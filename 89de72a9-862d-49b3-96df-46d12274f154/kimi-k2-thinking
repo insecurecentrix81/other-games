@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wild West Redemption - 1899</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: #2c1810;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #d4a574 0%, #c19660 50%, #8b6f47 100%);
+            border: 4px solid #3e2723;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(30, 15, 5, 0.9);
+            color: #d4a574;
+            padding: 15px;
+            border: 2px solid #8b4513;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 200px;
+            pointer-events: auto;
+        }
+
+        #mission {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 15, 5, 0.9);
+            color: #d4a574;
+            padding: 15px;
+            border: 2px solid #8b4513;
+            border-radius: 5px;
+            max-width: 300px;
+            pointer-events: auto;
+        }
+
+        #crosshair {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 10px;
+            background: #3e2723;
+            border: 1px solid #8b4513;
+            margin-top: 5px;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff0000, #ff6666);
+            transition: width 0.3s;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 15, 5, 0.95);
+            color: #d4a574;
+            padding: 30px;
+            border: 3px solid #8b4513;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            pointer-events: auto;
+        }
+
+        button {
+            background: #8b4513;
+            color: #d4a574;
+            border: 2px solid #5a2d0c;
+            padding: 10px 20px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #a0522d;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #d4a574;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div id="crosshair"></div>
+        
+        <div id="hud">
+            <div class="title">Arthur Morgan</div>
+            <div>Health:</div>
+            <div class="health-bar">
+                <div class="health-fill" id="playerHealth" style="width: 100%;"></div>
+            </div>
+            <div style="margin-top: 10px;">Ammo: <span id="ammo">12/48</span></div>
+            <div style="margin-top: 5px;">Dead Eye: <span id="deadEye">Ready</span></div>
+        </div>
+
+        <div id="mission">
+            <div class="title">Current Mission</div>
+            <div id="missionText">Clear the Bandit Camp - Eliminate all outlaws</div>
+            <div style="margin-top: 10px;">Enemies: <span id="enemyCount">5</span></div>
+        </div>
+
+        <div id="gameOver">
+            <div class="title" id="gameOverTitle">Mission Failed</div>
+            <div id="gameOverText">You have been defeated by the outlaws.</div>
+            <button onclick="location.reload()">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const crosshair = document.getElementById('crosshair');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Game state
+        const game = {
+            state: 'playing', // playing, paused, gameOver
+            mission: 1,
+            enemiesRemaining: 5
+        };
+
+        // Player
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            width: 20,
+            height: 20,
+            speed: 4,
+            health: 100,
+            maxHealth: 100,
+            ammo: 12,
+            maxAmmo: 12,
+            totalAmmo: 48,
+            deadEyeReady: true,
+            deadEyeActive: false,
+            angle: 0
+        };
+
+        // Input handling
+        const keys = {};
+        const mouse = { x: 0, y: 0 };
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === 'r' || e.key === 'R') {
+                reload();
+            }
+            if (e.key === 'q' || e.key === 'Q') {
+                activateDeadEye();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            crosshair.style.left = mouse.x + 'px';
+            crosshair.style.top = mouse.y + 'px';
+            
+            // Calculate angle to mouse
+            const dx = mouse.x - player.x;
+            const dy = mouse.y - player.y;
+            player.angle = Math.atan2(dy, dx);
+        });
+
+        window.addEventListener('click', (e) => {
+            if (game.state === 'playing') {
+                shoot();
+            }
+        });
+
+        // Game objects
+        const bullets = [];
+        const enemies = [];
+        const particles = [];
+
+        // Enemy class
+        class Enemy {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 18;
+                this.height = 18;
+                this.speed = 1.5;
+                this.health = 30;
+                this.maxHealth = 30;
+                this.shootCooldown = 0;
+                this.patrolAngle = Math.random() * Math.PI * 2;
+                this.state = 'patrol'; // patrol, chase, shoot
+            }
+
+            update() {
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 300) {
+                    this.state = 'chase';
+                } else {
+                    this.state = 'patrol';
+                }
+
+                if (this.state === 'chase') {
+                    if (distance > 100) {
+                        this.x += (dx / distance) * this.speed;
+                        this.y += (dy / distance) * this.speed;
+                    }
+                    
+                    if (distance < 200 && this.shootCooldown <= 0) {
+                        this.shoot();
+                        this.shootCooldown = 60 + Math.random() * 40;
+                    }
+                } else if (this.state === 'patrol') {
+                    this.patrolAngle += (Math.random() - 0.5) * 0.1;
+                    this.x += Math.cos(this.patrolAngle) * this.speed * 0.5;
+                    this.y += Math.sin(this.patrolAngle) * this.speed * 0.5;
+                }
+
+                // Keep enemies on screen
+                this.x = Math.max(20, Math.min(canvas.width - 20, this.x));
+                this.y = Math.max(20, Math.min(canvas.height - 20, this.y));
+
+                if (this.shootCooldown > 0) this.shootCooldown--;
+            }
+
+            shoot() {
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const angle = Math.atan2(dy, dx);
+                
+                bullets.push({
+                    x: this.x,
+                    y: this.y,
+                    vx: Math.cos(angle) * 6,
+                    vy: Math.sin(angle) * 6,
+                    damage: 10,
+                    friendly: false,
+                    size: 3
+                });
+            }
+
+            draw() {
+                // Enemy body
+                ctx.fillStyle = '#4a2c2c';
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+                
+                // Enemy hat
+                ctx.fillStyle = '#2c1810';
+                ctx.fillRect(this.x - 12, this.y - this.height/2 - 8, 24, 8);
+                
+                // Health bar
+                if (this.health < this.maxHealth) {
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(this.x - 15, this.y - this.height/2 - 15, 30, 3);
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(this.x - 15, this.y - this.height/2 - 15, 30 * (this.health / this.maxHealth), 3);
+                }
+            }
+        }
+
+        // Initialize enemies
+        function spawnEnemies() {
+            enemies.length = 0;
+            for (let i = 0; i < 5; i++) {
+                const angle = (i / 5) * Math.PI * 2;
+                const radius = 200 + Math.random() * 100;
+                const x = canvas.width / 2 + Math.cos(angle) * radius;
+                const y = canvas.height / 2 + Math.sin(angle) * radius;
+                enemies.push(new Enemy(x, y));
+            }
+            game.enemiesRemaining = 5;
+            updateUI();
+        }
+
+        // Shooting
+        function shoot() {
+            if (player.ammo <= 0) {
+                reload();
+                return;
+            }
+
+            const spread = player.deadEyeActive ? 0.1 : 0.3;
+            const bulletCount = player.deadEyeActive ? 3 : 1;
+            
+            for (let i = 0; i < bulletCount; i++) {
+                const angleOffset = (Math.random() - 0.5) * spread;
+                bullets.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(player.angle + angleOffset) * 10,
+                    vy: Math.sin(player.angle + angleOffset) * 10,
+                    damage: 25,
+                    friendly: true,
+                    size: 4
+                });
+            }
+
+            player.ammo--;
+            updateUI();
+            
+            // Muzzle flash
+            createMuzzleFlash();
+        }
+
+        function reload() {
+            if (player.ammo < player.maxAmmo && player.totalAmmo > 0) {
+                const needed = player.maxAmmo - player.ammo;
+                const available = Math.min(needed, player.totalAmmo);
+                player.ammo += available;
+                player.totalAmmo -= available;
+                updateUI();
+            }
+        }
+
+        function activateDeadEye() {
+            if (player.deadEyeReady && !player.deadEyeActive) {
+                player.deadEyeActive = true;
+                player.deadEyeReady = false;
+                setTimeout(() => {
+                    player.deadEyeActive = false;
+                    setTimeout(() => {
+                        player.deadEyeReady = true;
+                        updateUI();
+                    }, 10000);
+                }, 3000);
+                updateUI();
+            }
+        }
+
+        // Particles
+        function createMuzzleFlash() {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: player.x + Math.cos(player.angle) * 15,
+                    y: player.y + Math.sin(player.angle) * 15,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    life: 10,
+                    maxLife: 10,
+                    color: `hsl(${30 + Math.random() * 30}, 100%, 50%)`
+                });
+            }
+        }
+
+        function createExplosion(x, y, color = '#ff6600') {
+            for (let i = 0; i < 15; i++) {
+                const angle = (Math.PI * 2 * i) / 15;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * (2 + Math.random() * 3),
+                    vy: Math.sin(angle) * (2 + Math.random() * 3),
+                    life: 20 + Math.random() * 10,
+                    maxLife: 30,
+                    color: color
+                });
+            }
+        }
+
+        // Update game
+        function update() {
+            if (game.state !== 'playing') return;
+
+            // Update player
+            if (keys['w'] || keys['arrowup']) player.y -= player.speed;
+            if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+            if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
+            if (keys['d'] || keys['arrowright']) player.x += player.speed;
+
+            // Keep player on screen
+            player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+            player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
+
+            // Update enemies
+            enemies.forEach(enemy => enemy.update());
+
+            // Update bullets
+            bullets.forEach((bullet, index) => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+
+                // Remove bullets that are off screen
+                if (bullet.x < 0 || bullet.x > canvas.width || 
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(index, 1);
+                    return;
+                }
+
+                // Check collisions
+                if (bullet.friendly) {
+                    enemies.forEach((enemy, enemyIndex) => {
+                        if (Math.abs(bullet.x - enemy.x) < enemy.width/2 + bullet.size &&
+                            Math.abs(bullet.y - enemy.y) < enemy.height/2 + bullet.size) {
+                            enemy.health -= bullet.damage;
+                            bullets.splice(index, 1);
+                            
+                            if (enemy.health <= 0) {
+                                createExplosion(enemy.x, enemy.y, '#8b0000');
+                                enemies.splice(enemyIndex, 1);
+                                game.enemiesRemaining--;
+                                updateUI();
+                                
+                                if (game.enemiesRemaining <= 0) {
+                                    missionComplete();
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    if (Math.abs(bullet.x - player.x) < player.width/2 + bullet.size &&
+                        Math.abs(bullet.y - player.y) < player.height/2 + bullet.size) {
+                        player.health -= bullet.damage;
+                        bullets.splice(index, 1);
+                        updateUI();
+                        
+                        if (player.health <= 0) {
+                            gameOver();
+                        }
+                    }
+                }
+            });
+
+            // Update particles
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        // Draw game
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#d4a574';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw desert texture
+            ctx.fillStyle = 'rgba(139, 69, 19, 0.1)';
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                ctx.fillRect(x, y, 3, 3);
+            }
+
+            // Draw enemies
+            enemies.forEach(enemy => enemy.draw());
+
+            // Draw bullets
+            bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.friendly ? '#ffd700' : '#ff0000';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw player
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            
+            // Player body
+            ctx.fillStyle = '#3e2723';
+            ctx.fillRect(-player.width/2, -player.height/2, player.width, player.height);
+            
+            // Cowboy hat
+            ctx.fillStyle = '#2c1810';
+            ctx.fillRect(-15, -player.height/2 - 10, 30, 10);
+            
+            // Gun
+            ctx.fillStyle = '#2c2c2c';
+            ctx.fillRect(8, -3, 12, 6);
+            
+            ctx.restore();
+
+            // Draw particles
+            particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                ctx.fillStyle = particle.color.replace(')', `, ${alpha})`).replace('hsl', 'hsla');
+                ctx.fillRect(particle.x - 2, particle.y - 2, 4, 4);
+            });
+
+            // Dead Eye overlay
+            if (player.deadEyeActive) {
+                ctx.fillStyle = 'rgba(100, 100, 255, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = 'rgba(100, 100, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+            }
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('playerHealth').style.width = `${(player.health / player.maxHealth) * 100}%`;
+            document.getElementById('ammo').textContent = `${player.ammo}/${player.totalAmmo}`;
+            document.getElementById('deadEye').textContent = player.deadEyeActive ? 'ACTIVE' : 
+                                                          player.deadEyeReady ? 'Ready' : 'Recharging...';
+            document.getElementById('enemyCount').textContent = game.enemiesRemaining;
+        }
+
+        // Mission complete
+        function missionComplete() {
+            game.state = 'gameOver';
+            document.getElementById('gameOverTitle').textContent = 'Mission Complete!';
+            document.getElementById('gameOverText').textContent = 'You\'ve cleared the bandit camp. The town is safe... for now.';
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // Game over
+        function gameOver() {
+            game.state = 'gameOver';
+            document.getElementById('gameOverTitle').textContent = 'You Died';
+            document.getElementById('gameOverText').textContent = 'The outlaws have taken over. The wild west claims another soul.';
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        spawnEnemies();
+        gameLoop();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>

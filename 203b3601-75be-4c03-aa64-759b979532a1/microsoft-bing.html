@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Secure Centrix81 — Saharash's Semester</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:rgba(10,12,20,0.7);
+    --accent:#66e0ff;
+    --danger:#ff6b6b;
+    --good:#8cff88;
+    --muted:#cbd5e1;
+    font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#051022);}
+  #overlay{
+    position:fixed;left:12px;top:12px;z-index:10;color:var(--muted);backdrop-filter:blur(6px);
+    background:var(--panel);padding:12px;border-radius:10px;max-width:360px;
+    box-shadow:0 6px 20px rgba(2,6,23,0.6);
+  }
+  h1{font-size:16px;margin:0 0 6px 0;color:var(--accent)}
+  .row{display:flex;gap:8px;align-items:center}
+  .stat{display:flex;gap:8px;align-items:center;font-size:13px}
+  .bar{height:10px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;width:140px}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--good),#2df);width:80%}
+  #message{margin-top:8px;font-size:13px}
+  #canvas-wrap{width:100%;height:100vh;display:block;position:relative}
+  #hud-bottom{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:10;
+    background:var(--panel);padding:10px 14px;border-radius:999px;color:var(--muted);display:flex;gap:12px;align-items:center;
+    box-shadow:0 8px 30px rgba(2,6,23,0.6);
+  }
+  button, .btn{
+    background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:6px 10px;border-radius:8px;cursor:pointer;
+  }
+  #fader{position:fixed;inset:0;background:linear-gradient(180deg,transparent,#0008);pointer-events:none}
+  #instructions{
+    position:fixed;right:12px;top:12px;background:var(--panel);padding:10px;border-radius:10px;color:var(--muted);z-index:10;
+    max-width:320px;font-size:13px;
+  }
+  .mini{
+    width:36px;height:36px;border-radius:6px;overflow:hidden;border:2px solid rgba(255,255,255,0.06);
+    display:inline-block;vertical-align:middle;background:#111;
+  }
+  .crosshair{
+    width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.9);position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;opacity:0.9;
+  }
+  .label{
+    font-size:12px;color:#9fb8c8
+  }
+  #endScreen{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:20;
+    backdrop-filter:blur(4px);background:linear-gradient(180deg,rgba(0,0,0,0.2),rgba(0,0,0,0.6));visibility:hidden;opacity:0;transition:all .25s;
+  }
+  #endScreen.open{visibility:visible;opacity:1}
+  .panel{
+    background:linear-gradient(180deg,#071427,#022035);padding:22px;border-radius:12px;color:var(--muted);min-width:360px;text-align:center;
+    box-shadow:0 12px 40px rgba(0,0,0,0.6);
+  }
+  .big{font-size:22px;color:var(--accent);margin:0 0 8px 0}
+  .small{font-size:14px;color:#9fb8c8;margin-bottom:12px}
+  a.link{color:var(--accent);text-decoration:none}
+  footer {position:fixed;right:12px;bottom:12px;color:#6e8896;font-size:12px;z-index:10}
+  @media (max-width:640px){
+    #overlay{max-width:unset;left:8px;right:8px}
+    #instructions{display:none}
+  }
+</style>
+</head>
+<body>
+<div id="canvas-wrap"></div>
+
+<div id="overlay" aria-live="polite">
+  <h1>Secure Centrix81 — Semester Prototype</h1>
+  <div class="row">
+    <div class="stat"><strong>Grade</strong><span id="grade">C+</span></div>
+    <div class="stat"><strong>HP</strong><span id="hp">3</span></div>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <div class="label">Progress</div>
+    <div class="bar" title="progress"><i id="progressBar" style="width:35%"></i></div>
+  </div>
+  <div id="message">Find assignments (blue cubes), avoid Distractions (red spinners). Flip switches to open doors</div>
+</div>
+
+<div id="instructions">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <div class="mini"><img src="https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg" style="width:100%;height:100%;object-fit:cover" alt="portrait"></div>
+    <div>
+      <div style="font-weight:600;color:var(--accent)">Play as Saharash</div>
+      <div style="font-size:12px;color:#9fb8c8">Prototype avatar uses a 2D portrait sprite</div>
+    </div>
+  </div>
+  <div style="font-weight:600;margin-bottom:6px">Controls</div>
+  <div style="font-size:13px;color:var(--muted)">
+    WASD — Move; Mouse — Look; Space — Jump; E — Interact; Click — Lock pointer
+  </div>
+</div>
+
+<div id="hud-bottom">
+  <div class="label">Assignments</div>
+  <div id="count">0 / 5</div>
+  <button id="restart" class="btn">Restart</button>
+</div>
+
+<div class="crosshair" title="crosshair"></div>
+
+<div id="endScreen" role="dialog" aria-modal="true">
+  <div class="panel">
+    <div class="big" id="endTitle">Semester Over</div>
+    <div class="small" id="endMsg">You completed the prototype run.</div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <button id="tryAgain" class="btn">Play Again</button>
+      <button id="closeEnd" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<footer>Prototype — Secure Centrix81</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
+<script>
+/* Single-file 3D prototype game
+   - three.js scene with simple physics-like movement
+   - Player represented by a billboard sprite using provided portrait
+   - Collectible assignments (blue cubes)
+   - Enemy distractions (red rotating spinners)
+   - Switches open doors (platforms) to reach further areas
+   - Grade / HP system and simple UI
+*/
+
+/* -------------------------
+   Basic scene + renderer
+   ------------------------- */
+const wrap = document.getElementById('canvas-wrap');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+renderer.setClearColor(0x071427);
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, wrap.clientWidth / wrap.clientHeight, 0.1, 2000);
+camera.position.set(0, 2, 6);
+
+/* -------------------------
+   Lighting
+   ------------------------- */
+const hemi = new THREE.HemisphereLight(0xbfe6ff, 0x202040, 0.6);
+scene.add(hemi);
+const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+dir.position.set(5, 10, 7);
+scene.add(dir);
+
+/* -------------------------
+   Floor + grid area
+   ------------------------- */
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f2030, roughness: 0.9, metalness: 0.1 });
+const ground = new THREE.Mesh(new THREE.BoxGeometry(80, 1, 80), groundMat);
+ground.position.y = -1;
+scene.add(ground);
+
+const border = new THREE.Mesh(new THREE.BoxGeometry(80, 6, 1), new THREE.MeshStandardMaterial({ color: 0x091421 }));
+border.position.set(0, 1.6, -39.5);
+scene.add(border);
+
+/* -------------------------
+   Simple environment objects
+   ------------------------- */
+function createPlatform(x,z,w=6,h=0.5){
+  const m = new THREE.MeshStandardMaterial({ color: 0x112e3a, metalness:0.1, roughness:0.9 });
+  const p = new THREE.Mesh(new THREE.BoxGeometry(w, h, 6), m);
+  p.position.set(x, 0.25, z);
+  scene.add(p);
+  return p;
+}
+const platforms = [];
+platforms.push(createPlatform(0, -10, 14));
+platforms.push(createPlatform(-10, -22, 8));
+platforms.push(createPlatform(12, -28, 8));
+platforms.push(createPlatform(0, -36, 22));
+
+/* Doors (start closed, raised when activated) */
+const doorMat = new THREE.MeshStandardMaterial({ color: 0x083b56 });
+const door = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 0.5), doorMat);
+door.position.set(0, 2, -18);
+scene.add(door);
+let doorOpen = false;
+
+/* -------------------------
+   Player (controls + avatar)
+   ------------------------- */
+const controls = new THREE.PointerLockControls(camera, renderer.domElement);
+renderer.domElement.addEventListener('click', ()=> controls.lock(), false);
+
+const player = {
+  velocity: new THREE.Vector3(),
+  speed: 6,
+  onGround: false,
+  hp: 3,
+  assignments: 0,
+  gradePct: 0.35
+};
+
+/* A simple visible avatar: billboard sprite with portrait */
+const loader = new THREE.TextureLoader();
+const portraitUrl = 'https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg';
+const avatarTex = loader.load(portraitUrl);
+const avatarMat = new THREE.SpriteMaterial({ map: avatarTex, color: 0xffffff });
+const avatar = new THREE.Sprite(avatarMat);
+avatar.scale.set(1.2, 1.6, 1);
+scene.add(avatar);
+
+/* Position avatar relative to camera each frame */
+function updateAvatar(){
+  avatar.position.copy(camera.position);
+  avatar.position.y -= 0.8;
+  // Slight offset in front
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  avatar.position.add(forward.multiplyScalar(-0.6));
+  avatar.lookAt(camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(10)));
+}
+
+/* -------------------------
+   Collectibles and hazards
+   ------------------------- */
+const assignments = [];
+const hazards = [];
+const switches = [];
+
+/* Create assignment cubes */
+function createAssignment(x,z){
+  const geo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x4fb3ff, emissive: 0x10284a, metalness:0.2 });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, 0.5, z);
+  scene.add(m);
+  assignments.push(m);
+}
+
+/* Create rotating hazard spinners */
+function createHazard(x,z){
+  const g = new THREE.TorusGeometry(0.8, 0.18, 8, 40);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xff6b6b, emissive: 0x220000 });
+  const t = new THREE.Mesh(g, mat);
+  t.position.set(x, 0.9, z);
+  t.rotation.x = Math.PI/2;
+  scene.add(t);
+  hazards.push(t);
+}
+
+/* Create switches */
+function createSwitch(x,z,id){
+  const g = new THREE.CylinderGeometry(0.3,0.3,0.2,12);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffda66 });
+  const s = new THREE.Mesh(g, mat);
+  s.position.set(x,0.2,z);
+  s.userData = { id, active:false };
+  scene.add(s);
+  switches.push(s);
+}
+
+/* Initialize items in world */
+createAssignment(-4,-12);
+createAssignment(6,-12);
+createAssignment(-12,-24);
+createAssignment(14,-30);
+createAssignment(0,-34);
+
+createHazard(-2,-15);
+createHazard(8,-20);
+createHazard(6,-32);
+
+createSwitch(-6,-10,1);
+createSwitch(10,-26,2);
+
+/* Helper distance check */
+function dist(a,b){ return a.distanceTo(b); }
+
+/* -------------------------
+   UI sync
+   ------------------------- */
+const hpEl = document.getElementById('hp');
+const gradeEl = document.getElementById('grade');
+const progressBar = document.getElementById('progressBar');
+const countEl = document.getElementById('count');
+const messageEl = document.getElementById('message');
+
+function updateUI(){
+  hpEl.textContent = player.hp;
+  const pct = Math.round(player.gradePct*100);
+  gradeEl.textContent = gradeFromPct(player.gradePct);
+  progressBar.style.width = `${pct}%`;
+  countEl.textContent = `${player.assignments} / 5`;
+}
+
+function gradeFromPct(p){
+  if(p >= 0.9) return 'A';
+  if(p >= 0.8) return 'B';
+  if(p >= 0.65) return 'C+';
+  if(p >= 0.5) return 'D';
+  return 'F';
+}
+
+/* -------------------------
+   Interaction logic
+   ------------------------- */
+let canJump = true;
+const keys = {};
+window.addEventListener('keydown', (e) => { keys[e.code] = true; if(e.code==='KeyE') tryInteract(); });
+window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+function tryInteract(){
+  // pressing E near a switch toggles it
+  const ppos = camera.position.clone();
+  for(const s of switches){
+    if(!s.userData.active && ppos.distanceTo(s.position) < 2.2){
+      s.userData.active = true;
+      s.material.color.set(0x66ff88);
+      messageEl.textContent = 'Switch flipped — a door moved!';
+      // open the door
+      doorOpen = true;
+      return;
+    }
+  }
+}
+
+/* -------------------------
+   Simple collision & pickups
+   ------------------------- */
+function handleCollectibles(){
+  const ppos = camera.position.clone();
+  for(let i = assignments.length-1; i >= 0; i--){
+    const a = assignments[i];
+    if(ppos.distanceTo(a.position) < 1.2){
+      scene.remove(a);
+      assignments.splice(i,1);
+      player.assignments++;
+      player.gradePct = Math.min(1, player.gradePct + 0.12);
+      messageEl.textContent = 'Collected assignment! Grades improved.';
+    }
+  }
+  for(let i = hazards.length-1; i >= 0; i--){
+    const h = hazards[i];
+    if(ppos.distanceTo(h.position) < 1.2){
+      // take damage and knock back
+      scene.remove(h);
+      hazards.splice(i,1);
+      player.hp = Math.max(0, player.hp - 1);
+      player.gradePct = Math.max(0, player.gradePct - 0.08);
+      messageEl.textContent = 'Distracted! Lost a grade point and HP.';
+      // tiny camera knockback
+      const dir = camera.getWorldDirection(new THREE.Vector3()).negate();
+      camera.position.addScaledVector(dir, -1.2);
+    }
+  }
+  if(player.assignments >= 5){
+    // win condition
+    endGame(true);
+  }
+  if(player.hp <= 0){
+    endGame(false);
+  }
+}
+
+/* -------------------------
+   Simple physics + movement
+   ------------------------- */
+const gravity = -20;
+function simulate(delta){
+  // Movement vector from keys
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  forward.y = 0;
+  forward.normalize();
+  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize();
+
+  let move = new THREE.Vector3();
+  if(keys['KeyW']) move.add(forward);
+  if(keys['KeyS']) move.add(forward.clone().negate());
+  if(keys['KeyA']) move.add(right);
+  if(keys['KeyD']) move.add(right.clone().negate());
+  move.normalize();
+
+  const speed = player.speed;
+  player.velocity.x = move.x * speed;
+  player.velocity.z = move.z * speed;
+
+  // jump
+  if(keys['Space'] && canJump){
+    player.velocity.y = 8;
+    canJump = false;
+  }
+
+  // apply gravity
+  player.velocity.y += gravity * delta;
+
+  // integrate position
+  camera.position.addScaledVector(player.velocity, delta);
+
+  // simple ground collision
+  if(camera.position.y <= 1.6){
+    player.velocity.y = 0;
+    camera.position.y = 1.6;
+    canJump = true;
+  }
+
+  // door collision (if closed)
+  if(!doorOpen){
+    const dpos = door.position.clone();
+    if(Math.abs(camera.position.x - dpos.x) < 2 && Math.abs(camera.position.z - dpos.z) < 2){
+      // simple push-back
+      camera.position.z += 2 * Math.sign(camera.position.z - dpos.z);
+    }
+  }
+
+  // if door open, animate it upward
+  if(doorOpen && door.position.y < 20){
+    door.position.y += 6 * delta;
+  }
+}
+
+/* -------------------------
+   Main loop
+   ------------------------- */
+let last = performance.now();
+function animate(now){
+  const delta = Math.min(0.05, (now - last) / 1000);
+  last = now;
+
+  // rotate hazards for visual interest
+  hazards.forEach(h => { h.rotation.z += 2 * delta; });
+
+  // subtle bobbing on assignments
+  assignments.forEach((a,i) => {
+    a.position.y = 0.5 + Math.sin(now/600 + i) * 0.12;
+  });
+
+  // Update avatar sprite
+  updateAvatar();
+
+  simulate(delta);
+  handleCollectibles();
+  updateUI();
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+/* -------------------------
+   Resize handling
+   ------------------------- */
+window.addEventListener('resize', () => {
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  camera.aspect = wrap.clientWidth / wrap.clientHeight;
+  camera.updateProjectionMatrix();
+});
+
+/* -------------------------
+   Endgame & restart
+   ------------------------- */
+const endScreen = document.getElementById('endScreen');
+const endTitle = document.getElementById('endTitle');
+const endMsg = document.getElementById('endMsg');
+const tryAgain = document.getElementById('tryAgain');
+const closeEnd = document.getElementById('closeEnd');
+
+function endGame(won){
+  if(won){
+    endTitle.textContent = 'Semester Passed';
+    endMsg.textContent = `You collected ${player.assignments} assignments. Final grade: ${gradeFromPct(player.gradePct)}.`;
+  } else {
+    endTitle.textContent = 'Semester Failed';
+    endMsg.textContent = `HP reached zero. Final grade: ${gradeFromPct(player.gradePct)}. Try restarting.`;
+  }
+  endScreen.classList.add('open');
+}
+
+function resetGame(){
+  // reset player stats
+  player.hp = 3;
+  player.assignments = 0;
+  player.gradePct = 0.35;
+  // remove any remaining assignment/hazard/switches from scene then recreate
+  assignments.forEach(a => scene.remove(a));
+  hazards.forEach(h => scene.remove(h));
+  switches.forEach(s => scene.remove(s));
+  assignments.length = 0; hazards.length = 0; switches.length = 0;
+  // reset door
+  door.position.set(0,2,-18);
+  doorOpen = false;
+  // recreate objects
+  createAssignment(-4,-12);
+  createAssignment(6,-12);
+  createAssignment(-12,-24);
+  createAssignment(14,-30);
+  createAssignment(0,-34);
+  createHazard(-2,-15);
+  createHazard(8,-20);
+  createHazard(6,-32);
+  createSwitch(-6,-10,1);
+  createSwitch(10,-26,2);
+  endScreen.classList.remove('open');
+  messageEl.textContent = 'Restarted. Good luck.';
+  updateUI();
+  // teleport player to start
+  camera.position.set(0,1.6,8);
+}
+
+/* Hook buttons */
+document.getElementById('restart').addEventListener('click', resetGame);
+tryAgain.addEventListener('click', resetGame);
+closeEnd.addEventListener('click', ()=> endScreen.classList.remove('open'));
+
+/* initial UI + camera start */
+updateUI();
+camera.position.set(0,1.6,8);
+messageEl.textContent = 'Click to lock pointer and start playing.';
+
+/* Accessibility: allow unlocking pointer via Escape handled by control library */
+controls.addEventListener('lock', ()=> messageEl.textContent = 'Pointer locked. Move with WASD, interact with E.');
+controls.addEventListener('unlock', ()=> messageEl.textContent = 'Pointer unlocked. Click the canvas to resume.');
+
+/* small tip messages timer */
+setInterval(()=>{
+  const tips = [
+    "Flip switches to open new paths",
+    "Assignments improve your grade",
+    "Avoid distractions to keep HP",
+    "Explore platforms for hidden items"
+  ];
+  messageEl.textContent = tips[Math.floor(Math.random()*tips.length)];
+}, 12000);
+
+</script>
+</body>
+</html>

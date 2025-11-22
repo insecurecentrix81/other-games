@@ -671,11 +671,11 @@
             const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
             const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
             
-            if (keys['KeyW']) {
+            if (keys['KeyS']) {
                 camera.position.x += forward.x * moveSpeed;
                 camera.position.z += forward.z * moveSpeed;
             }
-            if (keys['KeyS']) {
+            if (keys['KeyW']) {
                 camera.position.x -= forward.x * moveSpeed;
                 camera.position.z -= forward.z * moveSpeed;
             }

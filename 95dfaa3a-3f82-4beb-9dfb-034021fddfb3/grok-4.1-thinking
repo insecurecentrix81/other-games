@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Saharsh's Class Failing Game</title>
+    <style>
+        body { margin:0; overflow:hidden; background:#000; }
+        #blocker { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; }
+        #instructions { text-align:center; color:white; font-family:Arial, sans-serif; max-width:800px; }
+        #instructions img { border-radius:50%; border:5px solid white; margin:20px 0; }
+        #ui { position:absolute; top:10px; left:10px; color:white; font-family:Arial; font-size:18px; background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; }
+        #playOverlay { position:absolute; top:0; left:0; width:100%; height:100%; background:#000; display:none; flex-direction:column; align-items:center; justify-content:center; }
+        #miniCanvas { background:#112; border:8px solid #333; box-shadow:0 0 30px #00ff00; }
+        #warning { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:red; font-size:80px; font-weight:bold; display:none; text-shadow:0 0 20px black; animation:pulse 1s infinite; }
+        @keyframes pulse { 0%{opacity:0.6} 50%{opacity:1} 100%{opacity:0.6} }
+        #gameOver { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); display:none; flex-direction:column; align-items:center; justify-content:center; color:white; font-family:Arial; text-align:center; }
+        button { margin-top:20px; padding:15px 30px; font-size:20px; cursor:pointer; background:#ff0000; color:white; border:none; border-radius:10px; }
+    </style>
+</head>
+<body>
+    <div id="blocker">
+        <div id="instructions" onclick="document.getElementById('blocker').style.display='none'; controls.lock();">
+            <h1>Saharsh's Class Failing Game</h1>
+            <img src="https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg" width="200" height="200">
+            <p>You are Saharsh. Your mission: waste the entire class playing on Secure Centrix81 and get the ultimate F.</p>
+            <p>Find your computer (blue desk), press <strong>E</strong> to play Flappy Bird.</p>
+            <p>If the teacher gets too close while you're playing → you get caught.</p>
+            <p>3 catches = expelled. Survive until the bell and get an F to win!</p>
+            <h3>Click to start</h3>
+        </div>
+    </div>
+
+    <div id="ui">
+        <div>Time left: <span id="timer">300</span>s</div>
+        <div>Grade: <span id="grade">A+</span></div>
+        <div>Fun Score: <span id="fun">0</span></div>
+        <div>Caught: <span id="caught">0</span>/3</div>
+    </div>
+
+    <div id="playOverlay">
+        <h1 style="color:#00ff00; text-shadow:0 0 20px lime;">SECURE CENTRIX81</h1>
+        <canvas id="miniCanvas" width="480" height="640"></canvas>
+        <p style="font-size:24px;">Score: <span id="miniScore">0</span></p>
+        <button onclick="exitPlay()">Quickly Alt+F4 (Exit)</button>
+    </div>
+
+    <div id="warning">TEACHER!!!</div>
+
+    <div id="gameOver">
+        <h1 id="endTitle"></h1>
+        <p id="goText"></p>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
+    <script>
+        let camera, scene, renderer, controls;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let moveForward=false, moveBackward=false, moveLeft=false, moveRight=false;
+        let canJump = false;
+        let prevTime = performance.now();
+
+        const computerPos = new THREE.Vector3(0, 0, -12);
+        let teacher;
+        let isPlaying = false;
+        let classTime = 300;
+        let grade = 100;
+        let funScore = 0;
+        let caught = 0;
+
+        // Flappy Bird
+        const canvas = document.getElementById('miniCanvas');
+        const ctx = canvas.getContext('2d');
+        let birdY = 320, birdV = 0, pipes = [], miniScore = 0, flappyActive = false;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xa0d8ef);
+            scene.fog = new THREE.FogExp2(0xa0d8ef, 0.015);
+
+            camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({antialias:true});
+            renderer.setSize(innerWidth, innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.PointerLockControls(camera, document.body);
+            scene.add(controls.getObject());
+
+            // Lighting
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+
+            // Floor
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(60, 60),
+                new THREE.MeshLambertMaterial({color:0xdddddd})
+            );
+            floor.rotation.x = -Math.PI/2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Desks
+            for(let i=0; i<5; i++){
+                for(let j=0; j<4; j++){
+                    const desk = new THREE.Mesh(
+                        new THREE.BoxGeometry(4,2,2),
+                        new THREE.MeshLambertMaterial({color:0x8b4513})
+                    );
+                    desk.position.set(i*10-20, 1, j*10-15);
+                    scene.add(desk);
+                }
+            }
+
+            // Your special computer (blue)
+            const compDesk = new THREE.Mesh(
+                new THREE.BoxGeometry(5,2,3),
+                new THREE.MeshLambertMaterial({color:0x0066ff})
+            );
+            compDesk.position.copy(computerPos);
+            compDesk.position.y = 1;
+            scene.add(compDesk);
+
+            // Teacher
+            teacher = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(1.2,1,5), new THREE.MeshLambertMaterial({color:0x00008b}));
+            body.position.y = 2.5;
+            teacher.add(body);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshLambertMaterial({color:0xffdbac}));
+            head.position.y = 5.5;
+            teacher.add(head);
+            teacher.position.set(0,0,15);
+            scene.add(teacher);
+
+            controls.getObject().position.set(0,5,10);
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            window.addEventListener('resize', ()=> {
+                camera.aspect = innerWidth/innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(innerWidth, innerHeight);
+            });
+
+            setInterval(()=>{ if(classTime>0) classTime--; document.getElementById('timer').innerText=classTime; if(classTime<=0) endGame(); },1000);
+            animate();
+        }
+
+        function startFlappy() {
+            birdY = 320; birdV = 0; pipes = []; miniScore = 0; flappyActive = true;
+            pipes.push({x:480, top:Math.random()*200+100});
+            flappyLoop();
+        }
+
+        function flappyLoop() {
+            if(!flappyActive) return;
+            ctx.fillStyle = '#87ceeb'; ctx.fillRect(0,0,480,640);
+            ctx.fillStyle = '#000'; // ground
+            ctx.fillRect(0,600,480,40);
+
+            // bird
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath(); ctx.arc(100, birdY, 25, 0, Math.PI*2); ctx.fill();
+            birdV += 0.6; birdY += birdV;
+
+            // pipes
+            pipes = pipes.filter(p=>p.x > -60);
+            pipes.forEach(p=>{
+                p.x -= 3;
+                ctx.fillStyle = '#0b0';
+                ctx.fillRect(p.x, 0, 60, p.top);
+                ctx.fillRect(p.x, p.top+180, 60, 640);
+                if(p.x < 100 && p.x+60 > 100 && (birdY-25 < p.top || birdY+25 > p.top+180)) flappyActive = false;
+                if(p.x+60 === 100) miniScore++;
+            });
+            if(pipes.length === 0 || pipes[pipes.length-1].x < 300) pipes.push({x:480, top:Math.random()*200+100});
+
+            document.getElementById('miniScore').innerText = miniScore;
+            if(birdY > 640 || birdY < -50) flappyActive = false;
+            if(flappyActive) requestAnimationFrame(flappyLoop);
+            else setTimeout(exitPlay, 800);
+        }
+
+        canvas.onclick = canvas.onmousedown = ()=>{ if(flappyActive) birdV = -12; };
+        document.addEventListener('keydown', e=>{ if(isPlaying && e.code==='Space') { e.preventDefault(); birdV = -12; } });
+
+        function startPlay() {
+            if(isPlaying || controls.getObject().position.distanceTo(computerPos)>6) return;
+            isPlaying = true;
+            document.getElementById('playOverlay').style.display = 'flex';
+            controls.unlock();
+            startFlappy();
+        }
+
+        function exitPlay() {
+            if(!isPlaying) return;
+            isPlaying = false;
+            flappyActive = false;
+            document.getElementById('playOverlay').style.display = 'none';
+            funScore += miniScore;
+            grade = Math.max(0, grade - miniScore*2);
+            updateGrade();
+            document.getElementById('fun').innerText = funScore;
+            controls.lock();
+        }
+
+        function updateGrade() {
+            const g = grade;
+            let letter = g>=90?'A+':g>=80?'A':g>=70?'B':g>=60?'C':'F';
+            document.getElementById('grade').innerText = `${letter} (${g}%)`;
+        }
+
+        function checkTeacher() {
+            const dist = controls.getObject().position.distanceTo(teacher.position);
+            if(isPlaying && dist < 9) {
+                caught++;
+                document.getElementById('caught').innerText = caught;
+                document.getElementById('warning').style.display = 'block';
+                setTimeout(()=>{document.getElementById('warning').style.display='none';},2000);
+                exitPlay();
+                if(caught >= 3) endGame(true);
+            }
+        }
+
+        function endGame(lost=false) {
+            document.getElementById('gameOver').style.display = 'flex';
+            if(lost || caught>=3) {
+                document.getElementById('endTitle').innerText = 'EXPELLED';
+                document.getElementById('goText').innerHTML = 'You got caught too many times!<br>Your parents will be notified.';
+            } else if(grade < 60) {
+                document.getElementById('endTitle').innerText = 'LEGENDARY FAIL!';
+                document.getElementById('goText').innerHTML = `Final Grade: F (${grade}%)<br>Fun Score: ${funScore}<br>You are a procrastination god!`;
+            } else {
+                document.getElementById('endTitle').innerText = 'You passed...';
+                document.getElementById('goText').innerHTML = `Grade: ${document.getElementById('grade').innerText}<br>Fun Score: ${funScore}<br>Boring. Try harder next time.`;
+            }
+        }
+
+        function onKeyDown(e) {
+            if(e.key==='e' || e.key==='E') startPlay();
+            switch(e.keyCode){
+                case 87: moveForward=true; break;
+                case 83: moveBackward=true; break;
+                case 65: moveLeft=true; break;
+                case 68: moveRight=true; break;
+            }
+        }
+        function onKeyUp(e){
+            switch(e.keyCode){
+                case 87: moveForward=false; break;
+                case 83: moveBackward=false; break;
+                case 65: moveLeft=false; break;
+                case 68: moveRight=false; break;
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if(controls.isLocked){
+                const delta = (performance.now() - prevTime)/1000;
+                velocity.x -= velocity.x*10*delta;
+                velocity.z -= velocity.z*10*delta;
+
+                direction.z = Number(moveForward)-Number(moveBackward);
+                direction.x = Number(moveRight)-Number(moveLeft);
+                direction.normalize();
+
+                if(moveForward||moveBackward) velocity.z -= direction.z*100*delta;
+                if(moveLeft||moveRight) velocity.x -= direction.x*100*delta;
+
+                controls.moveRight(-velocity.x*delta);
+                controls.moveForward(-velocity.z*delta);
+            }
+            prevTime = performance.now();
+
+            // Teacher patrol
+            const t = performance.now()/1000;
+            teacher.position.x = Math.sin(t*0.5)*18;
+            teacher.position.z = Math.cos(t*0.7)*12 + 5;
+            teacher.lookAt(controls.getObject().position);
+
+            checkTeacher();
+            renderer.render(scene, camera);
+        }
+
+        init();
+        updateGrade();
+    </script>
+</body>
+</html>

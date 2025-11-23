@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh Gobi-LOW IQ Adventures</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100vh;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            color: white;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+        }
+        
+        #hud h2 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        #hud p {
+            margin: 5px 0;
+            font-size: 18px;
+        }
+        
+        #healthBar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border: 2px solid #fff;
+            margin-top: 10px;
+            position: relative;
+        }
+        
+        #healthFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #00ff00);
+            transition: width 0.3s;
+        }
+        
+        #bossHealthBar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ff0000;
+            display: none;
+        }
+        
+        #bossHealthFill {
+            width: 300px;
+            height: 30px;
+            background: #333;
+            border: 2px solid #fff;
+            position: relative;
+        }
+        
+        #bossHealthFillInner {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff6600);
+            transition: width 0.3s;
+        }
+        
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #00ff00;
+            text-align: center;
+            pointer-events: all;
+        }
+        
+        #menu h1 {
+            color: #00ff00;
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #00ff00;
+        }
+        
+        #menu p {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #aaa;
+        }
+        
+        #menu button {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #00ff00;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: #000;
+            font-weight: bold;
+            transition: all 0.3s;
+            pointer-events: all;
+        }
+        
+        #menu button:hover {
+            background: #00cc00;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #00ff00;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: 2px solid #00ff00;
+            text-align: center;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ff0000;
+            border-radius: 50%;
+            display: none;
+            pointer-events: none;
+        }
+        
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #ff0000;
+        }
+        
+        #crosshair::before {
+            width: 2px;
+            height: 10px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #crosshair::after {
+            width: 10px;
+            height: 2px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #ffcc00;
+            font-size: 24px;
+            color: #ffcc00;
+            text-align: center;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameCanvas"></div>
+    
+    <div id="ui">
+        <div id="hud">
+            <h2>STAGE <span id="stageNum">1</span></h2>
+            <p>Score: <span id="score">0</span></p>
+            <p id="objective">Collect 1000 coins!</p>
+            <div id="healthBar">
+                <div id="healthFill" style="width: 100%"></div>
+            </div>
+            <p id="healthText">Health: <span id="health">100</span></p>
+        </div>
+        
+        <div id="bossHealthBar">
+            <p style="color: #ff0000; font-size: 20px; margin-bottom: 5px;">HOMEWORK BOSS</p>
+            <div id="bossHealthFill">
+                <div id="bossHealthFillInner" style="width: 100%"></div>
+            </div>
+            <p style="text-align: center; margin-top: 5px;">HP: <span id="bossHealth">1000</span></p>
+        </div>
+        
+        <div id="menu">
+            <h1>SAHARSH GOBI-LOW IQ ADVENTURES</h1>
+            <p>Stage 1: Temple Run - Escape from Grades!</p>
+            <p>Stage 2: Educational World - Hack Centrix!</p>
+            <p>Stage 3: Job Application - Defeat Homework Boss!</p>
+            <br>
+            <p><strong>Controls:</strong></p>
+            <p>WASD - Move | SPACE - Jump | Mouse - Aim & Shoot (Stage 3)</p>
+            <p>Click to lock mouse in Stage 3</p>
+            <br>
+            <button id="startBtn">START GAME</button>
+        </div>
+        
+        <div id="instructions" class="hidden">
+            <p id="instructionText">Collect coins to escape!</p>
+        </div>
+        
+        <div id="crosshair"></div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script>
+        // Game State
+        let scene, camera, renderer;
+        let player, playerMesh;
+        let gameState = 'menu'; // menu, playing, gameover, victory
+        let stage = 1;
+        let score = 0;
+        let health = 100;
+        let coins = [];
+        let obstacles = [];
+        let enemies = [];
+        let projectiles = [];
+        let boss = null;
+        let miniBosses = [];
+        let bossSpawnThresholds = [75, 50, 25];
+        let spawnedMiniWaves = [];
+        
+        // Player state
+        let velocity = { x: 0, y: 0, z: 0 };
+        let isGrounded = false;
+        let keys = {};
+        
+        // Stage 1 specific
+        let runSpeed = 0.3;
+        let chasers = [];
+        
+        // Stage 3 specific
+        let gun = null;
+        let isMouseLocked = false;
+        let shootCooldown = 0;
+        
+        // Initialize
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 10, 100);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('gameCanvas').appendChild(renderer.domElement);
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.left = -50;
+            dirLight.shadow.camera.right = 50;
+            dirLight.shadow.camera.top = 50;
+            dirLight.shadow.camera.bottom = -50;
+            scene.add(dirLight);
+            
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('keydown', (e) => keys[e.code] = true);
+            document.addEventListener('keyup', (e) => keys[e.code] = false);
+            document.getElementById('startBtn').addEventListener('click', startGame);
+            
+            // Mouse lock for stage 3
+            document.addEventListener('click', () => {
+                if (stage === 3 && gameState === 'playing' && !isMouseLocked) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+            
+            document.addEventListener('pointerlockchange', () => {
+                isMouseLocked = document.pointerLockElement === renderer.domElement;
+            });
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mousedown', onMouseClick);
+            
+            animate();
+        }
+        
+        function startGame() {
+            gameState = 'playing';
+            stage = 1;
+            score = 0;
+            health = 100;
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('instructions').classList.remove('hidden');
+            
+            setupStage1();
+        }
+        
+        function setupStage1() {
+            // Clear scene
+            clearScene();
+            
+            stage = 1;
+            updateUI();
+            
+            // Create player (Saharsh)
+            const loader = new THREE.TextureLoader();
+            loader.crossOrigin = "anonymous";
+            
+            // Larger geometry to match image aspect ratio (250x331)
+            const geometry = new THREE.BoxGeometry(2, 2.6, 1.5);
+            
+            // Try to load Saharsh's photo
+            loader.load(
+                'https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg',
+                (texture) => {
+                    const material = new THREE.MeshPhongMaterial({ map: texture });
+                    playerMesh = new THREE.Mesh(geometry, material);
+                    setupPlayer();
+                },
+                undefined,
+                () => {
+                    // Fallback if image doesn't load
+                    const material = new THREE.MeshPhongMaterial({ color: 0xff6600 });
+                    playerMesh = new THREE.Mesh(geometry, material);
+                    setupPlayer();
+                }
+            );
+            
+            function setupPlayer() {
+                playerMesh.position.set(0, 1, 0);
+                playerMesh.castShadow = true;
+                scene.add(playerMesh);
+                player = { x: 0, y: 1, z: 0 };
+                velocity = { x: 0, y: 0, z: 0 };
+                
+                // Create initial coins AFTER player is set up
+                for (let i = 0; i < 50; i++) {
+                    spawnCoin();
+                }
+            }
+            
+            // Create ground (temple run path)
+            createPath();
+            
+            // Camera position for stage 1 (behind player)
+            camera.position.set(0, 5, 10);
+            camera.lookAt(0, 1, -10);
+            
+            // Create chasers (grades)
+            for (let i = 0; i < 3; i++) {
+                spawnChaser();
+            }
+            
+            document.getElementById('instructionText').textContent = 'Collect coins to reach 1000 points! (10 pts each) WASD to move, SPACE to jump!';
+        }
+        
+        function createPath() {
+            const pathGeometry = new THREE.BoxGeometry(10, 0.5, 200);
+            const pathMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+            
+            for (let i = -2; i < 5; i++) {
+                const path = new THREE.Mesh(pathGeometry, pathMaterial);
+                path.position.set(0, -0.25, i * -200);
+                path.receiveShadow = true;
+                scene.add(path);
+                obstacles.push(path);
+            }
+        }
+        
+        function spawnCoin() {
+            const geometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+            const material = new THREE.MeshPhongMaterial({ color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity: 0.5 });
+            const coin = new THREE.Mesh(geometry, material);
+            
+            coin.position.set(
+                (Math.random() - 0.5) * 8,
+                1 + Math.random() * 2,
+                player.z - Math.random() * 100 - 20
+            );
+            coin.rotation.x = Math.PI / 2;
+            scene.add(coin);
+            coins.push(coin);
+        }
+        
+        function spawnChaser() {
+            const geometry = new THREE.BoxGeometry(1.5, 2, 1);
+            const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+            const chaser = new THREE.Mesh(geometry, material);
+            
+            chaser.position.set(
+                (Math.random() - 0.5) * 6,
+                1,
+                player.z + 20 + Math.random() * 10
+            );
+            chaser.castShadow = true;
+            scene.add(chaser);
+            chasers.push(chaser);
+        }
+        
+        function setupStage2() {
+            // Prevent re-initialization if player already exists
+            if (playerMesh && stage === 2) return;
+            
+            clearScene();
+            
+            stage = 2;
+            health = 100;
+            score = 0; // Reset score for stage 2
+            updateUI();
+            
+            // Create arena ground
+            const groundGeometry = new THREE.BoxGeometry(40, 0.5, 40);
+            const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x4a4a4a });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.position.y = -0.25;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            obstacles.push(ground);
+            
+            // Camera position
+            camera.position.set(0, 20, 20);
+            camera.lookAt(0, 0, 0);
+            
+            // Create player
+            const geometry = new THREE.BoxGeometry(1, 2, 1);
+            const loader = new THREE.TextureLoader();
+            loader.crossOrigin = "anonymous";
+            
+            loader.load(
+                'https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg',
+                (texture) => {
+                    const material = new THREE.MeshPhongMaterial({ map: texture });
+                    playerMesh = new THREE.Mesh(geometry, material);
+                    setupPlayerStage2();
+                },
+                undefined,
+                () => {
+                    const material = new THREE.MeshPhongMaterial({ color: 0xff6600 });
+                    playerMesh = new THREE.Mesh(geometry, material);
+                    setupPlayerStage2();
+                }
+            );
+            
+            function setupPlayerStage2() {
+                if (!playerMesh) return;
+                playerMesh.position.set(0, 1, 0);
+                playerMesh.castShadow = true;
+                scene.add(playerMesh);
+                player = { x: 0, y: 1, z: 0 };
+                velocity = { x: 0, y: 0, z: 0 };
+                
+                // Spawn boxes AFTER player is ready
+                for (let i = 0; i < 15; i++) {
+                    spawnBox('red');
+                }
+                for (let i = 0; i < 20; i++) {
+                    spawnBox('blue');
+                }
+                for (let i = 0; i < 20; i++) {
+                    spawnBox('green');
+                }
+            }
+            
+            document.getElementById('instructionText').textContent = 'Collect 10 RED boxes (Centrix Hacked)! Avoid BLUE (-40) and GREEN (-20)!';
+        }
+        
+        function spawnBox(type) {
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            let material, points, damage;
+            
+            if (type === 'red') {
+                material = new THREE.MeshPhongMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.3 });
+                points = 30;
+                damage = 0;
+            } else if (type === 'blue') {
+                material = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+                points = 0;
+                damage = 40;
+            } else {
+                material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+                points = 0;
+                damage = 20;
+            }
+            
+            const box = new THREE.Mesh(geometry, material);
+            
+            // Keep trying to find a good position (not too close to other boxes)
+            let validPosition = false;
+            let attempts = 0;
+            while (!validPosition && attempts < 50) {
+                box.position.set(
+                    (Math.random() - 0.5) * 35,
+                    0.5,
+                    (Math.random() - 0.5) * 35
+                );
+                
+                validPosition = true;
+                // Check distance to all other enemies
+                for (let enemy of enemies) {
+                    const dist = Math.sqrt(
+                        Math.pow(box.position.x - enemy.position.x, 2) +
+                        Math.pow(box.position.z - enemy.position.z, 2)
+                    );
+                    if (dist < 3) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+                attempts++;
+            }
+            
+            box.castShadow = true;
+            box.userData = { type, points, damage };
+            scene.add(box);
+            enemies.push(box);
+        }
+        
+        function setupStage3() {
+            clearScene();
+            
+            stage = 3;
+            score = 0;
+            updateUI();
+            
+            // Create player with gun
+            const geometry = new THREE.BoxGeometry(1, 2, 1);
+            const loader = new THREE.TextureLoader();
+            loader.crossOrigin = "anonymous";
+            
+            loader.load(
+                'https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg',
+                (texture) => {
+                    const material = new THREE.MeshPhongMaterial({ map: texture });
+                    playerMesh = new THREE.Mesh(geometry, material);
+                    setupPlayerStage3();
+                },
+                undefined,
+                () => {
+                    const material = new THREE.MeshPhongMaterial({ color: 0xff6600 });
+                    playerMesh = new THREE.Mesh(geometry, material);
+                    setupPlayerStage3();
+                }
+            );
+            
+            function setupPlayerStage3() {
+                playerMesh.position.set(0, 1, 0);
+                playerMesh.castShadow = true;
+                scene.add(playerMesh);
+                player = { x: 0, y: 1, z: 0 };
+                velocity = { x: 0, y: 0, z: 0 };
+                
+                // Create gun
+                const gunGroup = new THREE.Group();
+                const gunBody = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.2, 0.2, 0.8),
+                    new THREE.MeshPhongMaterial({ color: 0x333333 })
+                );
+                gunBody.position.set(0.5, 0, -0.5);
+                gunGroup.add(gunBody);
+                playerMesh.add(gunGroup);
+                gun = gunGroup;
+            }
+            
+            // Create arena ground
+            const groundGeometry = new THREE.BoxGeometry(60, 0.5, 60);
+            const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x2a2a2a });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.position.y = -0.25;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            obstacles.push(ground);
+            
+            // First-person camera
+            camera.position.set(0, 1.6, 0);
+            camera.rotation.set(0, 0, 0);
+            
+            // Create boss
+            createBoss();
+            
+            document.getElementById('bossHealthBar').style.display = 'block';
+            document.getElementById('crosshair').style.display = 'block';
+            
+            document.getElementById('instructionText').textContent = 'Defeat the Homework Boss! Click to lock mouse, WASD to move, Mouse to aim, Click to shoot!';
+        }
+        
+        function createBoss() {
+            const geometry = new THREE.BoxGeometry(3, 4, 3);
+            const material = new THREE.MeshPhongMaterial({ color: 0x8B0000, emissive: 0x8B0000, emissiveIntensity: 0.3 });
+            boss = new THREE.Mesh(geometry, material);
+            boss.position.set(0, 2, -20);
+            boss.castShadow = true;
+            boss.userData = { health: 1000, maxHealth: 1000 };
+            scene.add(boss);
+            
+            updateBossHealth();
+        }
+        
+        function spawnMiniBoss() {
+            const geometry = new THREE.BoxGeometry(1.5, 2, 1.5);
+            const material = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+            const miniBoss = new THREE.Mesh(geometry, material);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 15 + Math.random() * 10;
+            
+            miniBoss.position.set(
+                Math.cos(angle) * distance,
+                1,
+                Math.sin(angle) * distance
+            );
+            miniBoss.castShadow = true;
+            miniBoss.userData = { health: 50, maxHealth: 50, speed: 0.05 };
+            scene.add(miniBoss);
+            miniBosses.push(miniBoss);
+        }
+        
+        function clearScene() {
+            // Remove all game objects
+            coins.forEach(c => scene.remove(c));
+            coins = [];
+            
+            obstacles.forEach(o => scene.remove(o));
+            obstacles = [];
+            
+            enemies.forEach(e => scene.remove(e));
+            enemies = [];
+            
+            chasers.forEach(c => scene.remove(c));
+            chasers = [];
+            
+            projectiles.forEach(p => scene.remove(p));
+            projectiles = [];
+            
+            miniBosses.forEach(m => scene.remove(m));
+            miniBosses = [];
+            
+            if (boss) {
+                scene.remove(boss);
+                boss = null;
+            }
+            
+            if (playerMesh) {
+                scene.remove(playerMesh);
+                playerMesh = null;
+            }
+            
+            document.getElementById('bossHealthBar').style.display = 'none';
+            document.getElementById('crosshair').style.display = 'none';
+            
+            spawnedMiniWaves = [];
+        }
+        
+        function updateStage1() {
+            if (!playerMesh) return;
+            
+            // Auto-run forward
+            player.z -= runSpeed;
+            
+            // Movement (side to side and jump)
+            if (keys['KeyA']) velocity.x = -0.2;
+            else if (keys['KeyD']) velocity.x = 0.2;
+            else velocity.x *= 0.9;
+            
+            if (keys['KeyW']) velocity.z = -0.3;
+            else if (keys['KeyS']) velocity.z = 0.1;
+            else velocity.z *= 0.9;
+            
+            if (keys['Space'] && isGrounded) {
+                velocity.y = 0.3;
+                isGrounded = false;
+            }
+            
+            // Apply gravity
+            velocity.y -= 0.02;
+            
+            // Update position
+            player.x += velocity.x;
+            player.y += velocity.y;
+            player.z += velocity.z;
+            
+            // Clamp to path
+            player.x = Math.max(-4.5, Math.min(4.5, player.x));
+            
+            // Ground collision
+            if (player.y <= 1) {
+                player.y = 1;
+                velocity.y = 0;
+                isGrounded = true;
+            }
+            
+            playerMesh.position.set(player.x, player.y, player.z);
+            
+            // Update camera
+            camera.position.set(player.x, player.y + 4, player.z + 10);
+            camera.lookAt(player.x, player.y, player.z - 10);
+            
+            // Spawn more path segments and clean up old ones
+            if (player.z < -50 && obstacles.length < 10) {
+                const pathGeometry = new THREE.BoxGeometry(10, 0.5, 200);
+                const pathMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+                const path = new THREE.Mesh(pathGeometry, pathMaterial);
+                path.position.set(0, -0.25, player.z - 200);
+                path.receiveShadow = true;
+                scene.add(path);
+                obstacles.push(path);
+            }
+            
+            // Clean up old path segments behind player
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                if (obstacles[i].position.z > player.z + 100) {
+                    scene.remove(obstacles[i]);
+                    obstacles.splice(i, 1);
+                }
+            }
+            
+            // Coin collection
+            for (let i = coins.length - 1; i >= 0; i--) {
+                const coin = coins[i];
+                coin.rotation.y += 0.05;
+                
+                const dist = Math.sqrt(
+                    Math.pow(coin.position.x - player.x, 2) +
+                    Math.pow(coin.position.y - player.y, 2) +
+                    Math.pow(coin.position.z - player.z, 2)
+                );
+                
+                if (dist < 2) {
+                    score += 10; // Each coin worth 10 points
+                    scene.remove(coin);
+                    coins.splice(i, 1);
+                    updateUI();
+                    
+                    // Spawn new coin
+                    spawnCoin();
+                }
+                
+                // Remove coins that are behind player
+                if (coin.position.z > player.z + 20) {
+                    scene.remove(coin);
+                    coins.splice(i, 1);
+                    spawnCoin();
+                }
+            }
+            
+            // Chasers
+            chasers.forEach(chaser => {
+                // Move towards player
+                const dx = player.x - chaser.position.x;
+                const dz = player.z - chaser.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                
+                if (dist > 0) {
+                    chaser.position.x += (dx / dist) * 0.15;
+                    chaser.position.z += (dz / dist) * 0.15;
+                }
+                
+                // Check collision with player
+                const playerDist = Math.sqrt(
+                    Math.pow(chaser.position.x - player.x, 2) +
+                    Math.pow(chaser.position.z - player.z, 2)
+                );
+                
+                if (playerDist < 1.5) {
+                    // Player caught! Slight penalty but keep running
+                    chaser.position.z = player.z + 25;
+                    chaser.position.x = (Math.random() - 0.5) * 6;
+                }
+            });
+            
+            // Check win condition
+            if (score >= 1000) {
+                showMessage('Stage 1 Complete! Entering Educational World...', 3000);
+                setTimeout(() => setupStage2(), 3000);
+            }
+        }
+        
+        function updateStage2() {
+            if (!playerMesh) return;
+            
+            // Movement
+            if (keys['KeyA']) velocity.x = -0.15;
+            else if (keys['KeyD']) velocity.x = 0.15;
+            else velocity.x *= 0.9;
+            
+            if (keys['KeyW']) velocity.z = -0.15;
+            else if (keys['KeyS']) velocity.z = 0.15;
+            else velocity.z *= 0.9;
+            
+            if (keys['Space'] && isGrounded) {
+                velocity.y = 0.3;
+                isGrounded = false;
+            }
+            
+            velocity.y -= 0.02;
+            
+            player.x += velocity.x;
+            player.y += velocity.y;
+            player.z += velocity.z;
+            
+            // Clamp to arena
+            player.x = Math.max(-19, Math.min(19, player.x));
+            player.z = Math.max(-19, Math.min(19, player.z));
+            
+            if (player.y <= 1) {
+                player.y = 1;
+                velocity.y = 0;
+                isGrounded = true;
+            }
+            
+            playerMesh.position.set(player.x, player.y, player.z);
+            
+            // Camera follows player
+            camera.position.set(player.x, player.y + 20, player.z + 20);
+            camera.lookAt(player.x, player.y, player.z);
+            
+            // Box collection/collision
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const box = enemies[i];
+                box.rotation.y += 0.02;
+                
+                const dist = Math.sqrt(
+                    Math.pow(box.position.x - player.x, 2) +
+                    Math.pow(box.position.z - player.z, 2)
+                );
+                
+                if (dist < 1.5) {
+                    if (box.userData.type === 'red') {
+                        score += box.userData.points;
+                        scene.remove(box);
+                        enemies.splice(i, 1);
+                    } else {
+                        health -= box.userData.damage;
+                        scene.remove(box);
+                        enemies.splice(i, 1);
+                        updateUI();
+                        
+                        if (health <= 0) {
+                            gameOver();
+                            return;
+                        }
+                    }
+                    updateUI();
+                }
+            }
+            
+            // Check win condition (10 red boxes = 300 points)
+            if (score >= 300) {
+                showMessage('Stage 2 Complete! Entering Job Application World...', 3000);
+                setTimeout(() => setupStage3(), 3000);
+            }
+        }
+        
+        function updateStage3() {
+            if (!playerMesh) return;
+            
+            // Movement
+            const moveSpeed = 0.15;
+            const forward = new THREE.Vector3();
+            const right = new THREE.Vector3();
+            
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
+            
+            right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+            
+            const movement = new THREE.Vector3();
+            
+            if (keys['KeyW']) movement.add(forward.multiplyScalar(moveSpeed));
+            if (keys['KeyS']) movement.add(forward.multiplyScalar(-moveSpeed));
+            if (keys['KeyA']) movement.add(right.multiplyScalar(-moveSpeed));
+            if (keys['KeyD']) movement.add(right.multiplyScalar(moveSpeed));
+            
+            player.x += movement.x;
+            player.z += movement.z;
+            
+            // Clamp to arena
+            player.x = Math.max(-29, Math.min(29, player.x));
+            player.z = Math.max(-29, Math.min(29, player.z));
+            
+            playerMesh.position.set(player.x, player.y, player.z);
+            camera.position.set(player.x, player.y + 0.6, player.z);
+            
+            // Update shoot cooldown
+            if (shootCooldown > 0) shootCooldown--;
+            
+            // Boss AI
+            if (boss) {
+                // Boss looks at player
+                boss.lookAt(player.x, boss.position.y, player.z);
+                
+                // Boss slowly moves toward player
+                const dx = player.x - boss.position.x;
+                const dz = player.z - boss.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                
+                if (dist > 5) {
+                    boss.position.x += (dx / dist) * 0.03;
+                    boss.position.z += (dz / dist) * 0.03;
+                }
+                
+                // Spawn mini-bosses at health thresholds
+                const healthPercent = (boss.userData.health / boss.userData.maxHealth) * 100;
+                
+                bossSpawnThresholds.forEach((threshold, index) => {
+                    if (healthPercent <= threshold && !spawnedMiniWaves.includes(index)) {
+                        spawnedMiniWaves.push(index);
+                        for (let i = 0; i < 5; i++) {
+                            spawnMiniBoss();
+                        }
+                    }
+                });
+            }
+            
+            // Mini-boss AI and damage
+            for (let i = miniBosses.length - 1; i >= 0; i--) {
+                const miniBoss = miniBosses[i];
+                const dx = player.x - miniBoss.position.x;
+                const dz = player.z - miniBoss.position.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                
+                if (dist > 2) {
+                    miniBoss.position.x += (dx / dist) * miniBoss.userData.speed;
+                    miniBoss.position.z += (dz / dist) * miniBoss.userData.speed;
+                } else if (dist < 2) {
+                    // Deal damage to player
+                    if (!miniBoss.userData.lastHit || Date.now() - miniBoss.userData.lastHit > 1000) {
+                        health -= 5;
+                        updateUI();
+                        miniBoss.userData.lastHit = Date.now();
+                        
+                        if (health <= 0) {
+                            gameOver();
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Boss damage
+            if (boss) {
+                const bossDist = Math.sqrt(
+                    Math.pow(player.x - boss.position.x, 2) +
+                    Math.pow(player.z - boss.position.z, 2)
+                );
+                
+                if (bossDist < 3) {
+                    // Deal damage to player
+                    if (!boss.userData.lastHit || Date.now() - boss.userData.lastHit > 1500) {
+                        health -= 10;
+                        updateUI();
+                        boss.userData.lastHit = Date.now();
+                        
+                        if (health <= 0) {
+                            gameOver();
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Update projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const proj = projectiles[i];
+                proj.position.add(proj.userData.velocity);
+                
+                // Check collision with boss
+                if (boss) {
+                    const dist = proj.position.distanceTo(boss.position);
+                    if (dist < 2) {
+                        boss.userData.health -= 10;
+                        scene.remove(proj);
+                        projectiles.splice(i, 1);
+                        updateBossHealth();
+                        
+                        if (boss.userData.health <= 0) {
+                            victory();
+                            return;
+                        }
+                        continue;
+                    }
+                }
+                
+                // Check collision with mini-bosses
+                for (let j = miniBosses.length - 1; j >= 0; j--) {
+                    const miniBoss = miniBosses[j];
+                    const dist = proj.position.distanceTo(miniBoss.position);
+                    
+                    if (dist < 1) {
+                        miniBoss.userData.health -= 10;
+                        scene.remove(proj);
+                        projectiles.splice(i, 1);
+                        
+                        if (miniBoss.userData.health <= 0) {
+                            scene.remove(miniBoss);
+                            miniBosses.splice(j, 1);
+                        }
+                        break;
+                    }
+                }
+                
+                // Remove if too far
+                if (proj.position.length() > 100) {
+                    scene.remove(proj);
+                    projectiles.splice(i, 1);
+                }
+            }
+        }
+        
+        function onMouseMove(event) {
+            if (stage === 3 && isMouseLocked) {
+                const sensitivity = 0.002;
+                camera.rotation.y -= event.movementX * sensitivity;
+                camera.rotation.x -= event.movementY * sensitivity;
+                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+                camera.rotation.z = 0; // Lock Z rotation to prevent screen roll
+            }
+        }
+        
+        function onMouseClick(event) {
+            if (stage === 3 && gameState === 'playing' && isMouseLocked && shootCooldown === 0) {
+                shoot();
+                shootCooldown = 10;
+            }
+        }
+        
+        function shoot() {
+            const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
+            const projectile = new THREE.Mesh(geometry, material);
+            
+            projectile.position.copy(camera.position);
+            
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            direction.normalize();
+            
+            projectile.userData = { velocity: direction.multiplyScalar(0.8) };
+            
+            scene.add(projectile);
+            projectiles.push(projectile);
+        }
+        
+        function updateUI() {
+            document.getElementById('stageNum').textContent = stage;
+            document.getElementById('score').textContent = score;
+            document.getElementById('health').textContent = health;
+            document.getElementById('healthFill').style.width = Math.max(0, health) + '%';
+            
+            if (stage === 1) {
+                document.getElementById('objective').textContent = `Score: ${score}/1000 points!`;
+            } else if (stage === 2) {
+                document.getElementById('objective').textContent = `Red boxes: ${Math.floor(score / 30)}/10`;
+            } else if (stage === 3) {
+                document.getElementById('objective').textContent = 'Defeat the Homework Boss!';
+            }
+        }
+        
+        function updateBossHealth() {
+            if (boss) {
+                const percent = (boss.userData.health / boss.userData.maxHealth) * 100;
+                document.getElementById('bossHealth').textContent = boss.userData.health;
+                document.getElementById('bossHealthFillInner').style.width = percent + '%';
+            }
+        }
+        
+        function showMessage(text, duration) {
+            const msg = document.createElement('div');
+            msg.className = 'message';
+            msg.textContent = text;
+            document.getElementById('ui').appendChild(msg);
+            
+            setTimeout(() => {
+                msg.remove();
+            }, duration);
+        }
+        
+        function gameOver() {
+            gameState = 'gameover';
+            showMessage('GAME OVER! Saharsh failed...', 3000);
+            
+            setTimeout(() => {
+                document.getElementById('menu').classList.remove('hidden');
+                document.getElementById('instructions').classList.add('hidden');
+                clearScene();
+                gameState = 'menu';
+            }, 3000);
+        }
+        
+        function victory() {
+            gameState = 'victory';
+            scene.remove(boss);
+            boss = null;
+            
+            showMessage('🎉 VICTORY! Saharsh got the CENTRIX ULTIMATE HACKED as a prank! 🎉', 5000);
+            
+            setTimeout(() => {
+                document.getElementById('menu').classList.remove('hidden');
+                document.getElementById('menu').querySelector('h1').textContent = 'YOU WON!';
+                document.getElementById('instructions').classList.add('hidden');
+                clearScene();
+                gameState = 'menu';
+            }, 5000);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (gameState === 'playing') {
+                if (stage === 1) updateStage1();
+                else if (stage === 2) updateStage2();
+                else if (stage === 3) updateStage3();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Saharsh Gobi-LOW iq adventures - Secure Centrix81</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #020617;
+      color: #e5e7eb;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #gameCanvasContainer {
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+    }
+    .overlay-interactive {
+      pointer-events: auto;
+    }
+    .fade-bg {
+      background:
+        radial-gradient(circle at top, rgba(45, 212, 191, 0.18), transparent 55%),
+        radial-gradient(circle at bottom, rgba(59, 130, 246, 0.16), transparent 60%),
+        #020617;
+    }
+    .hidden {
+      display: none !important;
+    }
+    #statusBar {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #centerMessage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      margin-left: -7px;
+      margin-top: -7px;
+      border-radius: 9999px;
+      border: 2px solid rgba(248, 250, 252, 0.75);
+      box-shadow: 0 0 12px rgba(248, 250, 252, 0.9);
+      pointer-events: none;
+      display: none;
+      z-index: 9;
+    }
+    .btn-primary {
+      background-color: #22c55e;
+      color: #020617;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.7);
+      transition: background-color 0.15s, transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      background-color: #4ade80;
+      transform: translateY(-1px);
+      box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.8);
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.7);
+    }
+    #messageBody {
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <div id="gameCanvasContainer"></div>
+
+    <div id="statusBar" class="text-slate-100">
+      <div><span class="font-semibold">World:</span> <span id="worldLabel">Menu</span></div>
+      <div id="runnerStats" class="mt-1">
+        <span class="font-semibold">Coins:</span> <span id="runnerCoins">0</span>
+        <span class="ml-2 font-semibold">Score:</span> <span id="runnerScore">0</span>
+      </div>
+      <div id="eduStats" class="mt-1 hidden">
+        <span class="font-semibold">Health:</span> <span id="eduHealth">120</span>
+        <span class="ml-2 font-semibold">Red boxes:</span> <span id="eduReds">0</span>/10
+      </div>
+      <div id="bossStats" class="mt-1 hidden">
+        <span class="font-semibold">Player HP:</span> <span id="bossPlayerHP">120</span>
+        <span class="ml-2 font-semibold">Job HP:</span> <span id="bossHP">100</span>
+      </div>
+      <div id="hintLine" class="mt-1 text-[11px] text-slate-300"></div>
+    </div>
+
+    <div id="crosshair"></div>
+
+    <div id="menuOverlay" class="overlay overlay-interactive fade-bg flex items-center justify-center">
+      <div class="max-w-xl text-center px-6">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-emerald-400 drop-shadow mb-4">
+          Saharsh Gobi-LOW iq adventures
+        </h1>
+        <p class="text-sm md:text-base text-slate-200 mb-4">
+          A three-world Secure Centrix81 quest: outrun your grades, survive the educational maze,
+          and defeat the Job Application boss with the Centrix Gun.
+        </p>
+        <div class="bg-slate-900/70 border border-emerald-500/40 rounded-xl p-4 mb-4 text-left text-xs md:text-sm">
+          <h2 class="font-semibold text-emerald-300 mb-1">Controls</h2>
+          <ul class="list-disc list-inside space-y-1">
+            <li><span class="font-semibold">Move:</span> W / A / S / D</li>
+            <li><span class="font-semibold">Jump:</span> Space</li>
+            <li><span class="font-semibold">Shoot (World 3):</span> Left Mouse Button</li>
+            <li><span class="font-semibold">Pause:</span> P</li>
+          </ul>
+        </div>
+        <button id="startButton" class="btn-primary w-full md:w-auto">Start Adventure</button>
+      </div>
+    </div>
+
+    <div id="messageOverlay" class="overlay overlay-interactive hidden">
+      <div id="centerMessage" class="text-center max-w-md px-4">
+        <h2 id="messageTitle" class="text-2xl font-bold mb-2"></h2>
+        <p id="messageBody" class="mb-4 text-sm"></p>
+        <button id="messageButton" class="btn-primary"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <script>
+    (function() {
+      const STATE_MENU = 'menu';
+      const STATE_RUNNER = 'runner';
+      const STATE_EDU = 'edu';
+      const STATE_BOSS = 'boss';
+      const STATE_GAMEOVER = 'gameover';
+      const STATE_VICTORY = 'victory';
+      const STATE_TRANSITION = 'transition';
+
+      const container = document.getElementById('gameCanvasContainer');
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio || 1);
+      container.appendChild(renderer.domElement);
+
+      const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+      const clock = new THREE.Clock();
+
+      let activeScene = null;
+      let gameState = STATE_MENU;
+      let paused = false;
+
+      const menuScene = new THREE.Scene();
+      menuScene.background = new THREE.Color(0x020617);
+      const menuLight = new THREE.HemisphereLight(0x38bdf8, 0x020617, 0.9);
+      menuScene.add(menuLight);
+      activeScene = menuScene;
+
+      const worldLabel = document.getElementById('worldLabel');
+      const runnerStats = document.getElementById('runnerStats');
+      const eduStats = document.getElementById('eduStats');
+      const bossStats = document.getElementById('bossStats');
+      const runnerCoinsElem = document.getElementById('runnerCoins');
+      const runnerScoreElem = document.getElementById('runnerScore');
+      const eduHealthElem = document.getElementById('eduHealth');
+      const eduRedsElem = document.getElementById('eduReds');
+      const bossPlayerHPElem = document.getElementById('bossPlayerHP');
+      const bossHPElem = document.getElementById('bossHP');
+      const hintLine = document.getElementById('hintLine');
+
+      const menuOverlay = document.getElementById('menuOverlay');
+      const startButton = document.getElementById('startButton');
+      const crosshairElem = document.getElementById('crosshair');
+
+      const messageOverlay = document.getElementById('messageOverlay');
+      const messageTitle = document.getElementById('messageTitle');
+      const messageBody = document.getElementById('messageBody');
+      const messageButton = document.getElementById('messageButton');
+      let messageCallback = null;
+
+      function showMessage(title, body, buttonText, callback) {
+        messageTitle.textContent = title;
+        messageBody.textContent = body || '';
+        messageButton.textContent = buttonText || 'OK';
+        messageOverlay.classList.remove('hidden');
+        messageCallback = callback || null;
+      }
+
+      messageButton.addEventListener('click', function() {
+        messageOverlay.classList.add('hidden');
+        if (messageCallback) {
+          const cb = messageCallback;
+          messageCallback = null;
+          cb();
+        }
+      });
+
+      const keys = {};
+      window.addEventListener('keydown', function(e) {
+        if ([
+          'Space',
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight'
+        ].includes(e.code)) {
+          e.preventDefault();
+        }
+        keys[e.code] = true;
+
+        if (e.code === 'KeyP') {
+          togglePause();
+        }
+
+        if (gameState === STATE_MENU && (e.code === 'Enter' || e.code === 'Space')) {
+          startButton.click();
+        }
+      });
+
+      window.addEventListener('keyup', function(e) {
+        keys[e.code] = false;
+      });
+
+      function togglePause() {
+        if (gameState === STATE_MENU || gameState === STATE_TRANSITION || gameState === STATE_GAMEOVER || gameState === STATE_VICTORY) {
+          return;
+        }
+        paused = !paused;
+        if (paused) {
+          hintLine.textContent = 'Paused – press P to resume.';
+        } else {
+          updateHintForState();
+        }
+      }
+
+      function updateHintForState() {
+        if (gameState === STATE_RUNNER) {
+          hintLine.textContent = 'World 1 – Grade Run: A/D to dodge lanes and obstacles, Space to jump, collect coins until Score ≥ 1000, then enter the glowing portal.';
+        } else if (gameState === STATE_EDU) {
+          hintLine.textContent = 'World 2 – Educational Maze: Collect 10 red boxes (+30) and avoid blue (-40) and green (-20). Then find the teleport ring.';
+        } else if (gameState === STATE_BOSS) {
+          hintLine.textContent = 'World 3 – Job Application Boss: Click to lock mouse, aim with the mouse, move with WASD, Space to hop, left-click to fire the Centrix Gun.';
+        } else if (gameState === STATE_GAMEOVER) {
+          hintLine.textContent = 'Game over – use the button to restart.';
+        } else if (gameState === STATE_VICTORY) {
+          hintLine.textContent = 'Victory – you can replay from World 1.';
+        } else if (gameState === STATE_TRANSITION) {
+          hintLine.textContent = 'Transition – read the message and continue.';
+        } else {
+          hintLine.textContent = '';
+        }
+      }
+
+      // Runner world variables
+      let runnerScene = null;
+      let runnerPlayer = null;
+      let gradeWall = null;
+      let runnerCoins = [];
+      let runnerNextCoinZ = 0;
+      let runnerScore = 0;
+      let runnerCoinsCollected = 0;
+      let runnerJumpVelocity = 0;
+      let runnerIsOnGround = true;
+      let runnerEscapePortal = null;
+      let runnerEscapeSpawned = false;
+      let runnerObstacles = [];
+      let runnerNextObstacleZ = 30;
+
+      function initRunnerWorld() {
+        runnerScene = new THREE.Scene();
+        runnerScene.background = new THREE.Color(0x020617);
+        runnerScene.fog = new THREE.Fog(0x020617, 10, 120);
+
+        const hemi = new THREE.HemisphereLight(0x38bdf8, 0x020617, 0.9);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+        dir.position.set(10, 20, -15);
+        runnerScene.add(hemi);
+        runnerScene.add(dir);
+
+        const floorGeo = new THREE.PlaneGeometry(30, 400);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x020617 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.z = 150;
+        runnerScene.add(floor);
+
+        const sideGeo = new THREE.BoxGeometry(1, 4, 400);
+        const sideMat = new THREE.MeshStandardMaterial({ color: 0x111827 });
+        const leftSide = new THREE.Mesh(sideGeo, sideMat);
+        const rightSide = new THREE.Mesh(sideGeo, sideMat);
+        leftSide.position.set(-6, 2, 150);
+        rightSide.position.set(6, 2, 150);
+        runnerScene.add(leftSide);
+        runnerScene.add(rightSide);
+
+        const playerGeo = new THREE.BoxGeometry(1, 2, 1);
+        const playerMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 0.8 });
+        runnerPlayer = new THREE.Mesh(playerGeo, playerMat);
+        runnerPlayer.position.set(0, 1, 0);
+        runnerScene.add(runnerPlayer);
+
+        const wallGeo = new THREE.BoxGeometry(13, 6, 1);
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c, emissiveIntensity: 0.4 });
+        gradeWall = new THREE.Mesh(wallGeo, wallMat);
+        gradeWall.position.set(0, 3, -30);
+        runnerScene.add(gradeWall);
+
+        runnerCoins = [];
+        runnerNextCoinZ = 15;
+        runnerScore = 0;
+        runnerCoinsCollected = 0;
+        runnerJumpVelocity = 0;
+        runnerIsOnGround = true;
+        runnerEscapePortal = null;
+        runnerEscapeSpawned = false;
+        runnerObstacles = [];
+        runnerNextObstacleZ = runnerPlayer.position.z + 30;
+
+        worldLabel.textContent = 'World 1: Grade Run';
+        runnerStats.classList.remove('hidden');
+        eduStats.classList.add('hidden');
+        bossStats.classList.add('hidden');
+        runnerCoinsElem.textContent = '0';
+        runnerScoreElem.textContent = '0';
+
+        camera.position.set(0, 6, -12);
+        camera.lookAt(runnerPlayer.position);
+
+        activeScene = runnerScene;
+      }
+
+      function spawnRunnerCoins() {
+        const lanes = [-3, 0, 3];
+        while (runnerNextCoinZ < runnerPlayer.position.z + 120) {
+          for (let i = 0; i < lanes.length; i++) {
+            if (Math.random() < 0.7) {
+              const x = lanes[i];
+              const z = runnerNextCoinZ + THREE.MathUtils.randFloat(-4, 4);
+              const coinGeo = new THREE.TorusGeometry(0.5, 0.2, 8, 16);
+              const coinMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.8, metalness: 0.5, roughness: 0.3 });
+              const coin = new THREE.Mesh(coinGeo, coinMat);
+              coin.position.set(x, 1, z);
+              coin.rotation.x = Math.PI / 2;
+              runnerScene.add(coin);
+              runnerCoins.push(coin);
+            }
+          }
+          runnerNextCoinZ += 12;
+        }
+      }
+
+      function spawnRunnerEscapePortal() {
+        const geo = new THREE.TorusGeometry(2.3, 0.35, 16, 32);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0ea5e9, emissiveIntensity: 1.1, metalness: 0.7, roughness: 0.2 });
+        runnerEscapePortal = new THREE.Mesh(geo, mat);
+        runnerEscapePortal.position.set(0, 2, runnerPlayer.position.z + 40);
+        runnerScene.add(runnerEscapePortal);
+        runnerEscapeSpawned = true;
+      }
+
+      function spawnRunnerObstacles() {
+        const lanes = [-3, 0, 3];
+        while (runnerNextObstacleZ < runnerPlayer.position.z + 120) {
+          const laneIndex = Math.floor(Math.random() * lanes.length);
+          const x = lanes[laneIndex];
+          const z = runnerNextObstacleZ + THREE.MathUtils.randFloat(-4, 4);
+          const height = Math.random() < 0.5 ? 1.2 : 2.5;
+          const obsGeo = new THREE.BoxGeometry(1.4, height, 1.4);
+          const obsMat = new THREE.MeshStandardMaterial({ color: 0x64748b, emissive: 0x1e293b, emissiveIntensity: 0.6 });
+          const obs = new THREE.Mesh(obsGeo, obsMat);
+          obs.position.set(x, height / 2, z);
+          runnerScene.add(obs);
+          runnerObstacles.push(obs);
+          runnerNextObstacleZ += 10;
+        }
+      }
+
+      function updateRunner(delta) {
+        const forwardSpeed = 32;
+        const lateralSpeed = 10;
+        const gravity = 40;
+
+        runnerPlayer.position.z += forwardSpeed * delta;
+
+        let moveX = 0;
+        if (keys['KeyA']) moveX += 1;
+        if (keys['KeyD']) moveX -= 1;
+        runnerPlayer.position.x += moveX * lateralSpeed * delta;
+        runnerPlayer.position.x = Math.max(-4.2, Math.min(4.2, runnerPlayer.position.x));
+
+        if (runnerIsOnGround && keys['Space']) {
+          runnerJumpVelocity = 13;
+          runnerIsOnGround = false;
+        }
+        runnerJumpVelocity -= gravity * delta;
+        runnerPlayer.position.y += runnerJumpVelocity * delta;
+        if (runnerPlayer.position.y <= 1) {
+          runnerPlayer.position.y = 1;
+          runnerJumpVelocity = 0;
+          runnerIsOnGround = true;
+        }
+
+        camera.position.z = runnerPlayer.position.z - 12;
+        camera.position.x = runnerPlayer.position.x * 0.7;
+        camera.position.y = 6 + (runnerPlayer.position.y - 1) * 0.5;
+        camera.lookAt(
+          runnerPlayer.position.x,
+          runnerPlayer.position.y + 1,
+          runnerPlayer.position.z + 6
+        );
+
+        const desiredWallZ = runnerPlayer.position.z - 24;
+        if (gradeWall.position.z < desiredWallZ) {
+          gradeWall.position.z = desiredWallZ;
+        } else {
+          gradeWall.position.z += (desiredWallZ - gradeWall.position.z) * 0.5;
+        }
+
+        spawnRunnerCoins();
+        spawnRunnerObstacles();
+
+        const playerPos = runnerPlayer.position;
+        // Coins
+        for (let i = runnerCoins.length - 1; i >= 0; i--) {
+          const coin = runnerCoins[i];
+          coin.rotation.y += delta * 3;
+          if (coin.position.z < playerPos.z - 20) {
+            runnerScene.remove(coin);
+            runnerCoins.splice(i, 1);
+            continue;
+          }
+          const dx = coin.position.x - playerPos.x;
+          const dy = coin.position.y - playerPos.y;
+          const dz = coin.position.z - playerPos.z;
+          if (dx * dx + dy * dy + dz * dz < 1.4) {
+            runnerScene.remove(coin);
+            runnerCoins.splice(i, 1);
+            runnerCoinsCollected++;
+            runnerScore += 20;
+            runnerCoinsElem.textContent = String(runnerCoinsCollected);
+            runnerScoreElem.textContent = String(runnerScore);
+          }
+        }
+
+        // Obstacles collision
+        for (let i = runnerObstacles.length - 1; i >= 0; i--) {
+          const obs = runnerObstacles[i];
+          if (obs.position.z < playerPos.z - 20) {
+            runnerScene.remove(obs);
+            runnerObstacles.splice(i, 1);
+            continue;
+          }
+          const dx = obs.position.x - playerPos.x;
+          const dy = obs.position.y - playerPos.y;
+          const dz = obs.position.z - playerPos.z;
+          if (dx * dx + dy * dy + dz * dz < 2.5) {
+            triggerGameOver('You hit an obstacle while running from your grades in World 1.');
+            return;
+          }
+        }
+
+        if (runnerPlayer.position.z - gradeWall.position.z < 3) {
+          triggerGameOver('The wall of grades caught up with you in World 1.');
+          return;
+        }
+
+        if (!runnerEscapeSpawned && runnerScore >= 1000) {
+          spawnRunnerEscapePortal();
+        }
+
+        if (runnerEscapePortal) {
+          runnerEscapePortal.rotation.y += delta * 2.5;
+          const p = runnerPlayer.position;
+          const portalPos = runnerEscapePortal.position;
+          const dx = portalPos.x - p.x;
+          const dz = portalPos.z - p.z;
+          if (dx * dx + dz * dz < 4) {
+            runnerEscapePortal = null;
+            runnerEscapeSpawned = false;
+            gameState = STATE_TRANSITION;
+            updateHintForState();
+            showMessage(
+              'Escape Successful!',
+              'You collected enough Centrix coins to build the Escape Machine.\n\nNext up: the Educational World.\nGrab 10 red Centrix boxes (+30) but dodge blues (-40) and greens (-20).',
+              'Enter Educational World',
+              function() {
+                initEduWorld();
+                gameState = STATE_EDU;
+                updateHintForState();
+              }
+            );
+          }
+        }
+      }
+
+      // Educational world variables
+      let eduScene = null;
+      let eduPlayer = null;
+      let eduItems = [];
+      let eduHealth = 120;
+      let eduRedsCollected = 0;
+      let eduPortal = null;
+      let eduPortalSpawned = false;
+
+      function initEduWorld() {
+        eduScene = new THREE.Scene();
+        eduScene.background = new THREE.Color(0x020617);
+        eduScene.fog = new THREE.Fog(0x020617, 10, 90);
+
+        const hemi = new THREE.HemisphereLight(0xa855f7, 0x020617, 0.9);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+        dir.position.set(30, 20, -10);
+        eduScene.add(hemi);
+        eduScene.add(dir);
+
+        const floorGeo = new THREE.PlaneGeometry(80, 80);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x020617, metalness: 0.1, roughness: 0.95 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        eduScene.add(floor);
+
+        const grid = new THREE.GridHelper(80, 40, 0x4ade80, 0x22c55e);
+        grid.position.y = 0.01;
+        eduScene.add(grid);
+
+        const playerGeo = new THREE.BoxGeometry(1.5, 2, 1.5);
+        const playerMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.8 });
+        eduPlayer = new THREE.Mesh(playerGeo, playerMat);
+        eduPlayer.position.set(0, 1, 0);
+        eduScene.add(eduPlayer);
+
+        eduItems = [];
+        eduHealth = 120;
+        eduRedsCollected = 0;
+        eduPortal = null;
+        eduPortalSpawned = false;
+
+        worldLabel.textContent = 'World 2: Educational Maze';
+        runnerStats.classList.add('hidden');
+        eduStats.classList.remove('hidden');
+        bossStats.classList.add('hidden');
+        eduHealthElem.textContent = String(eduHealth);
+        eduRedsElem.textContent = String(eduRedsCollected);
+
+        camera.position.set(0, 35, 30);
+        camera.lookAt(eduPlayer.position);
+
+        activeScene = eduScene;
+
+        spawnEduItems(20);
+      }
+
+      function spawnEduItems(count) {
+        for (let i = 0; i < count; i++) {
+          const r = Math.random();
+          const type = r < 0.5 ? 'red' : r < 0.75 ? 'blue' : 'green';
+          let color;
+          if (type === 'red') color = 0xf97316;
+          else if (type === 'blue') color = 0x0ea5e9;
+          else color = 0x22c55e;
+
+          const mat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.6, metalness: 0.15, roughness: 0.55 });
+          const box = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), mat);
+          const range = 30;
+          box.position.set(THREE.MathUtils.randFloatSpread(range), 0.7, THREE.MathUtils.randFloatSpread(range));
+          eduScene.add(box);
+          eduItems.push({ mesh: box, type: type });
+        }
+      }
+
+      function spawnEduPortal() {
+        const ringGeo = new THREE.TorusGeometry(2.2, 0.35, 16, 32);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0xa855f7, emissiveIntensity: 1.0, metalness: 0.7, roughness: 0.25 });
+        eduPortal = new THREE.Mesh(ringGeo, ringMat);
+        eduPortal.position.set(THREE.MathUtils.randFloatSpread(40), 2, THREE.MathUtils.randFloatSpread(40));
+        eduScene.add(eduPortal);
+        eduPortalSpawned = true;
+      }
+
+      function updateEduWorld(delta) {
+        const moveSpeed = 12;
+        let moveX = 0;
+        let moveZ = 0;
+        if (keys['KeyW']) moveZ -= 1;
+        if (keys['KeyS']) moveZ += 1;
+        if (keys['KeyA']) moveX -= 1;
+        if (keys['KeyD']) moveX += 1;
+
+        if (moveX || moveZ) {
+          const len = Math.hypot(moveX, moveZ) || 1;
+          moveX /= len;
+          moveZ /= len;
+          eduPlayer.position.x += moveX * moveSpeed * delta;
+          eduPlayer.position.z += moveZ * moveSpeed * delta;
+        }
+
+        const limit = 35;
+        eduPlayer.position.x = Math.max(-limit, Math.min(limit, eduPlayer.position.x));
+        eduPlayer.position.z = Math.max(-limit, Math.min(limit, eduPlayer.position.z));
+
+        camera.position.x = eduPlayer.position.x;
+        camera.position.z = eduPlayer.position.z + 28;
+        camera.position.y = 32;
+        camera.lookAt(eduPlayer.position.x, 0.5, eduPlayer.position.z);
+
+        const playerPos = eduPlayer.position;
+        for (let i = eduItems.length - 1; i >= 0; i--) {
+          const item = eduItems[i];
+          const mesh = item.mesh;
+          mesh.rotation.y += delta * 1.5;
+          const dx = mesh.position.x - playerPos.x;
+          const dz = mesh.position.z - playerPos.z;
+          if (dx * dx + dz * dz < 2.2) {
+            eduScene.remove(mesh);
+            eduItems.splice(i, 1);
+            if (item.type === 'red') {
+              eduRedsCollected++;
+              eduHealth = Math.min(eduHealth + 5, 140);
+              eduHealthElem.textContent = String(eduHealth);
+              eduRedsElem.textContent = String(eduRedsCollected);
+            } else if (item.type === 'blue') {
+              eduHealth -= 40;
+              eduHealthElem.textContent = String(eduHealth);
+            } else {
+              eduHealth -= 20;
+              eduHealthElem.textContent = String(eduHealth);
+            }
+
+            if (eduHealth <= 0) {
+              triggerGameOver('You dropped to zero health in the Educational World.');
+              return;
+            }
+          }
+        }
+
+        if (eduItems.length < 10 && !eduPortalSpawned) {
+          spawnEduItems(6);
+        }
+
+        if (!eduPortalSpawned && eduRedsCollected >= 10) {
+          spawnEduPortal();
+        }
+
+        if (eduPortal) {
+          eduPortal.rotation.y += delta * 2;
+          const dx = eduPortal.position.x - playerPos.x;
+          const dz = eduPortal.position.z - playerPos.z;
+          if (dx * dx + dz * dz < 4) {
+            eduPortal = null;
+            eduPortalSpawned = false;
+            gameState = STATE_TRANSITION;
+            updateHintForState();
+            showMessage(
+              'Educational Trial Complete',
+              'Nice work collecting red Centrix sites while dodging the bad ones.\n\nFinal stop: the Job Application boss.\nClick to lock your mouse, move with WASD, and left-click to fire the Centrix Gun.',
+              'Enter Final World',
+              function() {
+                initBossWorld();
+                gameState = STATE_BOSS;
+                updateHintForState();
+              }
+            );
+          }
+        }
+      }
+
+      // Boss world variables
+      let bossScene = null;
+      let bossPlayerPos = null;
+      let bossPlayerVelY = 0;
+      let bossOnGround = true;
+      let bossYaw = Math.PI;
+      let bossPitch = 0;
+      let bossPlayerHealth = 120;
+      let bossMaxHealth = 200;
+      let bossHealth = 200;
+      let enemies = [];
+      let bossPhaseIndex = 0;
+      let pointerLocked = false;
+      let shootCooldown = 0;
+      const SHOOT_INTERVAL = 0.25;
+
+      function initBossWorld() {
+        bossScene = new THREE.Scene();
+        bossScene.background = new THREE.Color(0x020617);
+        bossScene.fog = new THREE.Fog(0x020617, 10, 120);
+
+        const hemi = new THREE.HemisphereLight(0x0ea5e9, 0x020617, 0.9);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+        dir.position.set(-20, 25, 20);
+        bossScene.add(hemi);
+        bossScene.add(dir);
+
+        const floorGeo = new THREE.PlaneGeometry(80, 80);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x020617, metalness: 0.2, roughness: 0.8 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        bossScene.add(floor);
+
+        const ringGeo = new THREE.RingGeometry(10, 10.5, 64);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, side: THREE.DoubleSide, opacity: 0.4, transparent: true });
+        const arenaRing = new THREE.Mesh(ringGeo, ringMat);
+        arenaRing.rotation.x = -Math.PI / 2;
+        bossScene.add(arenaRing);
+
+        bossPlayerPos = new THREE.Vector3(0, 2, 18);
+        bossPlayerVelY = 0;
+        bossOnGround = true;
+        bossYaw = Math.PI;
+        bossPitch = 0;
+
+        bossMaxHealth = 200;
+        bossHealth = bossMaxHealth;
+        bossPlayerHealth = 120;
+        bossPlayerHPElem.textContent = String(bossPlayerHealth);
+        bossHPElem.textContent = '100';
+
+        enemies = [];
+        bossPhaseIndex = 0;
+        shootCooldown = 0;
+
+        const bossGeo = new THREE.BoxGeometry(4, 6, 2);
+        const bossMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 0.9, metalness: 0.3, roughness: 0.4 });
+        const bossMesh = new THREE.Mesh(bossGeo, bossMat);
+        bossMesh.position.set(0, 3, -20);
+        bossScene.add(bossMesh);
+        enemies.push({ mesh: bossMesh, type: 'boss', health: bossHealth });
+
+        worldLabel.textContent = 'World 3: Job Application Boss';
+        runnerStats.classList.add('hidden');
+        eduStats.classList.add('hidden');
+        bossStats.classList.remove('hidden');
+
+        camera.position.copy(bossPlayerPos);
+        camera.lookAt(0, 3, -20);
+
+        activeScene = bossScene;
+      }
+
+      function spawnMiniWave() {
+        const count = 5;
+        for (let i = 0; i < count; i++) {
+          const angle = (i / count) * Math.PI * 2;
+          const radius = 16;
+          const x = Math.cos(angle) * radius;
+          const z = -20 + Math.sin(angle) * radius;
+          const geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+          const mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.8 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x, 0.6, z);
+          bossScene.add(mesh);
+          enemies.push({ mesh: mesh, type: 'mini', health: 50, contactCooldown: 0 });
+        }
+      }
+
+      function flashMesh(mesh) {
+        if (!mesh.material || !mesh.material.emissive) return;
+        const original = mesh.material.emissive.clone();
+        mesh.material.emissive.setHex(0xffffff);
+        setTimeout(function() {
+          if (mesh.material) {
+            mesh.material.emissive.copy(original);
+          }
+        }, 80);
+      }
+
+      function handleEnemyHit(enemy, damage) {
+        enemy.health -= damage;
+        if (enemy.type === 'boss') {
+          bossHealth = enemy.health;
+          const pct = Math.max(0, Math.round((bossHealth / bossMaxHealth) * 100));
+          bossHPElem.textContent = String(pct);
+          const thresholds = [0.75, 0.5, 0.25];
+          if (bossPhaseIndex < thresholds.length) {
+            const thresholdHealth = thresholds[bossPhaseIndex] * bossMaxHealth;
+            if (bossHealth <= thresholdHealth) {
+              spawnMiniWave();
+              bossPhaseIndex++;
+            }
+          }
+        }
+
+        if (enemy.health <= 0) {
+          if (enemy.mesh && enemy.mesh.parent) {
+            enemy.mesh.parent.remove(enemy.mesh);
+          }
+          const idx = enemies.indexOf(enemy);
+          if (idx !== -1) enemies.splice(idx, 1);
+        }
+      }
+
+      function shootCentrixGun() {
+        if (shootCooldown > 0) return;
+        shootCooldown = SHOOT_INTERVAL;
+
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        const ray = new THREE.Raycaster(camera.position.clone(), dir);
+        const meshes = enemies.map(function(e) { return e.mesh; });
+        const intersects = ray.intersectObjects(meshes);
+        if (intersects.length === 0) return;
+        const hitMesh = intersects[0].object;
+        const enemy = enemies.find(function(e) { return e.mesh === hitMesh; });
+        if (!enemy) return;
+
+        const damage = enemy.type === 'boss' ? 7 : 35;
+        flashMesh(hitMesh);
+        handleEnemyHit(enemy, damage);
+
+        if (!enemies.some(function(e) { return e.type === 'boss'; })) {
+          triggerVictory();
+        }
+      }
+
+      renderer.domElement.addEventListener('click', function() {
+        if (gameState === STATE_BOSS && !pointerLocked) {
+          renderer.domElement.requestPointerLock();
+        }
+      });
+
+      document.addEventListener('pointerlockchange', function() {
+        pointerLocked = (document.pointerLockElement === renderer.domElement);
+        crosshairElem.style.display = (pointerLocked && gameState === STATE_BOSS) ? 'block' : 'none';
+      });
+
+      document.addEventListener('mousemove', function(event) {
+        if (!pointerLocked || gameState !== STATE_BOSS) return;
+        const sensitivity = 0.0025;
+        bossYaw += event.movementX * sensitivity;
+        bossPitch -= event.movementY * sensitivity;
+        const maxPitch = Math.PI / 2 - 0.15;
+        if (bossPitch > maxPitch) bossPitch = maxPitch;
+        if (bossPitch < -maxPitch) bossPitch = -maxPitch;
+      });
+
+      document.addEventListener('mousedown', function(event) {
+        if (event.button !== 0) return;
+        if (gameState === STATE_BOSS) {
+          if (!pointerLocked) {
+            renderer.domElement.requestPointerLock();
+          } else {
+            shootCentrixGun();
+          }
+        }
+      });
+
+      function updateBossWorld(delta) {
+        if (shootCooldown > 0) shootCooldown -= delta;
+
+        const moveSpeed = 12;
+        const arenaLimit = 30;
+
+        let forward = 0;
+        let right = 0;
+        if (keys['KeyW']) forward += 1;
+        if (keys['KeyS']) forward -= 1;
+        if (keys['KeyA']) right -= 1;
+        if (keys['KeyD']) right += 1;
+
+        if (forward || right) {
+          const len = Math.hypot(forward, right) || 1;
+          forward /= len;
+          right /= len;
+          const forwardVec = new THREE.Vector3(Math.sin(bossYaw), 0, -Math.cos(bossYaw));
+          const rightVec = new THREE.Vector3().crossVectors(forwardVec, new THREE.Vector3(0, 1, 0));
+          const moveVec = new THREE.Vector3();
+          moveVec.addScaledVector(forwardVec, forward * moveSpeed * delta);
+          moveVec.addScaledVector(rightVec, right * moveSpeed * delta);
+          bossPlayerPos.add(moveVec);
+        }
+
+        const gravity = 30;
+        const jumpSpeed = 12;
+        if (bossOnGround && keys['Space']) {
+          bossPlayerVelY = jumpSpeed;
+          bossOnGround = false;
+        }
+        bossPlayerVelY -= gravity * delta;
+        bossPlayerPos.y += bossPlayerVelY * delta;
+        if (bossPlayerPos.y < 2) {
+          bossPlayerPos.y = 2;
+          bossOnGround = true;
+          bossPlayerVelY = 0;
+        }
+
+        bossPlayerPos.x = Math.max(-arenaLimit, Math.min(arenaLimit, bossPlayerPos.x));
+        bossPlayerPos.z = Math.max(-arenaLimit, Math.min(arenaLimit, bossPlayerPos.z));
+
+        const cosPitch = Math.cos(bossPitch);
+        const dir = new THREE.Vector3(
+          Math.sin(bossYaw) * cosPitch,
+          Math.sin(bossPitch),
+          -Math.cos(bossYaw) * cosPitch
+        );
+        camera.position.copy(bossPlayerPos);
+        const target = new THREE.Vector3().addVectors(bossPlayerPos, dir);
+        camera.lookAt(target);
+
+        const playerPos = bossPlayerPos;
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const enemy = enemies[i];
+          if (enemy.type === 'mini') {
+            const m = enemy.mesh;
+            m.lookAt(playerPos.x, m.position.y, playerPos.z);
+            const toPlayer = new THREE.Vector3().subVectors(playerPos, m.position);
+            toPlayer.normalize();
+            const speed = 7 / 1.5;
+            m.position.addScaledVector(toPlayer, speed * delta);
+            const newDist = m.position.distanceTo(playerPos);
+            enemy.contactCooldown = Math.max(0, (enemy.contactCooldown || 0) - delta);
+            if (newDist < 2.0 && enemy.contactCooldown <= 0) {
+              enemy.contactCooldown = 0.8;
+              bossPlayerHealth -= 15;
+              if (bossPlayerHealth < 0) bossPlayerHealth = 0;
+              bossPlayerHPElem.textContent = String(bossPlayerHealth);
+              if (bossPlayerHealth <= 0) {
+                triggerGameOver('Homework mini-bosses overwhelmed you in the Job Application arena.');
+                return;
+              }
+            }
+          }
+        }
+
+        if (!enemies.some(function(e) { return e.type === 'boss'; })) {
+          triggerVictory();
+        }
+      }
+
+      function triggerGameOver(reason) {
+        gameState = STATE_GAMEOVER;
+        paused = false;
+        updateHintForState();
+        if (document.pointerLockElement === renderer.domElement) {
+          document.exitPointerLock();
+        }
+        crosshairElem.style.display = 'none';
+        showMessage(
+          'Game Over',
+          reason + '\n\nClick below to restart from World 1.',
+          'Restart',
+          function() {
+            messageOverlay.classList.add('hidden');
+            initRunnerWorld();
+            gameState = STATE_RUNNER;
+            updateHintForState();
+          }
+        );
+      }
+
+      function triggerVictory() {
+        gameState = STATE_VICTORY;
+        paused = false;
+        updateHintForState();
+        if (document.pointerLockElement === renderer.domElement) {
+          document.exitPointerLock();
+        }
+        crosshairElem.style.display = 'none';
+        showMessage(
+          'Centrix Ultimate Hack (Prank) Complete!',
+          'You defeated the Job Application boss and all homework mini-bosses.\n\nThe Secure Centrix81 systems stay intact, but your prank-level Ultimate Hack will be remembered.',
+          'Play Again',
+          function() {
+            messageOverlay.classList.add('hidden');
+            initRunnerWorld();
+            gameState = STATE_RUNNER;
+            updateHintForState();
+          }
+        );
+      }
+
+      startButton.addEventListener('click', function() {
+        menuOverlay.classList.add('hidden');
+        initRunnerWorld();
+        gameState = STATE_RUNNER;
+        paused = false;
+        updateHintForState();
+      });
+
+      window.addEventListener('resize', function() {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+
+        if (!activeScene) return;
+
+        if (!paused) {
+          if (gameState === STATE_RUNNER) {
+            if (runnerPlayer) updateRunner(delta);
+          } else if (gameState === STATE_EDU) {
+            if (eduPlayer) updateEduWorld(delta);
+          } else if (gameState === STATE_BOSS) {
+            if (bossPlayerPos) updateBossWorld(delta);
+          }
+        }
+
+        renderer.render(activeScene, camera);
+      }
+
+      clock.start();
+      animate();
+    })();
+  </script>
+</body>
+</html>

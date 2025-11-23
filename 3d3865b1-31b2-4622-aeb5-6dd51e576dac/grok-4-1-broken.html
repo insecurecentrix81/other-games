@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh Gobi-LOW iq adventures</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+    </style>
+</head>
+<body>
+<script>
+const config = {
+    type: Phaser.AUTO,
+    width: 1200,
+    height: 600,
+    physics: { default: 'arcade', arcade: { gravity: { y: 300 }, debug: false } },
+    scene: [BootScene, MenuScene, RunnerScene, EducationScene, JobScene, GameOverScene, VictoryScene]
+};
+const game = new Phaser.Game(config);
+const SAHARSH_URL = 'https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg';
+class BootScene extends Phaser.Scene {
+    constructor() { super('Boot'); }
+    preload() {
+        this.load.image('saharsh', SAHARSH_URL);
+    }
+    create() {
+        this.scene.start('Menu');
+    }
+}
+class MenuScene extends Phaser.Scene {
+    constructor() { super('Menu'); }
+    create() {
+        this.add.text(600, 150, "Saharsh Gobi-LOW iq adventures", { fontSize: '56px', fill: '#ff0044', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(600, 250, "The ultimate prank journey", { fontSize: '36px', fill: '#ffffff' }).setOrigin(0.5);
+        this.add.text(600, 350, "WASD = Move   |   SPACE = Jump / Shoot   |   Mouse = Aim in final stage", { fontSize: '28px', fill: '#00ff00' }).setOrigin(0.5);
+        this.add.text(600, 450, "PRESS SPACE TO START", { fontSize: '40px', fill: '#ffff00' }).setOrigin(0.5).setBlink(this);
+        this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Runner'));
+    }
+}
+class RunnerScene extends Phaser.Scene {
+    constructor() {
+        super('Runner');
+        this.score = 0;
+    }
+    create() {
+        this.cameras.main.setBackgroundColor('#87CEEB');
+        this.add.text(20, 20, 'Stage 1: Run from Grades - Collect 1000 coins!', { fontSize: '28px', fill: '#000' }).setScrollFactor(0);
+        this.scoreText = this.add.text(20, 70, 'Coins: 0 / 1000', { fontSize: '32px', fill: '#ffff00' }).setScrollFactor(0);
+        this.player = this.physics.add.sprite(200, 400, 'saharsh').setScale(0.2).setDepth(10);
+        this.player.setCollideWorldBounds(true);
+        this.player.setBounce(0.1);
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        this.grounds = this.physics.add.staticGroup();
+        this.coins = this.physics.add.group();
+        this.obstacles = this.physics.add.group();
+        this.lastX = 0;
+        this.generateChunk();
+        this.physics.add.collider(this.player, this.grounds);
+        this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
+        this.physics.add.collider(this.player, this.obstacles, () => this.scene.start('GameOver'), null, this);
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.keys = this.input.keyboard.addKeys('W,A,S,D');
+        this.time.addEvent({ delay: 100, callback: this.autoRun, callbackScope: this, loop: true });
+    }
+    generateChunk() {
+        for (let i = 0; i < 15; i++) {
+            let x = this.lastX + Phaser.Math.Between(200, 400);
+            let width = Phaser.Math.Between(300, 700);
+            let ground = this.grounds.create(x, 550, null).setSize(width, 120).setVisible(false).refreshBody();
+            // coins
+            if (Phaser.Math.Between(0, 1)) {
+                let coin = this.add.circle(x, 400, 25, 0xffd700).setDepth(5);
+                this.physics.add.existing(coin);
+                this.coins.add(coin);
+            }
+            // grade obstacles
+            if (Phaser.Math.Between(0, 3) === 0) {
+                let obs = this.add.rectangle(x + 100, 480, 80, 120, 0xff0000);
+                this.physics.add.existing(obs, true);
+                this.obstacles.add(obs);
+                this.add.text(x + 60, 420, 'F', { fontSize: '48px', fill: '#fff' });
+            }
+            this.lastX = x + width / 2;
+        }
+    }
+    autoRun() {
+        this.player.x += 5; // constant forward movement
+        if (this.player.x > this.lastX - 2000) this.generateChunk();
+        // portal when 1000 coins
+        if (this.score >= 1000 && !this.portal) {
+            this.portal = this.add.rectangle(this.player.x + 800, 400, 120, 250, 0x00ff00).setAlpha(0.7);
+            this.physics.add.existing(this.portal, true);
+            this.physics.add.overlap(this.player, this.portal, () => this.scene.start('Education'), null, this);
+        }
+    }
+    collectCoin(player, coin) {
+        coin.destroy();
+        this.score += 10;
+        this.scoreText.setText('Coins: ' + this.score + ' / 1000');
+    }
+    update() {
+        if (this.keys.A.isDown || this.cursors.left.isDown) this.player.setVelocityX(-300);
+        else if (this.keys.D.isDown || this.cursors.right.isDown) this.player.setVelocityX(300);
+        else this.player.setVelocityX(0);
+        if ((this.keys.SPACE.isDown || this.cursors.up.isDown) && this.player.body.touching.down) {
+            this.player.setVelocityY(-450);
+        }
+    }
+}
+class EducationScene extends Phaser.Scene {
+    constructor() {
+        super('Education');
+        this.redCollected = 0;
+        this.health = 300;
+    }
+    create() {
+        this.cameras.main.setBackgroundColor('#113311');
+        this.add.text(20, 20, 'Stage 2: Educational World - Collect 10 Red Boxes (Hacked Centrix!)', { fontSize: '24px', fill: '#fff' }).setScrollFactor(0);
+        this.redText = this.add.text(20, 70, 'Red Boxes: 0 / 10', { fontSize: '32px', fill: '#ff0000' }).setScrollFactor(0);
+        this.healthText = this.add.text(20, 110, 'Health: 300', { fontSize: '32px', fill: '#00ff00' }).setScrollFactor(0);
+        this.player = this.physics.add.sprite(600, 300, 'saharsh').setScale(0.25);
+        this.physics.world.setBounds(0, 0, 2400, 1200);
+        this.cameras.main.setBounds(0, 0, 2400, 1200);
+        this.cameras.main.startFollow(this.player);
+        this.redBoxes = this.physics.add.staticGroup();
+        for (let i = 0; i < 10; i++) {
+            let box = this.add.rectangle(Phaser.Math.Between(200, 2200), Phaser.Math.Between(200, 1000), 100, 100, 0xff0000);
+            this.physics.add.existing(box, true);
+            this.redBoxes.add(box);
+            this.add.text(box.x - 45, box.y - 30, 'HACKED', { fontSize: '20px', fill: '#fff' });
+        }
+        this.badBoxes = this.physics.add.group();
+        for (let i = 0; i < 20; i++) {
+            let color = i % 2 === 0 ? 0x0000ff : 0x00ff00;
+            let damage = i % 2 === 0 ? 40 : 20;
+            let box = this.add.rectangle(Phaser.Math.Between(100, 2300), Phaser.Math.Between(100, 1100), 80, 80, color);
+            this.physics.add.existing(box);
+            box.damage = damage;
+            this.badBoxes.add(box);
+            box.setVelocity(Phaser.Math.Between(-80, 80), Phaser.Math.Between(-80, 80));
+            box.setBounce(1);
+            box.setCollideWorldBounds(true);
+        }
+        this.physics.add.overlap(this.player, this.redBoxes, this.collectRed, null, this);
+        this.physics.add.overlap(this.player, this.badBoxes, this.hitBad, null, this);
+        this.keys = this.input.keyboard.addKeys('W,A,S,D');
+    }
+    collectRed(p, box) {
+        box.destroy();
+        this.redCollected++;
+        this.redText.setText('Red Boxes: ' + this.redCollected + ' / 10');
+        if (this.redCollected === 10) {
+            let portal = this.add.rectangle(1200, 600, 150, 300, 0x00ff00).setAlpha(0.8);
+            this.physics.add.existing(portal, true);
+            this.physics.add.overlap(this.player, portal, () => this.scene.start('Job'), null, this);
+        }
+    }
+    hitBad(p, box) {
+        this.health -= box.damage;
+        this.healthText.setText('Health: ' + this.health);
+        if (this.health <= 0) this.scene.start('GameOver');
+        box.destroy();
+    }
+    update() {
+        const speed = 250;
+        this.player.setVelocity(0);
+        if (this.keys.W.isDown) this.player.setVelocityY(-speed);
+        if (this.keys.S.isDown) this.player.setVelocityY(speed);
+        if (this.keys.A.isDown) this.player.setVelocityX(-speed);
+        if (this.keys.D.isDown) this.player.setVelocityX(speed);
+    }
+}
+class JobScene extends Phaser.Scene {
+    constructor() {
+        super('Job');
+        this.jobProgress = 100;
+        this.spawnedAt = [];
+    }
+    create() {
+        this.cameras.main.setBackgroundColor('#1a0033');
+        this.add.text(20, 20, 'FINAL STAGE: Job Application Boss Fight - Use Centrix Gun!', { fontSize: '28px', fill: '#ff00ff' }).setScrollFactor(0);
+        this.progressText = this.add.text(20, 70, 'Job Progress: 100%', { fontSize: '32px', fill: '#ff0000' }).setScrollFactor(0);
+        this.player = this.physics.add.sprite(600, 300, 'saharsh').setScale(0.25);
+        this.keys = this.input.keyboard.addKeys('W,A,S,D');
+        this.bullets = this.physics.add.group({ classType: Phaser.GameObjects.Rectangle, maxSize: 100 });
+        this.input.on('pointerdown', this.shoot, this);
+        this.boss = this.add.rectangle(1000, 300, 250, 250, 0x880000).setDepth(5);
+        this.physics.add.existing(this.boss);
+        this.boss.health = 800;
+        this.add.text(920, 200, 'JOB BOSS', { fontSize: '48px', fill: '#fff' });
+        this.homeworks = this.physics.add.group();
+        this.physics.add.overlap(this.bullets, this.boss, this.damageBoss, null, this);
+        this.physics.add.overlap(this.bullets, this.homeworks, this.damageHW, null, this);
+        this.physics.add.overlap(this.player, this.homeworks, () => this.scene.start('GameOver'), null, this);
+        this.physics.add.overlap(this.player, this.boss, () => this.scene.start('GameOver'), null, this);
+        this.time.addEvent({ delay: 800, callback: this.lowerProgress, callbackScope: this, loop: true });
+    }
+    shoot(pointer) {
+        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, pointer.x + this.cameras.main.scrollX, pointer.y + this.cameras.main.scrollY);
+        const bullet = this.bullets.get(this.player.x, this.player.y);
+        if (bullet) {
+            bullet.setSize(20, 8).setTint(0xff0000);
+            this.physics.add.existing(bullet);
+            bullet.body.setVelocity(Math.cos(angle) * 900, Math.sin(angle) * 900);
+            this.time.delayedCall(800, () => bullet.destroy());
+        }
+    }
+    lowerProgress() {
+        this.jobProgress -= 2;
+        this.progressText.setText('Job Progress: ' + this.jobProgress + '%');
+        if (this.jobProgress <= 75 && !this.spawnedAt.includes(75)) { this.spawnWave(); this.spawnedAt.push(75); }
+        if (this.jobProgress <= 50 && !this.spawnedAt.includes(50)) { this.spawnWave(); this.spawnedAt.push(50); }
+        if (this.jobProgress <= 25 && !this.spawnedAt.includes(25)) { this.spawnWave(); this.spawnedAt.push(25); }
+    }
+    spawnWave() {
+        for (let i = 0; i < 5; i++) {
+            let hw = this.add.rectangle(Phaser.Math.Between(100, 1100), Phaser.Math.Between(100, 500), 90, 90, 0x888888);
+            this.physics.add.existing(hw);
+            hw.health = 50;
+            this.add.text(hw.x - 30, hw.y - 30, 'HW', { fontSize: '36px', fill: '#000' });
+            this.homeworks.add(hw);
+        }
+    }
+    damageBoss(bullet, boss) {
+        bullet.destroy();
+        boss.health -= 30;
+        if (boss.health <= 0) this.scene.start('Victory');
+    }
+    damageHW(bullet, hw) {
+        bullet.destroy();
+        hw.health -= 30;
+        if (hw.health <= 0) hw.destroy();
+    }
+    update() {
+        const speed = 220;
+        this.player.setVelocity(0);
+        if (this.keys.W.isDown) this.player.setVelocityY(-speed);
+        if (this.keys.S.isDown) this.player.setVelocityY(speed);
+        if (this.keys.A.isDown) this.player.setVelocityX(-speed);
+        if (this.keys.D.isDown) this.player.setVelocityX(speed);
+        this.homeworks.children.each(hw => {
+            this.physics.moveToObject(hw, this.player, 90);
+        }, this);
+    }
+}
+class GameOverScene extends Phaser.Scene {
+    constructor() { super('GameOver'); }
+    create() {
+        this.add.text(600, 250, 'GAME OVER', { fontSize: '80px', fill: '#ff0000' }).setOrigin(0.5);
+        this.add.text(600, 350, 'Saharsh got rekt by reality', { fontSize: '40px', fill: '#ffffff' }).setOrigin(0.5);
+        this.add.text(600, 450, 'Press SPACE to try again', { fontSize: '32px', fill: '#ffff00' }).setOrigin(0.5);
+        this.input.keyboard.once('keydown-SPACE', () => location.reload());
+    }
+}
+class VictoryScene extends Phaser.Scene {
+    constructor() { super('Victory'); }
+    create() {
+        this.add.text(600, 150, 'VICTORY!!!', { fontSize: '80px', fill: '#00ff00' }).setOrigin(0.5);
+        this.add.text(600, 260, 'CENTRIX ULTIMATE HACKED AS PRANK', { fontSize: '50px', fill: '#ff00ff' }).setOrigin(0.5);
+        this.add.text(600, 360, 'Saharsh Gobi is now free forever', { fontSize: '40px', fill: '#ffff00' }).setOrigin(0.5);
+        this.add.image(600, 450, 'saharsh').setScale(1.2);
+    }
+}
+</script>
+</body>
+</html>

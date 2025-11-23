@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh's Secure Centrix Run: Anti-GPA</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Courier New', Courier, monospace; background-color: #1a1a1a; user-select: none; }
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 5;
+        }
+        #score-board {
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #total-score-display {
+            font-size: 18px;
+            color: #0ff;
+            margin-top: 5px;
+        }
+        #gpa-container {
+            width: 300px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            padding: 5px;
+            position: relative;
+        }
+        #gpa-bar {
+            height: 20px;
+            width: 0%; /* Starts empty (0.0) */
+            background: linear-gradient(90deg, green, yellow, red);
+            transition: width 0.1s linear;
+        }
+        #gpa-text {
+            color: white;
+            text-align: center;
+            margin-top: 5px;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            border: 2px solid #f00;
+            border-radius: 15px;
+            display: none;
+            pointer-events: auto;
+            box-shadow: 0 0 20px #f00;
+            z-index: 20;
+            min-width: 400px;
+        }
+        .btn {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 5px;
+            transition: 0.2s;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .btn:hover { background: #fff; }
+        .btn-locked { background: #333; color: #777; cursor: not-allowed; border: 1px solid #555; }
+        .btn-locked:hover { background: #333; }
+        
+        .btn-danger { background: #f00; color: white; }
+        .btn-danger:hover { background: #a00; }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #0f0;
+            pointer-events: auto;
+            z-index: 10;
+            overflow-y: auto;
+        }
+        h1 { text-shadow: 0 0 10px #0f0; margin-bottom: 10px; }
+        p { color: #ccc; max-width: 600px; text-align: center; margin-bottom: 10px; }
+        
+        #difficulty-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+            width: 500px;
+        }
+        .difficulty-card {
+            background: #222;
+            border: 1px solid #0f0;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .difficulty-card:hover { background: #333; }
+        .difficulty-card.locked { border-color: #555; color: #555; pointer-events: none; }
+        
+        /* Completion Modal Styles */
+        .completion-text { color: #ffd700; font-weight: bold; margin-bottom: 15px; display: block;}
+    </style>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div id="score-board">
+            <div>RUN SCORE: <span id="score">0</span></div>
+            <div id="total-score-display">BANK: <span id="bank-score">0</span></div>
+            <div style="font-size: 16px; color: #aaa;">Status: <span id="status">Hacker Elite</span></div>
+            <div style="font-size: 12px; color: #555; margin-top:5px;">Mode: <span id="current-mode">Easy</span></div>
+        </div>
+        <div id="gpa-container">
+            <div id="gpa-bar"></div>
+            <div id="gpa-text">GPA: 0.0</div>
+        </div>
+    </div>
+
+    <div id="start-screen">
+        <h1 class="text-4xl font-bold">SECURE CENTRIX: ANTI-GPA</h1>
+        <p class="text-lg">Avoid Grades. Collect Laptops. Don't hit 4.0 GPA.</p>
+        <p style="color: #0ff; font-weight: bold; font-size: 1.2em;">TOTAL SECURE CENTRIX SCORE: <span id="menu-total-score">0</span></p>
+        
+        <div class="bg-gray-800 p-3 rounded-lg my-2 text-left text-sm w-[500px]">
+            <p>💻 <strong>Green Laptop</strong>: -0.25 GPA | +Score</p>
+            <p>🟥 <strong>Red Grade</strong>: +0.5 GPA | 💀</p>
+            <p class="text-yellow-400 mt-2 text-center">Spend Score to unlock harder difficulties.</p>
+        </div>
+
+        <div id="difficulty-container">
+            <!-- Buttons generated by JS -->
+        </div>
+        
+        <button id="reset-save-btn" class="mt-8 text-xs text-gray-500 hover:text-red-500 underline cursor-pointer bg-transparent border-none">Reset All Data</button>
+    </div>
+
+    <div id="game-over">
+        <h2 class="text-3xl font-bold text-red-500 mb-2" id="go-title">ACADEMIC VICTIM</h2>
+        
+        <div id="go-normal-content">
+            <p class="mb-2">You accidentally got a 4.0 GPA.</p>
+            <p>Run Score: <span class="text-green-400 font-bold" id="final-run-score">0</span></p>
+            <p>Total Bank: <span class="text-cyan-400 font-bold" id="final-total-score">0</span></p>
+            <p class="text-sm text-gray-400 mt-2" id="unlock-message"></p>
+            <button class="btn" id="back-to-menu-btn">Back to Menu</button>
+        </div>
+
+        <div id="go-completion-content" style="display: none;">
+            <p class="completion-text text-xl">🎉 SECURE CENTRIX MASTERED 🎉</p>
+            <p>You have faced Saharsh and survived (briefly).</p>
+            <p>The cycle is complete.</p>
+            <div class="mt-4">
+                <button class="btn" id="continue-btn">Continue Playing (Keep Score)</button>
+                <button class="btn btn-danger" id="prestige-btn">Restart Game (Reset All)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>let error=1;addEventListener("error",(e)=>{if(error){alert(e.message+"@"+e.lineno);error=false}})</script>
+    <script type="module">
+        import * as THREE from 'three';
+
+        let pageStorageID = location.href
+        let pageStorage = {
+          getItem: function(n) {
+            let data
+            try {
+              data = JSON.parse(localStorage.getItem(pageStorageID))
+              if (data === null) {
+                localStorage.setItem(pageStorageID, "{}")
+                data = {}
+              }
+            } catch (e) {
+              localStorage.setItem(pageStorageID, "{}")
+              data = {}
+            }
+            return data[n]
+          },
+          setItem: function(n,to) {
+            let data
+            try {
+              data = JSON.parse(localStorage.getItem(pageStorageID))
+            } catch (e) {
+              localStorage.setItem(pageStorageID, "{}")
+              data = {}
+            }
+            data[n] = to
+            localStorage.setItem(pageStorageID, JSON.stringify(data))
+          },
+          clear: function() {
+            localStorage.removeItem(pageStorageID)
+          }
+        }
+        // --- Difficulty Configuration ---
+        const DIFFICULTIES = [
+            {
+                name: "Easy",
+                cost: 0,
+                params: {
+                    START_REACTION_MS: 4000, MIN_REACTION_MS: 3000, TIME_TO_MAX_SPEED: 5,
+                    min_spawnInterval: 2, max_spawnInterval: 0.5, time_to_max_spawninterval: 5
+                }
+            },
+            {
+                name: "Normal",
+                cost: 7500, // approx 1 min
+                params: {
+                    START_REACTION_MS: 4000, MIN_REACTION_MS: 2000, TIME_TO_MAX_SPEED: 30,
+                    min_spawnInterval: 2, max_spawnInterval: 0.33, time_to_max_spawninterval: 30
+                }
+            },
+            {
+                name: "Hard",
+                cost: 25000, // approx > 1.1 min
+                params: {
+                    START_REACTION_MS: 4000, MIN_REACTION_MS: 1000, TIME_TO_MAX_SPEED: 60,
+                    min_spawnInterval: 2, max_spawnInterval: 0.2, time_to_max_spawninterval: 60
+                }
+            },
+            {
+                name: "Expert",
+                cost: 80000, // approx < 2 min
+                params: {
+                    START_REACTION_MS: 5000, MIN_REACTION_MS: 600, TIME_TO_MAX_SPEED: 60,
+                    min_spawnInterval: 1.0, max_spawnInterval: 0.15, time_to_max_spawninterval: 120
+                }
+            },
+            {
+                name: "Impossible",
+                cost: 120000, // 146250/(2+49.57/60) = ~51748.5404258/min = approx > 2 min
+                params: {
+                    START_REACTION_MS: 10000, MIN_REACTION_MS: 550, TIME_TO_MAX_SPEED: 5,
+                    min_spawnInterval: 0.15, max_spawnInterval: 0.15, time_to_max_spawninterval: 1
+                }
+            },
+            {
+                name: "Saharsh",
+                cost: 1000000, // ~50000/min
+                params: {
+                    START_REACTION_MS: 100000, MIN_REACTION_MS: 300, TIME_TO_MAX_SPEED: 10,
+                    min_spawnInterval: 0, max_spawnInterval: 0, time_to_max_spawninterval: 1, saharsh_final: true
+                }
+            }
+        ];
+
+        // --- Game State Management ---
+        let totalScore = parseInt(pageStorage.getItem('totalScore')) || 0;
+        let unlockedIndex = parseInt(pageStorage.getItem('unlockedIndex')) || 0;
+        let currentDifficultyIndex = 0;
+
+        // --- 3D Configuration ---
+        const SAHARSH_IMG_URL = "https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg";
+        const LANE_WIDTH = 2.5;
+        const SPAWN_Z = -60;
+
+        // Game Runtime Variables
+        let scene, camera, renderer;
+        let player, laneHighlight;
+        let lanes = [-LANE_WIDTH, 0, LANE_WIDTH];
+        let currentLane = 1; 
+        let gameObjects = [];
+        let particles = [];
+        let gameActive = false;
+        let runScore = 0;
+        let gpa = 0.0;
+        let clock = new THREE.Clock();
+        let totalTime = 0;
+        let worldSpeed = 0;
+        let currentReactionMs = 0;
+        let nextSpawnTime = 0;
+        let spawnInterval = 0;
+
+        // Current Difficulty Params
+        let curParams = DIFFICULTIES[0].params;
+
+        // DOM Elements
+        const uiScore = document.getElementById('score');
+        const uiBank = document.getElementById('bank-score');
+        const uiStatus = document.getElementById('status');
+        const uiMode = document.getElementById('current-mode');
+        const gpaBar = document.getElementById('gpa-bar');
+        const gpaText = document.getElementById('gpa-text');
+        
+        const startScreen = document.getElementById('start-screen');
+        const menuTotalScore = document.getElementById('menu-total-score');
+        const difficultyContainer = document.getElementById('difficulty-container');
+        
+        const gameOverScreen = document.getElementById('game-over');
+        const goNormalContent = document.getElementById('go-normal-content');
+        const goCompletionContent = document.getElementById('go-completion-content');
+        const finalRunScore = document.getElementById('final-run-score');
+        const finalTotalScore = document.getElementById('final-total-score');
+        const unlockMessage = document.getElementById('unlock-message');
+        
+        const backMenuBtn = document.getElementById('back-to-menu-btn');
+        const continueBtn = document.getElementById('continue-btn');
+        const prestigeBtn = document.getElementById('prestige-btn');
+        const resetSaveBtn = document.getElementById('reset-save-btn');
+
+        // Texture Loader
+        const textureLoader = new THREE.TextureLoader();
+        const saharshTexture = textureLoader.load(SAHARSH_IMG_URL);
+
+        function init() {
+            setup3D();
+            setupUI();
+            animate();
+        }
+
+        function setupUI() {
+            updateMenuUI();
+            
+            backMenuBtn.addEventListener('click', () => {
+                gameOverScreen.style.display = 'none';
+                startScreen.style.display = 'flex';
+                resetGameEntities();
+                updateMenuUI();
+            });
+
+            // Complete Reset (Prestige)
+            prestigeBtn.addEventListener('click', () => {
+                if(confirm("Are you sure? This will wipe all progress and start from Easy.")) {
+                    pageStorage.clear();
+                    location.reload();
+                }
+            });
+
+            // Continue Playing (Keep Score)
+            continueBtn.addEventListener('click', () => {
+                gameOverScreen.style.display = 'none';
+                startScreen.style.display = 'flex';
+                resetGameEntities();
+                updateMenuUI();
+            });
+
+            resetSaveBtn.addEventListener('click', () => {
+                if(confirm("Delete all save data?")) {
+                    pageStorage.clear();
+                    location.reload();
+                }
+            });
+
+            window.addEventListener('keydown', handleInput);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function updateMenuUI() {
+            menuTotalScore.innerText = totalScore;
+            difficultyContainer.innerHTML = '';
+
+            DIFFICULTIES.forEach((diff, index) => {
+                const btn = document.createElement('div');
+                btn.className = 'difficulty-card';
+                
+                if (index <= unlockedIndex) {
+                    // Unlocked
+                    btn.innerHTML = `<strong>${diff.name}</strong><br><span class="text-green-400">PLAY</span>`;
+                    btn.onclick = () => startGame(index);
+                } else if (index === unlockedIndex + 1) {
+                    // Next Unlockable
+                    if (totalScore >= diff.cost) {
+                        btn.innerHTML = `<strong>${diff.name}</strong><br><span class="text-yellow-400">UNLOCK: ${diff.cost}</span>`;
+                        btn.onclick = () => unlockDifficulty(index, diff.cost);
+                    } else {
+                        btn.className += ' locked';
+                        btn.innerHTML = `<strong>${diff.name}</strong><br>Cost: ${diff.cost}<br><span class="text-xs text-red-500">Need ${diff.cost - totalScore} more</span>`;
+                    }
+                } else {
+                    // Locked far ahead
+                    btn.className += ' locked';
+                    btn.innerHTML = `<strong>???</strong><br>Locked`;
+                }
+                difficultyContainer.appendChild(btn);
+            });
+        }
+
+        function unlockDifficulty(index, cost) {
+            totalScore -= cost;
+            unlockedIndex = index;
+            saveProgress();
+            updateMenuUI();
+        }
+
+        function saveProgress() {
+            pageStorage.setItem('totalScore', totalScore);
+            pageStorage.setItem('unlockedIndex', unlockedIndex);
+        }
+
+        function setup3D() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.FogExp2(0x050505, 0.015);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3.5, 7);
+            camera.lookAt(0, 0, -50);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0x00ff00, 0.8);
+            dirLight.position.set(5, 10, 7);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Floor
+            const floorGeometry = new THREE.PlaneGeometry(40, 1000);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8, metalness: 0.5 });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.z = -400;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(200, 100, 0x00ff00, 0x002200);
+            gridHelper.position.y = 0.01;
+            gridHelper.position.z = -50;
+            scene.add(gridHelper);
+            window.gridHelper = gridHelper;
+
+            // Lane Highlight
+            const highlightGeo = new THREE.PlaneGeometry(LANE_WIDTH, 100);
+            const highlightMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+            laneHighlight = new THREE.Mesh(highlightGeo, highlightMat);
+            laneHighlight.rotation.x = -Math.PI / 2;
+            laneHighlight.position.set(0, 0.02, -40);
+            scene.add(laneHighlight);
+
+            createPlayer();
+        }
+
+        function createPlayer() {
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const materials = [
+                new THREE.MeshStandardMaterial({ color: 0x222222 }), 
+                new THREE.MeshStandardMaterial({ color: 0x222222 }), 
+                new THREE.MeshStandardMaterial({ color: 0x222222 }), 
+                new THREE.MeshStandardMaterial({ color: 0x222222 }), 
+                new THREE.MeshStandardMaterial({ map: saharshTexture }), 
+                new THREE.MeshStandardMaterial({ color: 0x222222 })  
+            ];
+            player = new THREE.Mesh(geometry, materials);
+            player.position.y = 0.5;
+            player.castShadow = true;
+            scene.add(player);
+        }
+
+        function startGame(diffIndex) {
+            currentDifficultyIndex = diffIndex;
+            curParams = DIFFICULTIES[diffIndex].params;
+            
+            // Apply constants
+            startScreen.style.display = 'none';
+            gameActive = true;
+            runScore = 0;
+            gpa = 0.0; 
+            totalTime = 0;
+            spawnInterval = curParams.min_spawnInterval;
+            clock.start();
+            nextSpawnTime = (curParams.saharsh_final?10:0);
+            
+            uiMode.innerText = DIFFICULTIES[diffIndex].name;
+
+            currentLane = 1;
+            player.position.x = lanes[1];
+            laneHighlight.position.x = lanes[1];
+            
+            updateInGameUI();
+        }
+
+        function resetGameEntities() {
+            gameObjects.forEach(o => scene.remove(o));
+            particles.forEach(p => scene.remove(p));
+            gameObjects = [];
+            particles = [];
+        }
+
+        function gameOver() {
+            gameActive = false;
+            
+            // Add run score to bank
+            totalScore += Math.floor(runScore);
+            saveProgress();
+
+            gameOverScreen.style.display = 'block';
+            finalRunScore.innerText = Math.floor(runScore);
+            finalTotalScore.innerText = totalScore;
+            unlockMessage.innerText = "";
+
+            // Special handling for Saharsh (Last difficulty)
+            if (currentDifficultyIndex === DIFFICULTIES.length - 1) {
+                goNormalContent.style.display = 'none';
+                goCompletionContent.style.display = 'block';
+                document.getElementById('go-title').innerText = "SIMULATION ENDED";
+                document.getElementById('go-title').className = "text-3xl font-bold text-yellow-400 mb-2";
+            } else {
+                // Normal Game Over
+                goNormalContent.style.display = 'block';
+                goCompletionContent.style.display = 'none';
+                document.getElementById('go-title').innerText = "ACADEMIC VICTIM";
+                document.getElementById('go-title').className = "text-3xl font-bold text-red-500 mb-2";
+
+                // Check next unlock
+                const nextDiff = DIFFICULTIES[currentDifficultyIndex + 1];
+                if (nextDiff && currentDifficultyIndex === unlockedIndex) {
+                    if (totalScore >= nextDiff.cost) {
+                        unlockMessage.innerText = `You can now unlock ${nextDiff.name}!`;
+                        unlockMessage.style.color = "#0f0";
+                    } else {
+                        unlockMessage.innerText = `Next unlock: ${nextDiff.name} (${nextDiff.cost - totalScore} more needed)`;
+                    }
+                }
+            }
+        }
+
+        function spawnLogic(laneIndex, isGrade) {
+            if (totalTime < nextSpawnTime) return;
+            nextSpawnTime = totalTime + spawnInterval;
+
+            const xPos = lanes[laneIndex];
+
+            if (isGrade) createGrade(xPos);
+            else createLaptop(xPos);
+        }
+
+        function createGrade(x) {
+            const geometry = new THREE.BoxGeometry(1.5, 2, 0.5);
+            const material = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x550000 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, 1, SPAWN_Z);
+            mesh.castShadow = true;
+            mesh.userData = { type: 'grade', active: true };
+            scene.add(mesh);
+            gameObjects.push(mesh);
+        }
+
+        function createLaptop(x) {
+            const group = new THREE.Group();
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.6), new THREE.MeshStandardMaterial({ color: 0x00ff00 }));
+            const screen = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 0.05), new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x003300 }));
+            screen.position.set(0, 0.35, -0.3);
+            screen.rotation.x = -0.2;
+            group.add(base, screen);
+            
+            group.position.set(x, 0.5, SPAWN_Z);
+            group.userData = { type: 'laptop', active: true };
+            scene.add(group);
+            gameObjects.push(group);
+        }
+
+        function handleInput(e) {
+            if (!gameActive) return;
+            
+            let moved = false;
+            if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && currentLane > 0) {
+                currentLane--;
+                moved = true;
+            } else if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && currentLane < 2) {
+                currentLane++;
+                moved = true;
+            }
+
+            if (moved) {
+                const newX = lanes[currentLane];
+                player.position.x = newX;
+                laneHighlight.position.x = newX;
+            }
+        }
+
+        function updateInGameUI() {
+            uiScore.innerText = Math.floor(runScore);
+            uiBank.innerText = totalScore;
+            gpaText.innerText = "GPA: " + gpa.toFixed(2);
+            
+            const percentage = (gpa / 4.0) * 100;
+            gpaBar.style.width = Math.min(percentage, 100) + "%";
+            
+            if (gpa >= 4.0) {
+                uiStatus.innerText = "A+"; uiStatus.style.color = "hsl(0, 100%, 40%)";
+            } else if (gpa >= 3.0) {
+                uiStatus.innerText = "B"; uiStatus.style.color = "hsl(30, 100%, 40%)";
+            } else if (gpa >= 2.0) {
+                uiStatus.innerText = "C"; uiStatus.style.color = "hsl(70, 100%, 45%)";
+            } else if (gpa >= 1.0) {
+                uiStatus.innerText = "D"; uiStatus.style.color = "hsl(100, 100%, 45%)";
+            } else {
+                uiStatus.innerText = "F"; uiStatus.style.color = "hsl(120, 100%, 45%)";
+            }
+        }
+
+        function createParticles(pos, color) {
+            for (let i = 0; i < (curParams.saharsh_final?80:8); i++) {
+                let p
+                if (curParams.saharsh_final && Math.random()<0.005) {
+                  p = new THREE.Mesh(new THREE.BoxGeometry(0.2+0.1*Math.random(),0.2+0.1*Math.random(),0.2+0.1*Math.random()), new THREE.MeshBasicMaterial({ map: saharshTexture }));
+                  p.position.copy(pos);
+                  p.userData = {
+                      vel: new THREE.Vector3(0.3*(Math.random()-0.5), Math.random()*0.5, 0.3*(Math.random()-0.5)),
+                      life: 5.0
+                  };
+                } else {
+                  p = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({ color: color }));
+                  p.position.copy(pos);
+                  p.userData = {
+                      vel: new THREE.Vector3((Math.random()-0.5), Math.random()*0.5, (Math.random()-0.5)),
+                      life: 1.0
+                  };
+                }
+                
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (gameActive) {
+                totalTime += delta;
+                
+                // 1. Speed
+                const START_SPEED = -SPAWN_Z / (curParams.START_REACTION_MS / 1000);
+                const MAX_SPEED = -SPAWN_Z / (curParams.MIN_REACTION_MS / 1000);
+                const speedProgress = Math.min(totalTime / curParams.TIME_TO_MAX_SPEED, 1.0);
+                worldSpeed = START_SPEED + (speedProgress * (MAX_SPEED - START_SPEED));
+
+                // 2. Spawn Rate
+                const spawnProgress = Math.min(totalTime / curParams.time_to_max_spawninterval, 1.0);
+                spawnInterval = curParams.min_spawnInterval + (spawnProgress * (curParams.max_spawnInterval - curParams.min_spawnInterval));
+
+                // Visual bounce
+                player.position.y = 0.5 + Math.sin(Math.PI * totalTime * 2) * 0.1;
+
+                // Grid
+                window.gridHelper.position.z += worldSpeed * delta;
+                if (window.gridHelper.position.z > 0) window.gridHelper.position.z = -50;
+
+                if (curParams.saharsh_final) {
+                  let M = 10000000
+                  spawnLogic(0, Math.random() > 0.5**(runScore/M))
+                  spawnLogic(1, Math.random() > 0.5**(runScore/M))
+                  spawnLogic(2, Math.random() > 0.5**(runScore/M))
+                } else {
+                  spawnLogic(Math.floor(Math.random() * 3), Math.random() > 0.4)
+                }
+
+                // Game Objects
+                for (let i = gameObjects.length - 1; i >= 0; i--) {
+                    const obj = gameObjects[i];
+                    obj.position.z += worldSpeed * delta;
+
+                    if (obj.userData.type === 'laptop') obj.rotation.y += 2 * delta;
+
+                    // Collision
+                    if (obj.userData.active && obj.position.z > -1 && obj.position.z < 1) {
+                        const distX = Math.abs(obj.position.x - player.position.x);
+                        
+                        if (distX < 0.5) {
+                            obj.userData.active = false;
+                            scene.remove(obj);
+                            gameObjects.splice(i, 1);
+
+                            if (obj.userData.type === 'grade') {
+                                gpa += 0.5;
+                                createParticles(obj.position, 0xff0000);
+                                camera.position.x = (Math.random() - 0.5) * 0.5;
+                                setTimeout(() => camera.position.x = 0, 100);
+                            } else {
+                                gpa = Math.max(0, gpa - 0.25);
+                                // Score scales with difficulty cost and speed
+                                const diffMultiplier = 1 + (currentDifficultyIndex * 0.5);
+                                runScore += (100 + (worldSpeed * 2)) * diffMultiplier * (curParams.saharsh_final?10:1);
+                                createParticles(obj.position, 0x00ff00);
+                            }
+
+                            updateInGameUI();
+
+                            if (gpa >= 4.0) {
+                                gpa = 4.0;
+                                updateInGameUI();
+                                gameOver();
+                            }
+                            continue;
+                        }
+                    }
+
+                    if (obj.position.z > 5) {
+                        scene.remove(obj);
+                        gameObjects.splice(i, 1);
+                    }
+                }
+            }
+
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.position.add(p.userData.vel);
+                p.userData.vel.y -= 1 * delta;
+                p.userData.life -= 2 * delta;
+                p.scale.setScalar(p.userData.life);
+                if (p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>durr yussef sux</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #020617;
+    }
+    #three-container {
+      position: fixed;
+      inset: 0;
+    }
+    .hud {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 30;
+      background: rgba(2, 6, 23, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+      min-width: 240px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.45);
+    }
+    .hud h3 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #38bdf8;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.35rem;
+      font-size: 0.95rem;
+    }
+    #menu, #statusOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+    }
+    #menu.hidden, #statusOverlay.hidden {
+      display: none;
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.92);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      width: min(500px, 90vw);
+      box-shadow: 0 30px 60px rgba(2, 6, 23, 0.6);
+      border: 1px solid rgba(226, 232, 240, 0.12);
+    }
+    .btn-hero {
+      background: linear-gradient(135deg, #22d3ee, #2563eb);
+      padding: 0.85rem 1.5rem;
+      border-radius: 999px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.4);
+    }
+    .instructions {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 1.5rem;
+      z-index: 25;
+      background: rgba(2, 6, 23, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+      width: 280px;
+      backdrop-filter: blur(8px);
+      font-size: 0.9rem;
+      color: #cbd5f5;
+    }
+    #alertBox {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 35;
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 0.75rem 1.5rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #f8fafc;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    #alertBox.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="text-white">
+  <div id="three-container"></div>
+
+  <div class="fixed top-4 left-1/2 -translate-x-1/2 text-center pointer-events-none z-20">
+    <h1 class="text-4xl font-black tracking-tight drop-shadow-lg">durr yussef sux</h1>
+    <p class="text-sm text-slate-300">Secure Centrix81 directive: outrun faculty, snag flawless grades, keep your GPA spotless.</p>
+  </div>
+
+  <div class="hud">
+    <h3>Mission Feed</h3>
+    <div class="stat-row"><span>Level</span><span id="level">1</span></div>
+    <div class="stat-row"><span>A+ Vault</span><span><span id="score">0</span> (<span id="goal">0/0</span>)</span></div>
+    <div class="stat-row"><span>GPA Integrity</span><span id="gpa">4.00</span></div>
+    <div class="stat-row"><span>Pulse Burst</span><span id="pulse">Ready</span></div>
+    <div class="stat-row"><span>Survival Time</span><span id="time">0.0s</span></div>
+  </div>
+
+  <div class="instructions space-y-2">
+    <h4 class="text-lg font-semibold text-cyan-300">Controls</h4>
+    <p>WASD / Arrows: Dash across halls</p>
+    <p>Space: Jump over chaos</p>
+    <p>Shift: Sprint burst</p>
+    <p>Q: Shockwave pulse (fighting back)</p>
+    <p>Collect glowing A+ sigils, avoid the crimson grades, stay away from teachers.</p>
+  </div>
+
+  <div id="menu" class="flex items-center justify-center bg-slate-950/80">
+    <div class="panel text-center space-y-6">
+      <p class="uppercase tracking-[0.4em] text-cyan-300 text-xs">Secure Centrix81</p>
+      <h2 class="text-3xl font-extrabold">Operation: Hallway Havoc</h2>
+      <p class="text-slate-300 text-sm leading-relaxed">Yussef started beef with Sahahash and now every teacher is on high alert. Dodge deans, snag only A+ sigils, and unleash shockwave counters whenever staff corners you. Anything lower than an A+ tanks your GPA and unleashes the wrath of your parents.</p>
+      <button class="btn-hero pointer-events-auto" onclick="startGame()">Start Escape</button>
+    </div>
+  </div>
+
+  <div id="statusOverlay" class="hidden items-center justify-center bg-slate-950/85">
+    <div class="panel text-center space-y-6">
+      <h2 id="statusTitle" class="text-3xl font-black"></h2>
+      <p id="statusText" class="text-slate-200"></p>
+      <button id="overlayBtn" class="btn-hero pointer-events-auto">Play Again</button>
+    </div>
+  </div>
+
+  <div id="alertBox"></div>
+
+  <script>
+    const container = document.getElementById('three-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020617);
+    scene.fog = new THREE.Fog(0x020617, 40, 120);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, 8, 15);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0x9fc9ff, 0.6);
+    scene.add(ambient);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(20, 30, 10);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    const groundGeo = new THREE.PlaneGeometry(220, 220, 20, 20);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, wireframe: false });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const grid = new THREE.GridHelper(220, 50, 0x1f2937, 0x0f172a);
+    scene.add(grid);
+
+    const playerGeo = new THREE.BoxGeometry(1.2, 2.2, 1.2);
+    const playerMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.2, roughness: 0.5 });
+    const player = new THREE.Mesh(playerGeo, playerMat);
+    player.castShadow = true;
+    player.position.y = 1;
+    scene.add(player);
+
+    const keys = {};
+    const teachers = [];
+    const goodGrades = [];
+    const badGrades = [];
+    const pulses = [];
+
+    const clock = new THREE.Clock();
+    const groundLimit = 90;
+    const gravity = -30;
+    let playerVelocityY = 0;
+    let canJump = true;
+    let pulseCooldown = 0;
+    let state = 'menu';
+    let gpa = 4.0;
+    let score = 0;
+    let level = 1;
+    let levelCollected = 0;
+    let survivalTime = 0;
+    const maxLevels = 3;
+
+    const levelEl = document.getElementById('level');
+    const scoreEl = document.getElementById('score');
+    const gpaEl = document.getElementById('gpa');
+    const goalEl = document.getElementById('goal');
+    const pulseEl = document.getElementById('pulse');
+    const timeEl = document.getElementById('time');
+    const menu = document.getElementById('menu');
+    const overlay = document.getElementById('statusOverlay');
+    const overlayTitle = document.getElementById('statusTitle');
+    const overlayText = document.getElementById('statusText');
+    const overlayBtn = document.getElementById('overlayBtn');
+    const alertBox = document.getElementById('alertBox');
+
+    const goalForLevel = (lvl) => 4 + lvl * 2;
+
+    function updateHUD() {
+      levelEl.textContent = level;
+      scoreEl.textContent = score;
+      gpaEl.textContent = gpa.toFixed(2);
+      goalEl.textContent = `${levelCollected}/${goalForLevel(level)}`;
+      pulseEl.textContent = pulseCooldown <= 0 ? 'Ready' : `${pulseCooldown.toFixed(1)}s`;
+      timeEl.textContent = `${survivalTime.toFixed(1)}s`;
+    }
+
+    function showAlert(message, color = '#f8fafc') {
+      alertBox.textContent = message;
+      alertBox.style.color = color;
+      alertBox.classList.add('visible');
+      setTimeout(() => alertBox.classList.remove('visible'), 1200);
+    }
+
+    function clearEntities(list) {
+      list.forEach(obj => scene.remove(obj));
+      list.length = 0;
+    }
+
+    function resetWorld() {
+      teachers.forEach(t => scene.remove(t.mesh));
+      clearEntities(goodGrades);
+      clearEntities(badGrades);
+      pulses.forEach(p => scene.remove(p.mesh));
+      teachers.length = 0;
+      pulses.length = 0;
+      player.position.set(0, 1, 0);
+      playerVelocityY = 0;
+    }
+
+    function randomPosition() {
+      return {
+        x: (Math.random() - 0.5) * groundLimit * 1.6,
+        z: (Math.random() - 0.5) * groundLimit * 1.6
+      };
+    }
+
+    function spawnTeacher() {
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.6, 0.8, 2.4, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf87171, metalness: 0.15, roughness: 0.8 })
+      );
+      body.castShadow = true;
+      const pos = randomPosition();
+      body.position.set(pos.x, 1.2, pos.z);
+      scene.add(body);
+      teachers.push({ mesh: body, baseSpeed: 3 + Math.random(), hitTimer: 0 });
+    }
+
+    function createGradeSprite(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'rgba(15,23,42,0.0)';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.fillStyle = color;
+      ctx.font = 'bold 160px Inter';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = 20;
+      ctx.fillText(text, 128, 140);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(3, 3, 1);
+      return sprite;
+    }
+
+    function spawnGoodGrade() {
+      if (goodGrades.length >= 4) return;
+      const sprite = createGradeSprite('A+', '#22c55e');
+      const pos = randomPosition();
+      sprite.position.set(pos.x, 2, pos.z);
+      sprite.userData = { type: 'good' };
+      scene.add(sprite);
+      goodGrades.push(sprite);
+    }
+
+    function spawnBadGrade() {
+      if (badGrades.length >= Math.max(1, level)) return;
+      const sprite = createGradeSprite('C-', '#f43f5e');
+      const pos = randomPosition();
+      sprite.position.set(pos.x, 2, pos.z);
+      sprite.userData = { type: 'bad' };
+      scene.add(sprite);
+      badGrades.push(sprite);
+    }
+
+    function startGame() {
+      menu.classList.add('hidden');
+      overlay.classList.add('hidden');
+      gpa = 4.0;
+      score = 0;
+      level = 1;
+      levelCollected = 0;
+      survivalTime = 0;
+      pulseCooldown = 0;
+      state = 'playing';
+      resetWorld();
+      setupLevel();
+      updateHUD();
+      showAlert('Sprint for straight A+ glory!', '#38bdf8');
+    }
+
+    function setupLevel() {
+      clearEntities(goodGrades);
+      clearEntities(badGrades);
+      teachers.forEach(t => scene.remove(t.mesh));
+      teachers.length = 0;
+      levelCollected = 0;
+      for (let i = 0; i < level + 2; i++) {
+        spawnTeacher();
+      }
+      while (goodGrades.length < 4) {
+        spawnGoodGrade();
+      }
+      while (badGrades.length < Math.max(1, level)) {
+        spawnBadGrade();
+      }
+      updateHUD();
+      showAlert(`Level ${level}: Need ${goalForLevel(level)} flawless pulls!`, '#c084fc');
+    }
+
+    function handleGoodPickup(sprite, index) {
+      scene.remove(sprite);
+      goodGrades.splice(index, 1);
+      score += 1;
+      levelCollected += 1;
+      showAlert('A+ secured! GPA intact.', '#22c55e');
+      if (score % 2 === 0) {
+        spawnBadGrade();
+      }
+      if (levelCollected >= goalForLevel(level)) {
+        if (level >= maxLevels) {
+          endGame(true);
+          return;
+        } else {
+          level += 1;
+          setupLevel();
+        }
+      } else {
+        spawnGoodGrade();
+      }
+      updateHUD();
+    }
+
+    function handleBadPickup(sprite, index) {
+      scene.remove(sprite);
+      badGrades.splice(index, 1);
+      gpa = Math.max(0, gpa - 0.35);
+      showAlert('Parents yell over that weak grade! -0.35 GPA', '#f87171');
+      spawnBadGrade();
+      updateHUD();
+      if (gpa <= 0) {
+        endGame(false);
+      }
+    }
+
+    function handleTeacherCatch(teacher) {
+      if (teacher.hitTimer > 0) return;
+      teacher.hitTimer = 1.5;
+      gpa = Math.max(0, gpa - 0.2);
+      const pushDir = new THREE.Vector3().subVectors(player.position, teacher.mesh.position).normalize();
+      player.position.addScaledVector(pushDir, 2);
+      showAlert('Teacher caught you! -0.20 GPA', '#f97316');
+      updateHUD();
+      if (gpa <= 0) {
+        endGame(false);
+      }
+    }
+
+    function endGame(victory) {
+      state = victory ? 'victory' : 'gameover';
+      overlayTitle.textContent = victory ? 'Valedictorian Vanish!' : 'GPA Collapse!';
+      overlayText.textContent = victory
+        ? 'You blasted through every hallway, held off the staff, and never let an A+ slip. Secure Centrix81 salutes you.'
+        : 'Teachers closed in and the GPA plummeted. The parents are on the line and detention is inevitable.';
+      overlay.classList.remove('hidden');
+    }
+
+    function triggerPulse() {
+      if (state !== 'playing' || pulseCooldown > 0) return;
+      pulseCooldown = 6;
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.5, 0.8, 32),
+        new THREE.MeshBasicMaterial({ color: 0xffd166, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(player.position.x, 0.05, player.position.z);
+      scene.add(ring);
+      pulses.push({ mesh: ring, life: 0 });
+      showAlert('Shockwave out! Teachers staggered.', '#fde047');
+    }
+
+    function updatePlayer(delta) {
+      const move = new THREE.Vector3();
+      if (keys['KeyW'] || keys['ArrowUp']) move.z -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) move.z += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) move.x -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) move.x += 1;
+      if (move.lengthSq() > 0) {
+        move.normalize();
+        const speed = (keys['ShiftLeft'] || keys['ShiftRight']) ? 16 : 10;
+        player.position.addScaledVector(move, speed * delta);
+      }
+      player.position.x = THREE.MathUtils.clamp(player.position.x, -groundLimit, groundLimit);
+      player.position.z = THREE.MathUtils.clamp(player.position.z, -groundLimit, groundLimit);
+
+      playerVelocityY += gravity * delta;
+      player.position.y += playerVelocityY * delta;
+      if (player.position.y <= 1) {
+        player.position.y = 1;
+        playerVelocityY = 0;
+        if (!keys['Space']) canJump = true;
+        if (keys['Space'] && canJump) {
+          playerVelocityY = 13;
+          canJump = false;
+        }
+      }
+
+      const camTarget = new THREE.Vector3(player.position.x, player.position.y + 8, player.position.z + 14);
+      camera.position.lerp(camTarget, 4 * delta);
+      camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
+    }
+
+    function updateTeachers(delta) {
+      teachers.forEach(teacher => {
+        if (teacher.hitTimer > 0) {
+          teacher.hitTimer -= delta;
+        }
+        const dir = new THREE.Vector3().subVectors(player.position, teacher.mesh.position);
+        const distance = dir.length();
+        dir.normalize();
+        const speed = (teacher.baseSpeed + level * 0.4) * delta;
+        teacher.mesh.position.addScaledVector(dir, speed);
+        teacher.mesh.lookAt(player.position.x, teacher.mesh.position.y, player.position.z);
+        if (distance < 1.4) {
+          handleTeacherCatch(teacher);
+        }
+      });
+    }
+
+    function updateGrades() {
+      const playerPos = player.position;
+      for (let i = goodGrades.length - 1; i >= 0; i--) {
+        const sprite = goodGrades[i];
+        if (sprite.position.distanceTo(playerPos) < 1.5) {
+          handleGoodPickup(sprite, i);
+        }
+      }
+      for (let i = badGrades.length - 1; i >= 0; i--) {
+        const sprite = badGrades[i];
+        if (sprite.position.distanceTo(playerPos) < 1.5) {
+          handleBadPickup(sprite, i);
+        }
+      }
+    }
+
+    function updatePulses(delta) {
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const pulse = pulses[i];
+        pulse.life += delta * 2;
+        const scale = 1 + pulse.life * 10;
+        pulse.mesh.scale.set(scale, scale, 1);
+        pulse.mesh.material.opacity = THREE.MathUtils.clamp(0.8 - pulse.life, 0, 1);
+        teachers.forEach(teacher => {
+          const dist = new THREE.Vector3().subVectors(teacher.mesh.position, player.position).length();
+          if (dist < scale * 0.7) {
+            const away = new THREE.Vector3().subVectors(teacher.mesh.position, player.position).normalize();
+            teacher.mesh.position.addScaledVector(away, 5 * delta * 20);
+            teacher.hitTimer = 1.5;
+          }
+        });
+        if (pulse.life > 1) {
+          scene.remove(pulse.mesh);
+          pulses.splice(i, 1);
+        }
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      if (state === 'playing') {
+        survivalTime += delta;
+        if (pulseCooldown > 0) {
+          pulseCooldown = Math.max(0, pulseCooldown - delta);
+        }
+        updatePlayer(delta);
+        updateTeachers(delta);
+        updateGrades();
+        updatePulses(delta);
+        while (goodGrades.length < 4) {
+          spawnGoodGrade();
+        }
+        while (badGrades.length < Math.max(1, level)) {
+          spawnBadGrade();
+        }
+        updateHUD();
+      }
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (e.code === 'KeyQ') {
+        triggerPulse();
+      }
+      if (e.code === 'Enter' && state !== 'playing') {
+        startGame();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    overlayBtn.addEventListener('click', () => {
+      startGame();
+    });
+  </script>
+</body>
+</html>

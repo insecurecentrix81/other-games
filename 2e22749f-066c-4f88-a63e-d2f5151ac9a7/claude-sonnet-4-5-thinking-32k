@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Be A Failure or Asian IQ Brain-minded</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial Black', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 900px;
+            height: 600px;
+            background: #1a1a2e;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #0f3460;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .stat {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 2px solid #00d9ff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #characterInfo {
+            text-align: left;
+        }
+
+        #gameInfo {
+            text-align: right;
+        }
+
+        .label {
+            color: #00d9ff;
+            font-size: 12px;
+        }
+
+        .value {
+            color: #fff;
+            font-size: 20px;
+        }
+
+        #healthBar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+            border: 2px solid #00d9ff;
+        }
+
+        #healthFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff6b6b);
+            transition: width 0.3s;
+        }
+
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #00d9ff;
+        }
+
+        #menu h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #00d9ff;
+            text-shadow: 0 0 20px #00d9ff;
+        }
+
+        #menu h2 {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #ffeb3b;
+        }
+
+        #menu p {
+            font-size: 14px;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d9ff, #0096ff);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 217, 255, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 217, 255, 0.6);
+        }
+
+        button:active {
+            transform: translateY(-1px);
+        }
+
+        #bossWarning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            animation: pulse 0.5s infinite;
+            z-index: 50;
+            display: none;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="ui">
+            <div id="characterInfo">
+                <div class="stat">
+                    <div class="label">CHARACTER</div>
+                    <div class="value" id="characterName">Saharsh Gobinath</div>
+                </div>
+                <div class="stat" style="margin-top: 10px;">
+                    <div class="label">IQ POINTS</div>
+                    <div class="value" id="iqDisplay">0 / 50</div>
+                </div>
+            </div>
+            
+            <div id="gameInfo">
+                <div class="stat">
+                    <div class="label">HEALTH</div>
+                    <div id="healthBar">
+                        <div id="healthFill" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div class="stat" style="margin-top: 10px;">
+                    <div class="label">STUDY GUN AMMO</div>
+                    <div class="value" id="ammoDisplay">∞</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="menu">
+            <h1>🧠 BE A FAILURE OR ASIAN IQ BRAIN-MINDED 🧠</h1>
+            <h2>The Ultimate IQ Evolution Challenge</h2>
+            <p><strong>GOAL:</strong> Evolve from 0 IQ to 450 IQ by collecting items and defeating bosses!</p>
+            <p><strong>COLLECT:</strong> 🟢 Green Homework Boxes (+5 IQ) | 🔵 Blue Tutor Boxes (+10 IQ)</p>
+            <p><strong>BOSS FIGHTS:</strong> Every 50 IQ, face the Centrix Boss! Defeat to evolve!</p>
+            <p><strong>WARNING:</strong> Die to boss = RESET TO 0 IQ! No checkpoints!</p>
+            <p><strong>CONTROLS:</strong> WASD/Arrows = Move | Mouse Click = Shoot | Space = Special Attack</p>
+            <button id="startButton">START YOUR IQ JOURNEY</button>
+        </div>
+
+        <div id="bossWarning">⚠️ BOSS FIGHT ⚠️</div>
+
+        <div class="controls-hint">
+            WASD/Arrows: Move | Left Click: Shoot | Space: Special Attack
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 900;
+        canvas.height = 600;
+
+        // Game State
+        let gameState = 'menu'; // menu, playing, boss, gameover, victory
+        let player = {
+            x: 450,
+            y: 300,
+            width: 40,
+            height: 40,
+            speed: 5,
+            health: 100,
+            maxHealth: 100,
+            iq: 0,
+            level: 0,
+            hasStudyGun: false,
+            shootCooldown: 0,
+            specialCooldown: 0
+        };
+
+        const characterData = [
+            { iq: 0, name: "Saharsh Gobinath", color: "#ff6b6b", emoji: "😵" },
+            { iq: 50, name: "Hamster", color: "#ffa500", emoji: "🐹" },
+            { iq: 100, name: "Toddler", color: "#ffeb3b", emoji: "👶" },
+            { iq: 150, name: "Anbu", color: "#4caf50", emoji: "🤓" },
+            { iq: 200, name: "Calvin (Coding Troller)", color: "#2196f3", emoji: "💻" },
+            { iq: 250, name: "Teacher", color: "#9c27b0", emoji: "👨‍🏫" },
+            { iq: 300, name: "Stanford Student", color: "#ff1744", emoji: "🎓" },
+            { iq: 350, name: "Professor", color: "#00bcd4", emoji: "👨‍🔬" },
+            { iq: 400, name: "Stephen Hawking", color: "#ffd700", emoji: "🧠" },
+            { iq: 450, name: "Asian Doctor", color: "#00ff00", emoji: "⚕️" }
+        ];
+
+        let collectibles = [];
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+        let boss = null;
+        let bossPhase = 0;
+
+        const keys = {};
+        const mouse = { x: 0, y: 0, clicked: false };
+
+        // Event Listeners
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                useSpecialAttack();
+            }
+        });
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            mouse.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            if (gameState === 'playing' || gameState === 'boss') {
+                shootBullet();
+            }
+        });
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            startGame();
+        });
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            gameState = 'playing';
+            resetPlayer(false);
+            spawnCollectibles();
+        }
+
+        function resetPlayer(fullReset = true) {
+            if (fullReset) {
+                player.iq = 0;
+                player.level = 0;
+                player.hasStudyGun = false;
+            }
+            player.x = 450;
+            player.y = 300;
+            player.health = player.maxHealth;
+            collectibles = [];
+            bullets = [];
+            enemies = [];
+            particles = [];
+            boss = null;
+        }
+
+        function getCurrentCharacter() {
+            for (let i = characterData.length - 1; i >= 0; i--) {
+                if (player.iq >= characterData[i].iq) {
+                    return characterData[i];
+                }
+            }
+            return characterData[0];
+        }
+
+        function spawnCollectibles() {
+            collectibles = [];
+            for (let i = 0; i < 15; i++) {
+                collectibles.push({
+                    x: Math.random() * (canvas.width - 30) + 15,
+                    y: Math.random() * (canvas.height - 30) + 15,
+                    width: 25,
+                    height: 25,
+                    type: Math.random() > 0.6 ? 'tutor' : 'homework',
+                    collected: false,
+                    pulse: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function checkBossThreshold() {
+            const nextThreshold = (player.level + 1) * 50;
+            if (player.iq >= nextThreshold && player.iq < 450) {
+                startBossFight();
+            } else if (player.iq >= 450 && gameState !== 'boss') {
+                startFinalBoss();
+            }
+        }
+
+        function startBossFight() {
+            gameState = 'boss';
+            document.getElementById('bossWarning').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('bossWarning').style.display = 'none';
+            }, 2000);
+
+            const bossLevel = player.level;
+            boss = {
+                x: canvas.width / 2,
+                y: 100,
+                width: 60 + bossLevel * 10,
+                height: 60 + bossLevel * 10,
+                health: 100 + bossLevel * 50,
+                maxHealth: 100 + bossLevel * 50,
+                speed: 2 + bossLevel * 0.5,
+                shootCooldown: 0,
+                spawnCooldown: 0,
+                pattern: 0,
+                isFinal: false
+            };
+
+            collectibles = [];
+            enemies = [];
+        }
+
+        function startFinalBoss() {
+            gameState = 'boss';
+            document.getElementById('bossWarning').style.display = 'block';
+            document.getElementById('bossWarning').textContent = '⚠️ FINAL BOSS ⚠️';
+            setTimeout(() => {
+                document.getElementById('bossWarning').style.display = 'none';
+                document.getElementById('bossWarning').textContent = '⚠️ BOSS FIGHT ⚠️';
+            }, 2000);
+
+            boss = {
+                x: canvas.width / 2,
+                y: 100,
+                width: 100,
+                height: 100,
+                health: 1000,
+                maxHealth: 1000,
+                speed: 5,
+                shootCooldown: 0,
+                spawnCooldown: 0,
+                pattern: 0,
+                isFinal: true
+            };
+
+            collectibles = [];
+            enemies = [];
+        }
+
+        function shootBullet() {
+            if (player.shootCooldown > 0) return;
+
+            const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(angle) * 10,
+                vy: Math.sin(angle) * 10,
+                width: 8,
+                height: 8,
+                damage: player.hasStudyGun ? 15 : 10,
+                fromPlayer: true
+            });
+
+            player.shootCooldown = player.hasStudyGun ? 10 : 15;
+            
+            createParticles(player.x, player.y, '#00d9ff', 5);
+        }
+
+        function useSpecialAttack() {
+            if (player.specialCooldown > 0 || !player.hasStudyGun) return;
+            
+            // Circular burst attack
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                bullets.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(angle) * 8,
+                    vy: Math.sin(angle) * 8,
+                    width: 10,
+                    height: 10,
+                    damage: 20,
+                    fromPlayer: true,
+                    special: true
+                });
+            }
+
+            player.specialCooldown = 120;
+            createParticles(player.x, player.y, '#ffeb3b', 20);
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 30,
+                    maxLife: 30,
+                    color: color,
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function updatePlayer() {
+            // Movement
+            if (keys['w'] || keys['arrowup']) player.y -= player.speed;
+            if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+            if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
+            if (keys['d'] || keys['arrowright']) player.x += player.speed;
+
+            // Boundaries
+            player.x = Math.max(player.width / 2, Math.min(canvas.width - player.width / 2, player.x));
+            player.y = Math.max(player.height / 2, Math.min(canvas.height - player.height / 2, player.y));
+
+            // Cooldowns
+            if (player.shootCooldown > 0) player.shootCooldown--;
+            if (player.specialCooldown > 0) player.specialCooldown--;
+
+            // Check collectible collisions
+            collectibles.forEach(col => {
+                if (!col.collected && checkCollision(player, col)) {
+                    col.collected = true;
+                    if (col.type === 'homework') {
+                        player.iq += 5;
+                    } else {
+                        player.iq += 10;
+                    }
+                    createParticles(col.x, col.y, col.type === 'homework' ? '#00ff00' : '#0099ff', 10);
+                    checkBossThreshold();
+                }
+            });
+
+            collectibles = collectibles.filter(c => !c.collected);
+
+            if (collectibles.length === 0 && gameState === 'playing') {
+                spawnCollectibles();
+            }
+        }
+
+        function updateBoss() {
+            if (!boss) return;
+
+            // Boss movement pattern
+            boss.pattern += 0.02;
+            boss.x = canvas.width / 2 + Math.sin(boss.pattern) * 200;
+            boss.y = 100 + Math.sin(boss.pattern * 2) * 50;
+
+            // Boss shooting
+            boss.shootCooldown--;
+            if (boss.shootCooldown <= 0) {
+                const bossLevel = boss.isFinal ? 9 : player.level;
+                const shootCount = boss.isFinal ? 8 : Math.min(1 + bossLevel, 5);
+                
+                for (let i = 0; i < shootCount; i++) {
+                    const angle = Math.atan2(player.y - boss.y, player.x - boss.x) + (Math.random() - 0.5) * 0.5;
+                    bullets.push({
+                        x: boss.x,
+                        y: boss.y,
+                        vx: Math.cos(angle) * (4 + bossLevel * 0.5),
+                        vy: Math.sin(angle) * (4 + bossLevel * 0.5),
+                        width: 12,
+                        height: 12,
+                        damage: 10 + bossLevel * 2,
+                        fromPlayer: false
+                    });
+                }
+                
+                boss.shootCooldown = boss.isFinal ? 20 : 40 - bossLevel * 3;
+            }
+
+            // Spawn goons
+            boss.spawnCooldown--;
+            if (boss.spawnCooldown <= 0) {
+                const bossLevel = boss.isFinal ? 9 : player.level;
+                const goonCount = boss.isFinal ? 3 : Math.min(1 + Math.floor(bossLevel / 2), 4);
+                
+                for (let i = 0; i < goonCount; i++) {
+                    enemies.push({
+                        x: Math.random() * canvas.width,
+                        y: -20,
+                        width: 30,
+                        height: 30,
+                        speed: 2 + bossLevel * 0.3,
+                        health: 30 + bossLevel * 10
+                    });
+                }
+                
+                boss.spawnCooldown = boss.isFinal ? 60 : 120 - bossLevel * 10;
+            }
+        }
+
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0) {
+                    enemy.x += (dx / dist) * enemy.speed;
+                    enemy.y += (dy / dist) * enemy.speed;
+                }
+
+                // Enemy collision with player
+                if (checkCollision(enemy, player)) {
+                    player.health -= 0.5;
+                }
+            });
+        }
+
+        function updateBullets() {
+            bullets.forEach(bullet => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+
+                // Check player bullet hits on boss
+                if (bullet.fromPlayer && boss && checkCollision(bullet, boss)) {
+                    boss.health -= bullet.damage;
+                    bullet.remove = true;
+                    createParticles(bullet.x, bullet.y, '#ff0000', 8);
+
+                    if (boss.health <= 0) {
+                        defeatedBoss();
+                    }
+                }
+
+                // Check player bullet hits on enemies
+                if (bullet.fromPlayer) {
+                    enemies.forEach(enemy => {
+                        if (checkCollision(bullet, enemy)) {
+                            enemy.health -= bullet.damage;
+                            bullet.remove = true;
+                            createParticles(bullet.x, bullet.y, '#ff6b6b', 5);
+
+                            if (enemy.health <= 0) {
+                                enemy.remove = true;
+                                createParticles(enemy.x, enemy.y, '#ffa500', 15);
+                            }
+                        }
+                    });
+                }
+
+                // Check enemy bullet hits player
+                if (!bullet.fromPlayer && checkCollision(bullet, player)) {
+                    player.health -= bullet.damage;
+                    bullet.remove = true;
+                    createParticles(bullet.x, bullet.y, '#ff0000', 8);
+
+                    if (player.health <= 0) {
+                        gameOver();
+                    }
+                }
+
+                // Remove off-screen bullets
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullet.remove = true;
+                }
+            });
+
+            bullets = bullets.filter(b => !b.remove);
+            enemies = enemies.filter(e => !e.remove);
+        }
+
+        function updateParticles() {
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+            });
+            particles = particles.filter(p => p.life > 0);
+        }
+
+        function defeatedBoss() {
+            player.level++;
+            
+            if (boss.isFinal) {
+                victory();
+                return;
+            }
+
+            player.hasStudyGun = true;
+            player.health = Math.min(player.health + 50, player.maxHealth);
+            
+            boss = null;
+            gameState = 'playing';
+            spawnCollectibles();
+            
+            createParticles(canvas.width / 2, canvas.height / 2, '#00ff00', 30);
+        }
+
+        function gameOver() {
+            gameState = 'gameover';
+            const menu = document.getElementById('menu');
+            menu.innerHTML = `
+                <h1>💀 GAME OVER 💀</h1>
+                <h2>You died! All progress lost!</h2>
+                <p>Final IQ: ${player.iq}</p>
+                <p>Level Reached: ${player.level}</p>
+                <button onclick="location.reload()">TRY AGAIN</button>
+            `;
+            menu.style.display = 'block';
+        }
+
+        function victory() {
+            gameState = 'victory';
+            const menu = document.getElementById('menu');
+            menu.innerHTML = `
+                <h1>🎉 VICTORY! 🎉</h1>
+                <h2>You've achieved maximum IQ!</h2>
+                <p style="font-size: 24px; color: #00ff00;">⚕️ ASIAN DOCTOR ⚕️</p>
+                <p>You are now at the pinnacle of intelligence!</p>
+                <p>Final IQ: 450+</p>
+                <button onclick="location.reload()">PLAY AGAIN</button>
+            `;
+            menu.style.display = 'block';
+        }
+
+        function checkCollision(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+
+        function drawPlayer() {
+            const char = getCurrentCharacter();
+            
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(player.x, player.y + player.height / 2 + 5, player.width / 2, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Player body
+            ctx.fillStyle = char.color;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Character emoji
+            ctx.font = `${player.width - 10}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(char.emoji, player.x, player.y);
+
+            // Health bar above player
+            const barWidth = 40;
+            const barHeight = 5;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(player.x - barWidth / 2, player.y - player.height / 2 - 15, barWidth, barHeight);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(player.x - barWidth / 2, player.y - player.height / 2 - 15, barWidth * (player.health / player.maxHealth), barHeight);
+        }
+
+        function drawCollectibles() {
+            collectibles.forEach(col => {
+                col.pulse += 0.1;
+                const pulse = Math.sin(col.pulse) * 3;
+
+                ctx.save();
+                ctx.translate(col.x, col.y);
+                ctx.rotate(col.pulse * 0.5);
+
+                if (col.type === 'homework') {
+                    ctx.fillStyle = '#00ff00';
+                    ctx.strokeStyle = '#00aa00';
+                } else {
+                    ctx.fillStyle = '#0099ff';
+                    ctx.strokeStyle = '#0066cc';
+                }
+
+                ctx.lineWidth = 2;
+                ctx.fillRect(-col.width / 2, -col.height / 2 + pulse, col.width, col.height);
+                ctx.strokeRect(-col.width / 2, -col.height / 2 + pulse, col.width, col.height);
+
+                // Icon
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(col.type === 'homework' ? '📝' : '📚', 0, pulse);
+
+                ctx.restore();
+            });
+        }
+
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                if (bullet.fromPlayer) {
+                    if (bullet.special) {
+                        ctx.fillStyle = '#ffeb3b';
+                        ctx.shadowColor = '#ffeb3b';
+                        ctx.shadowBlur = 10;
+                    } else {
+                        ctx.fillStyle = '#00d9ff';
+                        ctx.shadowColor = '#00d9ff';
+                        ctx.shadowBlur = 5;
+                    }
+                } else {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.shadowColor = '#ff0000';
+                    ctx.shadowBlur = 5;
+                }
+
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+        }
+
+        function drawBoss() {
+            if (!boss) return;
+
+            // Boss shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(boss.x, boss.y + boss.height / 2 + 10, boss.width / 2, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Boss body
+            const gradient = ctx.createRadialGradient(boss.x, boss.y, 0, boss.x, boss.y, boss.width / 2);
+            gradient.addColorStop(0, boss.isFinal ? '#ff0000' : '#ff6b6b');
+            gradient.addColorStop(1, boss.isFinal ? '#8b0000' : '#ff0000');
+            
+            ctx.fillStyle = gradient;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(boss.x, boss.y, boss.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Boss face
+            ctx.font = `${boss.width - 20}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(boss.isFinal ? '👹' : '😈', boss.x, boss.y);
+
+            // Boss health bar
+            const barWidth = boss.width;
+            const barHeight = 8;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(boss.x - barWidth / 2, boss.y - boss.height / 2 - 20, barWidth, barHeight);
+            ctx.fillStyle = boss.health < boss.maxHealth * 0.3 ? '#ff0000' : '#ff6b6b';
+            ctx.fillRect(boss.x - barWidth / 2, boss.y - boss.height / 2 - 20, barWidth * (boss.health / boss.maxHealth), barHeight);
+
+            // Boss name
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(boss.isFinal ? 'ULTIMATE CENTRIX BOSS' : 'CENTRIX BOSS', boss.x, boss.y - boss.height / 2 - 30);
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                // Enemy shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(enemy.x, enemy.y + enemy.height / 2 + 3, enemy.width / 2, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Enemy body
+                ctx.fillStyle = '#ffa500';
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Enemy face
+                ctx.font = `${enemy.width - 8}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('👾', enemy.x, enemy.y);
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / p.maxLife;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawBackground() {
+            // Animated grid background
+            ctx.strokeStyle = 'rgba(0, 217, 255, 0.1)';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            const offset = (Date.now() * 0.02) % gridSize;
+
+            for (let x = -offset; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = -offset; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function updateUI() {
+            const char = getCurrentCharacter();
+            document.getElementById('characterName').textContent = char.name;
+            
+            const nextThreshold = Math.min((player.level + 1) * 50, 450);
+            document.getElementById('iqDisplay').textContent = `${player.iq} / ${nextThreshold}`;
+            
+            const healthPercent = (player.health / player.maxHealth) * 100;
+            document.getElementById('healthFill').style.width = healthPercent + '%';
+            
+            if (player.hasStudyGun) {
+                const specialReady = player.specialCooldown <= 0;
+                document.getElementById('ammoDisplay').textContent = specialReady ? '⚡ READY' : Math.ceil(player.specialCooldown / 60) + 's';
+            } else {
+                document.getElementById('ammoDisplay').textContent = '∞';
+            }
+        }
+
+        function gameLoop() {
+            // Clear canvas
+            ctx.fillStyle = '#0f3460';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawBackground();
+
+            if (gameState === 'playing' || gameState === 'boss') {
+                updatePlayer();
+                updateBullets();
+                updateParticles();
+
+                if (gameState === 'boss') {
+                    updateBoss();
+                    updateEnemies();
+                }
+
+                drawCollectibles();
+                drawBullets();
+                drawEnemies();
+                drawBoss();
+                drawParticles();
+                drawPlayer();
+
+                updateUI();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>

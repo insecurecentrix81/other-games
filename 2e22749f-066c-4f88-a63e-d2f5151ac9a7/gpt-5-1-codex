@@ -1,1 +1,775 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Be A Failure or Asian IQ Brain-minded</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #0f172a, #020617 60%);
+      color: #f8fafc;
+      font-family: "Space Grotesk", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body class="text-slate-100">
+  <main class="max-w-6xl mx-auto px-4 py-10 flex flex-col gap-6 items-center">
+    <header class="text-center space-y-2">
+      <p class="text-emerald-300 uppercase text-xs tracking-[0.5em]">Secure Centrix81</p>
+      <h1 class="text-4xl md:text-5xl font-black text-white drop-shadow-lg">Be A Failure or Asian IQ Brain-minded</h1>
+      <p class="text-slate-300 max-w-3xl mx-auto">Hustle from F-tier brain fog to legendary Asian doctor status. Collect knowledge boxes, survive transforming bosses, and keep your IQ streak alive&mdash;one mistake throws you back to rock bottom.</p>
+    </header>
+
+    <section class="grid md:grid-cols-3 gap-4 w-full">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-lg shadow-emerald-500/10">
+        <div class="flex items-center justify-between">
+          <p class="text-xs uppercase tracking-[0.4em] text-emerald-300">Current IQ</p>
+          <span class="text-xs text-slate-400">Focus never sleeps</span>
+        </div>
+        <p id="iqDisplay" class="text-4xl font-black">0 IQ</p>
+        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div id="iqBar" class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full" style="width:0%"></div>
+        </div>
+        <div>
+          <p class="text-sm text-slate-400">Focus (HP): <span id="healthLabel">120/120</span></p>
+          <div class="w-full h-1.5 bg-slate-800 rounded-full mt-1">
+            <div id="healthBar" class="h-full bg-rose-400 rounded-full" style="width:100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-2">
+        <p class="text-xs uppercase tracking-[0.4em] text-amber-300">Current Form</p>
+        <p id="stageName" class="text-2xl font-semibold text-white">Saharsh Gobinath</p>
+        <p id="stageTagline" class="text-sm text-slate-400">Game addiction has bit failing grades.</p>
+        <p id="nextGoalText" class="text-xs text-slate-500">Next upgrade at 50 IQ</p>
+      </div>
+
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+        <p class="text-xs uppercase tracking-[0.4em] text-sky-300">How to Play</p>
+        <ul class="text-sm text-slate-300 space-y-1.5 mt-2">
+          <li>&middot; Grab <span class="text-emerald-300">green Homework</span> (+5 IQ) &amp; <span class="text-sky-300">blue Tutor cubes</span> (+10 IQ).</li>
+          <li>&middot; Every 50 IQ auto-upgrades your avatar and summons Centrix.</li>
+          <li>&middot; Boss rounds unlock the Study Gun (SPACE) until the final duel.</li>
+          <li>&middot; Dodge bullets &amp; goons. Lose all HP and your IQ resets to 0.</li>
+          <li>&middot; Defeat the final Centrix Prime without a gun to win.</li>
+        </ul>
+      </div>
+    </section>
+
+    <div id="bossPanel" class="hidden w-full bg-fuchsia-900/30 border border-fuchsia-500/50 rounded-2xl p-5 space-y-2 shadow-inner">
+      <p class="text-xs uppercase tracking-[0.4em] text-fuchsia-200">Centrix Threat Level</p>
+      <div class="flex items-center justify-between text-lg font-semibold">
+        <span id="bossName">Centrix Lv.0</span>
+        <span id="bossHealthLabel">0%</span>
+      </div>
+      <div class="w-full h-2 bg-fuchsia-900 rounded-full overflow-hidden">
+        <div id="bossHealthBar" class="h-full bg-fuchsia-300 rounded-full" style="width:0%"></div>
+      </div>
+      <p id="bossHint" class="text-sm text-fuchsia-100">Hold SPACE to fire concentrated study packets.</p>
+    </div>
+
+    <div id="gameWrapper" class="relative w-full max-w-5xl">
+      <canvas id="game" width="960" height="600" class="w-full bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl shadow-2xl shadow-cyan-500/20"></canvas>
+      <div class="absolute inset-x-0 bottom-5 flex flex-wrap justify-center gap-3 pointer-events-none text-[0.7rem] md:text-xs font-semibold tracking-wide">
+        <span class="px-3 py-1 rounded-full bg-slate-900/70 border border-slate-700 text-slate-200">WASD / Arrow Keys &mdash; Move</span>
+        <span class="px-3 py-1 rounded-full bg-slate-900/70 border border-slate-700 text-slate-200">SPACE &mdash; Study Gun (boss only)</span>
+        <span class="px-3 py-1 rounded-full bg-slate-900/70 border border-slate-700 text-slate-200">R &mdash; Reset after failure</span>
+      </div>
+    </div>
+
+    <section class="w-full max-w-5xl grid md:grid-cols-2 gap-4 text-sm">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+        <p class="text-xs uppercase tracking-[0.4em] text-lime-300">Upgrade Roadmap</p>
+        <ul class="mt-3 space-y-1 text-slate-300">
+          <li>0 IQ &mdash; Saharsh Gobinath (game-addicted slump)</li>
+          <li>50 IQ &mdash; Hamster (fast paws, tiny brain)</li>
+          <li>100 IQ &mdash; Toddler (crayon calculus)</li>
+          <li>150 IQ &mdash; Anbu (math/coding/bio struggle arc)</li>
+          <li>200 IQ &mdash; Calvin (smart coding troller)</li>
+          <li>250 IQ &mdash; Teacher (rubric enforcer)</li>
+          <li>300 IQ &mdash; Stanford Student (coffee + comps)</li>
+          <li>350 IQ &mdash; Professor (tenure tornado)</li>
+          <li>400 IQ &mdash; Space-Time English Master</li>
+          <li>450 IQ &mdash; Asian Doctor (final legend)</li>
+        </ul>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+        <p class="text-xs uppercase tracking-[0.4em] text-rose-300">Boss Warnings</p>
+        <ul class="mt-3 space-y-2 text-slate-300">
+          <li>&middot; Goons get faster each tier and swarm wherever you hide.</li>
+          <li>&middot; Bullets scale with IQ level. Side-step and keep moving.</li>
+          <li>&middot; Final Centrix Prime boosts by 100× and disables your gun.</li>
+          <li>&middot; Pink focus nodes only spawn in the last duel&mdash;grab them to burn the boss.</li>
+          <li>&middot; No checkpoints. If you fail, you are back to 0 IQ.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+
+      const iqDisplay = document.getElementById('iqDisplay');
+      const iqBar = document.getElementById('iqBar');
+      const healthLabel = document.getElementById('healthLabel');
+      const healthBar = document.getElementById('healthBar');
+      const stageNameEl = document.getElementById('stageName');
+      const stageTaglineEl = document.getElementById('stageTagline');
+      const nextGoalText = document.getElementById('nextGoalText');
+      const bossPanel = document.getElementById('bossPanel');
+      const bossNameEl = document.getElementById('bossName');
+      const bossHealthLabel = document.getElementById('bossHealthLabel');
+      const bossHealthBar = document.getElementById('bossHealthBar');
+      const bossHintEl = document.getElementById('bossHint');
+
+      const MAX_IQ = 450;
+      const stages = [
+        { iq: 0, label: "Saharsh Gobinath", tagline: "Game addiction has bit failing grades.", aura: "#f87171" },
+        { iq: 50, label: "Hamster", tagline: "Furry blur scratching for worksheets.", aura: "#facc15" },
+        { iq: 100, label: "Toddler", tagline: "Finger painting quadratic formulas.", aura: "#fb923c" },
+        { iq: 150, label: "Anbu", tagline: "Kinda dumb at math, coding, and bio... for now.", aura: "#34d399" },
+        { iq: 200, label: "Calvin", tagline: "Smart coding troller with meme aim.", aura: "#38bdf8" },
+        { iq: 250, label: "Teacher", tagline: "Gradebook ninja with chalky wrath.", aura: "#c084fc" },
+        { iq: 300, label: "Stanford Student", tagline: "Optimizing GPA, coffee, and IQ loops.", aura: "#f472b6" },
+        { iq: 350, label: "Professor", tagline: "Tenure-track tornado, spelling TBD.", aura: "#fb7185" },
+        { iq: 400, label: "Space-Time English Master", tagline: "Bends grammar and gravity simultaneously.", aura: "#e879f9" },
+        { iq: 450, label: "Asian Doctor", tagline: "Legendary healer with 200 IQ stethoscope.", aura: "#bef264" }
+      ];
+
+      const player = {
+        x: width / 2,
+        y: height - 90,
+        radius: 18,
+        speed: 3.2,
+        color: '#22d3ee',
+        health: 120,
+        maxHealth: 120,
+        canShoot: false,
+        fireCooldown: 0,
+        invincibleTimer: 0
+      };
+
+      let iq = 0;
+      let stageIndex = 0;
+      let gamePhase = 'collect';
+      let defeatReason = '';
+      let pickupTimer = 0;
+      let boss = null;
+      let bossBullets = [];
+      let playerBullets = [];
+      let goons = [];
+      let pickups = [];
+      let focusOrbs = [];
+      let focusSpawnTimer = 0;
+      const celebration = [];
+      const messages = [];
+
+      const keys = {};
+
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') e.preventDefault();
+        keys[e.code] = true;
+        if (gamePhase === 'gameOver' && e.code === 'KeyR') {
+          resetGame();
+        }
+      });
+
+      document.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+      });
+
+      function rand(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function distance(ax, ay, bx, by) {
+        return Math.hypot(ax - bx, ay - by);
+      }
+
+      function pushMessage(text, ttl = 240) {
+        messages.push({ text, ttl });
+        if (messages.length > 5) messages.shift();
+      }
+
+      function getNextThreshold() {
+        return stageIndex < stages.length - 1 ? stages[stageIndex + 1].iq : null;
+      }
+
+      function enterCollectMode(info) {
+        gamePhase = 'collect';
+        pickups = [];
+        pickupTimer = 25;
+        playerBullets = [];
+        bossBullets = [];
+        goons = [];
+        boss = null;
+        focusOrbs = [];
+        focusSpawnTimer = 0;
+        player.canShoot = false;
+        if (info) pushMessage(info);
+      }
+
+      function resetGame() {
+        iq = 0;
+        stageIndex = 0;
+        defeatReason = '';
+        player.x = width / 2;
+        player.y = height - 90;
+        player.maxHealth = 120;
+        player.health = player.maxHealth;
+        player.invincibleTimer = 0;
+        celebration.length = 0;
+        messages.length = 0;
+        pushMessage('Collect homework and tutor boxes to boost IQ!');
+        enterCollectMode();
+      }
+
+      function levelUp() {
+        if (stageIndex >= stages.length - 1) return;
+        stageIndex += 1;
+        iq = Math.max(iq, stages[stageIndex].iq);
+        player.maxHealth = 120 + stageIndex * 15;
+        player.health = player.maxHealth;
+        pushMessage(`Transformed into ${stages[stageIndex].label}!`);
+        startBossFight(stageIndex === stages.length - 1);
+      }
+
+      function startBossFight(isFinal) {
+        gamePhase = isFinal ? 'finalBoss' : 'boss';
+        player.canShoot = !isFinal;
+        player.fireCooldown = 0;
+        player.invincibleTimer = 30;
+        player.x = width / 2;
+        player.y = height - 110;
+        pickups = [];
+        playerBullets = [];
+        bossBullets = [];
+        goons = [];
+        focusOrbs = [];
+        focusSpawnTimer = 160;
+        const stageBoost = stageIndex;
+        const baseHealth = isFinal ? 900 : 120 + stageBoost * 30;
+        boss = {
+          x: width / 2,
+          y: 140,
+          radius: 36 + stageBoost * 2,
+          speed: 1 + stageBoost * 0.08,
+          fireTimer: 60,
+          fireDelay: Math.max(40, 130 - stageBoost * 8),
+          goonTimer: 90,
+          goonDelay: Math.max(60, 200 - stageBoost * 10),
+          bulletSpeed: 2.2 + stageBoost * 0.25,
+          health: baseHealth,
+          maxHealth: baseHealth,
+          color: isFinal ? '#f472b6' : '#38bdf8',
+          stageBoost,
+          final: isFinal
+        };
+        pushMessage(isFinal ? 'Centrix81 Prime unleashes 100x power! Study gun offline.' : 'Centrix clone detected. Study gun online!');
+      }
+
+      function spawnPickup() {
+        const type = Math.random() < 0.6 ? 'homework' : 'tutor';
+        const value = type === 'homework' ? 5 : 10;
+        const size = type === 'homework' ? 22 : 26;
+        const spawn = {
+          x: rand(50, width - 50),
+          y: rand(120, height - 80),
+          size,
+          type,
+          value,
+          wobble: Math.random() * Math.PI * 2
+        };
+        if (distance(spawn.x, spawn.y, player.x, player.y) < 80) {
+          spawn.x = clamp(spawn.x + 120, 60, width - 60);
+        }
+        pickups.push(spawn);
+      }
+
+      function updateCollectPhase() {
+        pickupTimer -= 1;
+        if (pickupTimer <= 0 && pickups.length < 12) {
+          spawnPickup();
+          pickupTimer = 30 + Math.random() * 30;
+        }
+        for (let i = pickups.length - 1; i >= 0; i--) {
+          const p = pickups[i];
+          const dist = distance(player.x, player.y, p.x, p.y);
+          if (dist < player.radius + p.size * 0.5) {
+            iq = Math.min(MAX_IQ, iq + p.value);
+            pickups.splice(i, 1);
+            pushMessage(p.type === 'homework' ? '+5 IQ from homework!' : '+10 IQ from tutor!');
+          }
+        }
+        const next = getNextThreshold();
+        if (gamePhase === 'collect' && next !== null && iq >= next) {
+          levelUp();
+        }
+      }
+
+      function handleMovement() {
+        let dx = 0;
+        let dy = 0;
+        if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+        if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+        if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+        if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+        if (dx !== 0 || dy !== 0) {
+          const len = Math.hypot(dx, dy);
+          const speed = player.speed + stageIndex * 0.08;
+          player.x += (dx / len) * speed;
+          player.y += (dy / len) * speed;
+        }
+        player.x = clamp(player.x, player.radius, width - player.radius);
+        player.y = clamp(player.y, player.radius, height - player.radius);
+      }
+
+      function shootStudyBurst() {
+        const bulletSpeed = 6.2 + stageIndex * 0.25;
+        playerBullets.push({
+          x: player.x + (Math.random() - 0.5) * 6,
+          y: player.y - player.radius,
+          dx: (Math.random() - 0.5) * 0.4,
+          dy: -bulletSpeed,
+          radius: 5,
+          damage: 12 + stageIndex * 3
+        });
+        player.fireCooldown = Math.max(6, 16 - stageIndex);
+      }
+
+      function spawnGoon() {
+        if (!boss) return;
+        const isFinal = gamePhase === 'finalBoss';
+        const angle = Math.random() * Math.PI * 2;
+        const offset = boss.radius + 60 + Math.random() * 40;
+        const radius = isFinal ? 22 : 12 + Math.min(stageIndex, 6);
+        const speed = isFinal ? 1.6 + stageIndex * 0.08 : 1.1 + stageIndex * 0.1;
+        const health = isFinal ? 80 : 25 + stageIndex * 8;
+        goons.push({
+          x: clamp(boss.x + Math.cos(angle) * offset, radius, width - radius),
+          y: clamp(boss.y + Math.sin(angle) * offset, radius, height - radius),
+          radius,
+          speed,
+          health
+        });
+      }
+
+      function fireBossBullet() {
+        if (!boss) return;
+        const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+        const spread = gamePhase === 'finalBoss' ? (Math.random() - 0.5) * 1.2 : (Math.random() - 0.5) * 0.4;
+        const bulletSpeed = boss.bulletSpeed + (gamePhase === 'finalBoss' ? 1.2 : 0);
+        bossBullets.push({
+          x: boss.x,
+          y: boss.y,
+          dx: Math.cos(angle + spread) * bulletSpeed,
+          dy: Math.sin(angle + spread) * bulletSpeed,
+          radius: 6 + stageIndex * 0.2
+        });
+      }
+
+      function spawnFocusOrb() {
+        focusOrbs.push({
+          x: rand(80, width - 80),
+          y: rand(140, height - 160),
+          radius: 14,
+          pulse: Math.random() * Math.PI * 2,
+          value: 70
+        });
+      }
+
+      function damagePlayer(amount) {
+        if (player.invincibleTimer > 0 || gamePhase === 'victory') return;
+        player.health -= amount;
+        player.invincibleTimer = 25;
+        if (player.health <= 0) {
+          player.health = 0;
+          triggerGameOver('Centrix wiped your memory.');
+        }
+      }
+
+      function triggerGameOver(reason) {
+        gamePhase = 'gameOver';
+        defeatReason = reason;
+        boss = null;
+        pushMessage('IQ reset! Press R to restart.');
+      }
+
+      function winBossFight() {
+        if (gamePhase === 'finalBoss') {
+          triggerVictory();
+        } else {
+          pushMessage('Boss expelled! Back to grind.');
+          enterCollectMode('Collect more knowledge for the next 50 IQ.');
+        }
+      }
+
+      function triggerVictory() {
+        gamePhase = 'victory';
+        player.canShoot = false;
+        celebration.length = 0;
+        for (let i = 0; i < 140; i++) {
+          celebration.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            speed: 0.5 + Math.random() * 1.5,
+            color: `hsl(${Math.random() * 360},80%,65%)`
+          });
+        }
+        pushMessage('Secure Centrix81 crowns you Mega Brain!');
+      }
+
+      function updateBossPhase() {
+        if (!boss) return;
+        const dx = player.x - boss.x;
+        const dist = Math.max(1, Math.abs(dx));
+        boss.x += Math.sign(dx) * boss.speed;
+        boss.x = clamp(boss.x, boss.radius, width - boss.radius);
+        boss.y = 140 + Math.sin(Date.now() * 0.001 + stageIndex) * 20;
+
+        boss.fireTimer -= 1;
+        if (boss.fireTimer <= 0) {
+          fireBossBullet();
+          boss.fireTimer = boss.fireDelay;
+          if (gamePhase === 'finalBoss') boss.fireTimer *= 0.85;
+        }
+
+        boss.goonTimer -= 1;
+        const goonCap = gamePhase === 'finalBoss' ? 8 : 4 + Math.floor(stageIndex / 2);
+        if (boss.goonTimer <= 0 && goons.length < goonCap) {
+          spawnGoon();
+          boss.goonTimer = boss.goonDelay;
+        }
+
+        for (let i = bossBullets.length - 1; i >= 0; i--) {
+          const bullet = bossBullets[i];
+          bullet.x += bullet.dx;
+          bullet.y += bullet.dy;
+          if (bullet.x < -30 || bullet.x > width + 30 || bullet.y < -30 || bullet.y > height + 30) {
+            bossBullets.splice(i, 1);
+            continue;
+          }
+          if (distance(bullet.x, bullet.y, player.x, player.y) < bullet.radius + player.radius) {
+            bossBullets.splice(i, 1);
+            damagePlayer(12 + stageIndex * 2);
+          }
+        }
+
+        for (let i = goons.length - 1; i >= 0; i--) {
+          const g = goons[i];
+          const gx = player.x - g.x;
+          const gy = player.y - g.y;
+          const gDist = Math.hypot(gx, gy) || 1;
+          g.x += (gx / gDist) * g.speed;
+          g.y += (gy / gDist) * g.speed;
+          if (g.x < g.radius || g.x > width - g.radius) g.x = clamp(g.x, g.radius, width - g.radius);
+          if (g.y < g.radius || g.y > height - g.radius) g.y = clamp(g.y, g.radius, height - g.radius);
+          if (distance(g.x, g.y, player.x, player.y) < g.radius + player.radius) {
+            goons.splice(i, 1);
+            damagePlayer(10 + stageIndex * 2);
+            continue;
+          }
+        }
+
+        for (let i = playerBullets.length - 1; i >= 0; i--) {
+          const b = playerBullets[i];
+          b.x += b.dx;
+          b.y += b.dy;
+          if (b.y < -40 || b.y > height + 40) {
+            playerBullets.splice(i, 1);
+            continue;
+          }
+          let hit = false;
+          for (let j = goons.length - 1; j >= 0; j--) {
+            if (distance(b.x, b.y, goons[j].x, goons[j].y) < goons[j].radius + b.radius) {
+              goons[j].health -= b.damage;
+              hit = true;
+              if (goons[j].health <= 0) goons.splice(j, 1);
+              break;
+            }
+          }
+          if (!hit && boss && distance(b.x, b.y, boss.x, boss.y) < boss.radius + b.radius) {
+            boss.health -= b.damage;
+            hit = true;
+            if (boss.health < 0) boss.health = 0;
+          }
+          if (hit) playerBullets.splice(i, 1);
+        }
+
+        if (gamePhase === 'finalBoss') {
+          focusSpawnTimer -= 1;
+          if (focusSpawnTimer <= 0) {
+            spawnFocusOrb();
+            focusSpawnTimer = 150;
+          }
+          for (let i = focusOrbs.length - 1; i >= 0; i--) {
+            const orb = focusOrbs[i];
+            orb.pulse += 0.08;
+            orb.radius = 14 + Math.sin(orb.pulse) * 2;
+            orb.x += Math.cos(orb.pulse) * 0.3;
+            orb.y += Math.sin(orb.pulse * 0.7) * 0.2;
+            if (distance(orb.x, orb.y, player.x, player.y) < orb.radius + player.radius) {
+              boss.health -= orb.value;
+              goons = [];
+              player.health = Math.min(player.maxHealth, player.health + 20);
+              pushMessage('Focus surge! Prime mind cracked.');
+              focusOrbs.splice(i, 1);
+            }
+          }
+        }
+
+        if (boss && boss.health <= 0) {
+          boss.health = 0;
+          winBossFight();
+        }
+      }
+
+      function updateMessages() {
+        for (let i = messages.length - 1; i >= 0; i--) {
+          messages[i].ttl -= 1;
+          if (messages[i].ttl <= 0) messages.splice(i, 1);
+        }
+      }
+
+      function updateUI() {
+        iqDisplay.textContent = `${Math.floor(iq)} IQ`;
+        const next = getNextThreshold();
+        if (next !== null) {
+          const prev = stages[stageIndex].iq;
+          const ratio = (iq - prev) / (next - prev);
+          iqBar.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
+          nextGoalText.textContent = `Next upgrade at ${next} IQ`;
+        } else {
+          iqBar.style.width = '100%';
+          nextGoalText.textContent = 'Max IQ unlocked. Final thesis in progress.';
+        }
+        stageNameEl.textContent = stages[stageIndex].label;
+        stageNameEl.style.color = stages[stageIndex].aura;
+        stageTaglineEl.textContent = stages[stageIndex].tagline;
+        healthLabel.textContent = `${Math.max(0, Math.ceil(player.health))}/${player.maxHealth}`;
+        const healthRatio = player.health / player.maxHealth;
+        healthBar.style.width = `${Math.max(0, Math.min(1, healthRatio)) * 100}%`;
+
+        if ((gamePhase === 'boss' || gamePhase === 'finalBoss') && boss) {
+          bossPanel.classList.remove('hidden');
+          bossNameEl.textContent = `Centrix Lv.${stageIndex}`;
+          const percent = Math.max(0, boss.health / boss.maxHealth);
+          bossHealthLabel.textContent = `${Math.round(percent * 100)}%`;
+          bossHealthBar.style.width = `${percent * 100}%`;
+          bossHintEl.textContent = gamePhase === 'finalBoss'
+            ? 'Study gun offline! Grab pink focus nodes to burn Centrix Prime.'
+            : 'Hold SPACE to fire study bursts. Delete goons for breathing room.';
+        } else {
+          bossPanel.classList.add('hidden');
+        }
+      }
+
+      function drawGame() {
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, '#0f172a');
+        gradient.addColorStop(1, '#020617');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = 'rgba(15,23,42,0.3)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < width; x += 40) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+        for (let y = 0; y < height; y += 40) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+
+        pickups.forEach((p) => {
+          p.wobble += 0.05;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(Math.sin(p.wobble) * 0.3);
+          if (p.type === 'homework') {
+            ctx.fillStyle = '#4ade80';
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.strokeStyle = '#bbf7d0';
+            ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          } else {
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.roundRect(-p.size / 2, -p.size / 2, p.size, p.size, 6);
+            ctx.fill();
+            ctx.strokeStyle = '#bae6fd';
+            ctx.stroke();
+            ctx.strokeStyle = '#e0f2fe';
+            ctx.beginPath();
+            ctx.moveTo(-p.size / 4, 0);
+            ctx.lineTo(p.size / 4, 0);
+            ctx.moveTo(0, -p.size / 4);
+            ctx.lineTo(0, p.size / 4);
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+
+        focusOrbs.forEach((orb) => {
+          ctx.save();
+          ctx.translate(orb.x, orb.y);
+          const radius = orb.radius || 14;
+          const grad = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius);
+          grad.addColorStop(0, 'rgba(251, 113, 133, 1)');
+          grad.addColorStop(1, 'rgba(244, 114, 182, 0.2)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        goons.forEach((g) => {
+          ctx.fillStyle = '#facc15';
+          ctx.beginPath();
+          ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fde047';
+          ctx.stroke();
+        });
+
+        bossBullets.forEach((b) => {
+          ctx.fillStyle = '#f472b6';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        playerBullets.forEach((b) => {
+          ctx.fillStyle = '#a5f3fc';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        if (boss) {
+          ctx.save();
+          ctx.translate(boss.x, boss.y);
+          ctx.fillStyle = boss.color;
+          ctx.shadowColor = boss.color;
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.arc(0, 0, boss.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(-boss.radius * 0.3, -8, 6, 0, Math.PI * 2);
+          ctx.arc(boss.radius * 0.3, -8, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.fillStyle = player.invincibleTimer > 0 ? '#fde68a' : player.color;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(player.x - 6, player.y - 4, 3, 0, Math.PI * 2);
+        ctx.arc(player.x + 6, player.y - 4, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = '16px "Space Grotesk", sans-serif';
+        messages.forEach((msg, index) => {
+          const alpha = Math.min(1, msg.ttl / 60);
+          ctx.fillStyle = `rgba(248, 250, 252, ${alpha})`;
+          ctx.fillText(msg.text, 20, 30 + index * 20);
+        });
+
+        if (gamePhase === 'gameOver') {
+          ctx.save();
+          ctx.fillStyle = 'rgba(127, 29, 29, 0.8)';
+          ctx.fillRect(0, 0, width, height);
+          ctx.fillStyle = '#fee2e2';
+          ctx.textAlign = 'center';
+          ctx.font = '42px "Space Grotesk", sans-serif';
+          ctx.fillText('IQ RESET!', width / 2, height / 2 - 20);
+          ctx.font = '20px "Space Grotesk", sans-serif';
+          ctx.fillText(defeatReason, width / 2, height / 2 + 20);
+          ctx.fillText('Press R to grind again.', width / 2, height / 2 + 50);
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
+
+        if (gamePhase === 'victory') {
+          ctx.save();
+          ctx.fillStyle = 'rgba(15, 118, 110, 0.7)';
+          ctx.fillRect(0, 0, width, height);
+          celebration.forEach((confetti) => {
+            confetti.y += confetti.speed;
+            if (confetti.y > height) confetti.y = -10;
+            ctx.fillStyle = confetti.color;
+            ctx.fillRect(confetti.x, confetti.y, 4, 10);
+          });
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#f0fdf4';
+          ctx.font = '48px "Space Grotesk", sans-serif';
+          ctx.fillText('Ultimate IQ Unlocked!', width / 2, height / 2 - 40);
+          ctx.font = '22px "Space Grotesk", sans-serif';
+          ctx.fillText('You became the Asian Doctor legend. Press R to play again.', width / 2, height / 2 + 10);
+          ctx.textAlign = 'left';
+          ctx.restore();
+        }
+      }
+
+      function update() {
+        if (gamePhase !== 'gameOver' && gamePhase !== 'victory') {
+          handleMovement();
+          if (player.fireCooldown > 0) player.fireCooldown -= 1;
+          if (player.canShoot && keys['Space'] && player.fireCooldown <= 0) {
+            shootStudyBurst();
+          }
+          if (player.invincibleTimer > 0) player.invincibleTimer -= 1;
+          if (gamePhase === 'collect') {
+            updateCollectPhase();
+          } else if (gamePhase === 'boss' || gamePhase === 'finalBoss') {
+            updateBossPhase();
+          }
+        } else if (gamePhase === 'victory') {
+          celebration.forEach((confetti) => {
+            confetti.y += confetti.speed;
+            if (confetti.y > height) confetti.y = -10;
+          });
+        }
+        updateMessages();
+        updateUI();
+      }
+
+      function loop() {
+        update();
+        drawGame();
+        requestAnimationFrame(loop);
+      }
+
+      resetGame();
+      loop();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Be A Failure or Asian IQ Brain-minded</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #0f172a 0, #020617 55%, #000 100%);
+      color: #e5e7eb;
+    }
+
+    #gameCanvas {
+      background: radial-gradient(circle at center, #020617 0, #020617 40%, #000 100%);
+      display: block;
+    }
+
+    .shadow-soft {
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+    }
+
+    .glass {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.86));
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .btn-main {
+      background: linear-gradient(135deg, #22c55e, #22c55e, #0ea5e9);
+      color: #0f172a;
+      font-weight: 600;
+      border-radius: 9999px;
+      padding: 0.5rem 1.4rem;
+      font-size: 0.9rem;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+      box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-main:hover {
+      transform: translateY(-1px) scale(1.01);
+      filter: brightness(1.05);
+      box-shadow: 0 14px 28px rgba(34, 197, 94, 0.4);
+    }
+
+    .btn-main:active {
+      transform: translateY(1px) scale(0.99);
+      box-shadow: 0 6px 12px rgba(15, 23, 42, 0.9);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border-radius: 9999px;
+      padding: 0.4rem 1.1rem;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(148, 163, 184, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .badge {
+      border-radius: 9999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 0.1rem 0.55rem;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+    }
+
+    .hud-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+    }
+
+    .hud-value {
+      font-weight: 600;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .layout-stack {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center">
+  <header class="w-full max-w-6xl px-4 pt-6 pb-2 flex flex-col items-center text-center">
+    <div class="badge mb-2">Secure Centrix81 • IQ Climber</div>
+    <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-50 drop-shadow">
+      Be A Failure or Asian IQ Brain-minded
+    </h1>
+    <p class="mt-2 max-w-2xl text-xs md:text-sm text-slate-300">
+      Start at rock-bottom IQ, grind homework and tutors to evolve your brain form, and face escalating Centrix boss fights.
+      One mistake and every single IQ point resets back to zero.
+    </p>
+  </header>
+
+  <main class="w-full max-w-6xl px-4 pb-6 flex layout-stack gap-4">
+    <!-- Game Panel -->
+    <section class="flex-1 flex flex-col gap-3">
+      <!-- HUD -->
+      <div class="glass shadow-soft rounded-2xl px-3 py-2 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <div>
+            <div class="hud-label">IQ</div>
+            <div class="hud-value flex items-baseline gap-1">
+              <span id="iqValue">0</span>
+              <span class="text-[0.6rem] text-slate-400">/ 450</span>
+            </div>
+          </div>
+          <div class="h-10 w-px bg-slate-700/70"></div>
+          <div>
+            <div class="hud-label">Form</div>
+            <div id="formLabel" class="hud-value truncate max-w-[11rem]">
+              Saharsh — Casual Gamer
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="hud-label">Phase</div>
+            <div id="phaseLabel" class="hud-value">Menu</div>
+          </div>
+          <div class="text-right">
+            <div class="hud-label">Stage</div>
+            <div id="stageLabel" class="hud-value">0</div>
+          </div>
+          <button id="pauseButton" type="button" class="btn-secondary text-[0.7rem]">
+            Pause
+          </button>
+        </div>
+      </div>
+
+      <!-- Canvas Card -->
+      <div class="glass shadow-soft rounded-3xl p-3 md:p-4 flex flex-col gap-2">
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2 text-[0.7rem] text-slate-400">
+            <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="statusLabel">Menu • Press "Start New Run"</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="startButton" type="button" class="btn-main">
+              Start New Run
+            </button>
+          </div>
+        </div>
+        <div class="relative w-full rounded-2xl overflow-hidden border border-slate-800/80 bg-slate-950">
+          <div class="absolute inset-0 pointer-events-none bg-gradient-to-b from-sky-500/5 via-transparent to-emerald-500/5"></div>
+          <canvas id="gameCanvas" class="w-full h-full" aria-label="IQ Climber Game" role="img"></canvas>
+        </div>
+        <p class="mt-1 text-[0.65rem] md:text-[0.7rem] text-slate-400 leading-snug">
+          <span class="font-semibold text-emerald-400">Tip:</span>
+          Chain homework and tutor pickups without getting hit to speed through IQ forms. Every multiple of 50 IQ
+          unlocks the next Centrix boss variant.
+        </p>
+      </div>
+
+      <!-- State / Narrative Panel -->
+      <div id="stateMessages" class="glass shadow-soft rounded-2xl px-3 py-3 flex flex-col gap-2 hidden">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/15 text-rose-400">
+            !
+          </span>
+          <h2 id="stateTitle" class="text-sm font-semibold text-slate-50">Game Over</h2>
+        </div>
+        <p id="stateText" class="text-[0.75rem] text-slate-300 leading-snug">
+          You got bonked.
+        </p>
+        <div class="flex flex-wrap gap-2 mt-1">
+          <button id="stateButton" type="button" class="btn-main text-[0.8rem]">
+            Start from 0 IQ
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Side Info Panel -->
+    <aside class="w-full md:w-80 flex flex-col gap-3">
+      <!-- Instructions -->
+      <div class="glass shadow-soft rounded-2xl px-3 py-3 text-[0.75rem] md:text-[0.8rem] leading-snug">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-xs font-semibold text-slate-50 tracking-wide uppercase">How to Play</h2>
+          <span class="badge">Controls</span>
+        </div>
+        <ul class="list-disc list-inside space-y-1 text-slate-300">
+          <li><span class="font-semibold text-sky-400">Move:</span> WASD or Arrow keys</li>
+          <li><span class="font-semibold text-emerald-400">Study Phase:</span> collect
+            <span class="text-emerald-400 font-semibold">green</span> homework boxes (+1 IQ) and
+            <span class="text-sky-400 font-semibold">blue</span> tutor boxes (+3 IQ).</li>
+          <li>Every <span class="font-semibold text-amber-300">50 IQ</span> your form evolves and a tougher Centrix boss
+            is unlocked.</li>
+          <li><span class="font-semibold text-rose-400">Boss Phase (IQ &lt; 450):</span> avoid red bullets and orange
+            goons; fire the Study Blaster with <span class="font-semibold">Space</span> or by
+            <span class="font-semibold">holding Left Click / Tap</span>.</li>
+          <li><span class="font-semibold text-fuchsia-400">Final Boss (450 IQ):</span> no blaster. Just dodge the
+            storm while your raw IQ slowly melts the Ultra Centrix boss.</li>
+          <li>If you get hit even once, <span class="font-semibold text-rose-400">all IQ resets back to 0</span>. No
+            checkpoints, no mercy.</li>
+        </ul>
+      </div>
+
+      <!-- IQ Forms -->
+      <div class="glass shadow-soft rounded-2xl px-3 py-3 text-[0.75rem] md:text-[0.8rem] leading-snug">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-xs font-semibold text-slate-50 tracking-wide uppercase">IQ Forms</h2>
+          <span class="badge">Evolution</span>
+        </div>
+        <ol class="list-decimal list-inside space-y-0.5 text-slate-300" id="iqList">
+          <li><span class="font-semibold text-amber-300">0 IQ</span> — Saharsh — Casual Gamer</li>
+          <li><span class="font-semibold text-amber-300">50 IQ</span> — Hamster on a Wheel</li>
+          <li><span class="font-semibold text-amber-300">100 IQ</span> — Curious Toddler</li>
+          <li><span class="font-semibold text-amber-300">150 IQ</span> — Anbu — Determined Learner</li>
+          <li><span class="font-semibold text-amber-300">200 IQ</span> — Calvin — Code Tinkerer</li>
+          <li><span class="font-semibold text-amber-300">250 IQ</span> — Dedicated Teacher</li>
+          <li><span class="font-semibold text-amber-300">300 IQ</span> — Elite Student</li>
+          <li><span class="font-semibold text-amber-300">350 IQ</span> — Respected Professor</li>
+          <li><span class="font-semibold text-amber-300">400 IQ</span> — Legendary Scientist</li>
+          <li><span class="font-semibold text-emerald-400">450 IQ</span> — World-Class Doctor</li>
+        </ol>
+      </div>
+
+      <!-- Hints -->
+      <div class="glass shadow-soft rounded-2xl px-3 py-3 text-[0.7rem] md:text-[0.75rem] leading-snug text-slate-300">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-xs font-semibold text-slate-50 tracking-wide uppercase">Centrix Boss Hints</h2>
+          <span class="badge">Boss</span>
+        </div>
+        <ul class="list-disc list-inside space-y-1">
+          <li>Green homework is safe but slow; blue tutors are risky but give more IQ.</li>
+          <li>During bosses, keep moving in wide circles instead of tiny wiggles.</li>
+          <li>Snipe orange goons quickly so you can focus on dodging bullet waves.</li>
+          <li>On the final Ultra Centrix phase, stay calm; tiny movements beat panic dashes.</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      // HUD elements
+      const iqValueEl = document.getElementById('iqValue');
+      const formLabelEl = document.getElementById('formLabel');
+      const phaseLabelEl = document.getElementById('phaseLabel');
+      const stageLabelEl = document.getElementById('stageLabel');
+      const statusLabelEl = document.getElementById('statusLabel');
+
+      const startButton = document.getElementById('startButton');
+      const pauseButton = document.getElementById('pauseButton');
+
+      const statePanel = document.getElementById('stateMessages');
+      const stateTitleEl = document.getElementById('stateTitle');
+      const stateTextEl = document.getElementById('stateText');
+      const stateButton = document.getElementById('stateButton');
+
+      const GAME_STATE = {
+        MENU: 'menu',
+        STUDY: 'study',
+        BOSS: 'boss',
+        GAMEOVER: 'gameover',
+        VICTORY: 'victory'
+      };
+
+      let gameState = GAME_STATE.MENU;
+      let isPaused = false;
+
+      const maxIq = 450;
+      let iq = 0;
+
+      const IQ_LEVELS = [
+        { threshold: 0, label: 'Saharsh  Casual Gamer', short: 'Saharsh' },
+        { threshold: 50, label: 'Hamster on a Wheel', short: 'Hamster' },
+        { threshold: 100, label: 'Curious Toddler', short: 'Toddler' },
+        { threshold: 150, label: 'Anbu  Determined Learner', short: 'Anbu' },
+        { threshold: 200, label: 'Calvin  Code Tinkerer', short: 'Calvin' },
+        { threshold: 250, label: 'Dedicated Teacher', short: 'Teacher' },
+        { threshold: 300, label: 'Elite Student', short: 'Elite Student' },
+        { threshold: 350, label: 'Respected Professor', short: 'Professor' },
+        { threshold: 400, label: 'Legendary Scientist', short: 'Scientist' },
+        { threshold: 450, label: 'World-Class Doctor', short: 'Doctor' }
+      ];
+
+      const player = {
+        x: 0,
+        y: 0,
+        w: 32,
+        h: 32,
+        speed: 270
+      };
+
+      let items = [];
+      let itemSpawnTimer = 0;
+
+      let boss = null;
+      let bullets = [];
+      let playerBullets = [];
+      let goons = [];
+      let bossStageIndex = -1;
+      let bossShootTimer = 0;
+      let goonSpawnTimer = 0;
+      let shootCooldown = 0;
+
+      let bannerText = '';
+      let bannerTimer = 0;
+
+      const keys = {};
+      let shootHeld = false;
+
+      function initCanvas() {
+        canvas.width = 960;
+        canvas.height = 540;
+      }
+
+      initCanvas();
+
+      function rectsIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+        return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+      }
+
+      function getLevelForIq(value) {
+        let current = IQ_LEVELS[0];
+        for (let i = 0; i < IQ_LEVELS.length; i++) {
+          if (value >= IQ_LEVELS[i].threshold) {
+            current = IQ_LEVELS[i];
+          }
+        }
+        return current;
+      }
+
+      function showBanner(text) {
+        bannerText = text;
+        bannerTimer = 2.6;
+      }
+
+      function showStatePanel(title, text, buttonLabel) {
+        stateTitleEl.textContent = title;
+        stateTextEl.textContent = text;
+        stateButton.textContent = buttonLabel;
+        statePanel.classList.remove('hidden');
+      }
+
+      function hideStatePanel() {
+        statePanel.classList.add('hidden');
+      }
+
+      function resetPlayerPosition() {
+        player.x = (canvas.width - player.w) / 2;
+        player.y = canvas.height - player.h - 40;
+      }
+
+      function updateHud() {
+        iqValueEl.textContent = iq.toString();
+        const level = getLevelForIq(iq);
+        formLabelEl.textContent = level.label;
+
+        let phase;
+        switch (gameState) {
+          case GAME_STATE.STUDY:
+            phase = 'Study phase';
+            break;
+          case GAME_STATE.BOSS:
+            phase = 'Boss fight';
+            break;
+          case GAME_STATE.GAMEOVER:
+            phase = 'Game over';
+            break;
+          case GAME_STATE.VICTORY:
+            phase = 'Victory';
+            break;
+          default:
+            phase = 'Menu';
+        }
+        phaseLabelEl.textContent = phase;
+
+        const stageIndex = Math.floor(iq / 50);
+        stageLabelEl.textContent = stageIndex.toString();
+      }
+
+      function updateStatusLabel() {
+        let text = '';
+        if (gameState === GAME_STATE.MENU) {
+          text = 'Menu  Press "Start New Run"';
+        } else if (gameState === GAME_STATE.STUDY) {
+          text = 'Study Phase  Collect homework and tutors';
+        } else if (gameState === GAME_STATE.BOSS) {
+          if (bossStageIndex === 8) {
+            text = 'Final Boss  Survive while your IQ melts Ultra Centrix';
+          } else {
+            text = 'Boss Fight  Shoot with Space / Hold Click';
+          }
+        } else if (gameState === GAME_STATE.VICTORY) {
+          text = 'Victory  You reached the ultimate IQ form!';
+        } else if (gameState === GAME_STATE.GAMEOVER) {
+          text = 'Game Over  IQ reset to 0';
+        }
+        statusLabelEl.textContent = text;
+      }
+
+      function startNewRun() {
+        hideStatePanel();
+        iq = 0;
+        items = [];
+        bullets = [];
+        playerBullets = [];
+        goons = [];
+        boss = null;
+        bossStageIndex = -1;
+        itemSpawnTimer = 0;
+        shootCooldown = 0;
+        isPaused = false;
+        gameState = GAME_STATE.STUDY;
+        resetPlayerPosition();
+        showBanner('Study Phase: collect homework (green) and tutors (blue)!');
+        updateHud();
+        updateStatusLabel();
+        pauseButton.textContent = 'Pause';
+      }
+
+      function failRun(reason) {
+        iq = 0;
+        gameState = GAME_STATE.GAMEOVER;
+        updateHud();
+        updateStatusLabel();
+        showStatePanel('Game Over', reason + ' Your IQ has been reset all the way back to 0. Start over and try again.', 'Start from 0 IQ');
+      }
+
+      function startBoss() {
+        gameState = GAME_STATE.BOSS;
+        bossStageIndex = Math.max(0, Math.floor(iq / 50) - 1);
+
+        const baseHp = 55;
+        const hp = baseHp + bossStageIndex * 25;
+
+        boss = {
+          x: canvas.width / 2 - 60,
+          y: 80,
+          w: 120,
+          h: 70,
+          hp: hp,
+          maxHp: hp
+        };
+
+        bullets = [];
+        playerBullets = [];
+        goons = [];
+        shootCooldown = 0;
+        bossShootTimer = 0.6;
+        goonSpawnTimer = Math.max(2.6 - bossStageIndex * 0.2, 0.8);
+        resetPlayerPosition();
+
+        const levelLabel = getLevelForIq(iq).short;
+        if (bossStageIndex < 8) {
+          showBanner('Boss ' + (bossStageIndex + 1) + ': Centrix vs ' + levelLabel + '! Use your Study Blaster.');
+        } else {
+          showBanner('Final Boss: Ultra Centrix! Dodge everything while your IQ does the damage.');
+        }
+        updateStatusLabel();
+      }
+
+      // Input handling
+      window.addEventListener('keydown', function (e) {
+        if ([
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight'
+        ].includes(e.key)) {
+          e.preventDefault();
+        }
+        if ([
+          'KeyW',
+          'KeyA',
+          'KeyS',
+          'KeyD',
+          'Space'
+        ].includes(e.code)) {
+          e.preventDefault();
+        }
+        keys[e.key] = true;
+        keys[e.code] = true;
+        if (e.code === 'Space') {
+          shootHeld = true;
+        }
+      });
+
+      window.addEventListener('keyup', function (e) {
+        keys[e.key] = false;
+        keys[e.code] = false;
+        if (e.code === 'Space') {
+          shootHeld = false;
+        }
+      });
+
+      canvas.addEventListener('mousedown', function () {
+        shootHeld = true;
+      });
+
+      canvas.addEventListener('mouseup', function () {
+        shootHeld = false;
+      });
+
+      canvas.addEventListener('mouseleave', function () {
+        shootHeld = false;
+      });
+
+      canvas.addEventListener('touchstart', function (e) {
+        e.preventDefault();
+        shootHeld = true;
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', function () {
+        shootHeld = false;
+      });
+
+      startButton.addEventListener('click', function () {
+        startNewRun();
+      });
+
+      pauseButton.addEventListener('click', function () {
+        if (gameState === GAME_STATE.MENU) return;
+        isPaused = !isPaused;
+        pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
+      });
+
+      stateButton.addEventListener('click', function () {
+        startNewRun();
+      });
+
+      function getInputDirection() {
+        let dx = 0;
+        let dy = 0;
+        if (keys['ArrowLeft'] || keys['KeyA']) dx -= 1;
+        if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+        if (keys['ArrowUp'] || keys['KeyW']) dy -= 1;
+        if (keys['ArrowDown'] || keys['KeyS']) dy += 1;
+        if (dx === 0 && dy === 0) return { dx: 0, dy: 0 };
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        return { dx: dx / len, dy: dy / len };
+      }
+
+      function updatePlayer(dt) {
+        const dir = getInputDirection();
+        const speed = player.speed;
+        player.x += dir.dx * speed * dt;
+        player.y += dir.dy * speed * dt;
+
+        const margin = 12;
+        if (player.x < margin) player.x = margin;
+        if (player.y < margin) player.y = margin;
+        if (player.x + player.w > canvas.width - margin) player.x = canvas.width - margin - player.w;
+        if (player.y + player.h > canvas.height - margin) player.y = canvas.height - margin - player.h;
+      }
+
+      function spawnItem() {
+        const padding = 40;
+        const size = 24;
+        const type = Math.random() < 0.68 ? 'homework' : 'tutor';
+        const value = type === 'homework' ? 1 : 3;
+        const x = padding + Math.random() * (canvas.width - padding * 2 - size);
+        const y = padding + 40 + Math.random() * (canvas.height - padding * 2 - size - 40);
+        items.push({ x: x, y: y, size: size, type: type, value: value });
+      }
+
+      function checkBossTrigger() {
+        if (gameState !== GAME_STATE.STUDY) return;
+        if (iq >= maxIq) {
+          startBoss();
+          return;
+        }
+        const currentIndex = Math.floor(iq / 50);
+        const nextThreshold = (currentIndex + 1) * 50;
+        if (iq >= nextThreshold) {
+          startBoss();
+        }
+      }
+
+      function updateStudy(dt) {
+        updatePlayer(dt);
+
+        itemSpawnTimer -= dt;
+        if (itemSpawnTimer <= 0) {
+          spawnItem();
+          itemSpawnTimer = 0.6 + Math.random() * 0.7;
+        }
+
+        // Collect items
+        for (let i = items.length - 1; i >= 0; i--) {
+          const it = items[i];
+          if (rectsIntersect(player.x, player.y, player.w, player.h, it.x, it.y, it.size, it.size)) {
+            iq += it.value;
+            if (iq > maxIq) iq = maxIq;
+            items.splice(i, 1);
+            updateHud();
+            checkBossTrigger();
+          }
+        }
+      }
+
+      function spawnBossBullets() {
+        if (!boss) return;
+        const centerX = boss.x + boss.w / 2;
+        const centerY = boss.y + boss.h / 2;
+        const difficulty = bossStageIndex;
+        const radial = difficulty >= 4;
+        const baseSpeed = 120 + difficulty * 20;
+
+        if (!radial) {
+          const rows = 1 + Math.floor(difficulty / 2);
+          const count = 4 + difficulty;
+          for (let r = 0; r < rows; r++) {
+            for (let i = 0; i < count; i++) {
+              const offset = (i - (count - 1) / 2) * 22;
+              bullets.push({
+                x: centerX + offset,
+                y: centerY + r * 14,
+                radius: 6,
+                vx: 0,
+                vy: baseSpeed * 0.7
+              });
+            }
+          }
+        } else {
+          const count = 10 + difficulty * 2;
+          for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count + (performance.now() / 500) % (Math.PI * 2);
+            const speed = baseSpeed;
+            bullets.push({
+              x: centerX,
+              y: centerY,
+              radius: 5.5,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed
+            });
+          }
+        }
+      }
+
+      function spawnGoon() {
+        const size = 30;
+        const difficulty = bossStageIndex;
+        const speed = 70 + difficulty * 12;
+        const side = Math.floor(Math.random() * 4);
+        let x = 0;
+        let y = 0;
+        if (side === 0) {
+          x = Math.random() * (canvas.width - size);
+          y = -size - 10;
+        } else if (side === 1) {
+          x = canvas.width + 10;
+          y = Math.random() * (canvas.height - size);
+        } else if (side === 2) {
+          x = Math.random() * (canvas.width - size);
+          y = canvas.height + 10;
+        } else {
+          x = -size - 10;
+          y = Math.random() * (canvas.height - size);
+        }
+        goons.push({ x: x, y: y, w: size, h: size, speed: speed });
+      }
+
+      function spawnPlayerBullet() {
+        const cx = player.x + player.w / 2;
+        const cy = player.y;
+        playerBullets.push({ x: cx, y: cy, radius: 5, vy: -380 });
+      }
+
+      function updateBossPhase(dt) {
+        if (!boss) return;
+
+        updatePlayer(dt);
+
+        // Manual shooting for all bosses except final
+        const canManualShoot = bossStageIndex < 8;
+        if (canManualShoot) {
+          shootCooldown -= dt;
+          if (shootHeld && shootCooldown <= 0) {
+            spawnPlayerBullet();
+            const baseCooldown = 0.26;
+            const cd = Math.max(baseCooldown - bossStageIndex * 0.015, 0.1);
+            shootCooldown = cd;
+          }
+        }
+
+        // Final boss: passive IQ damage over time
+        if (!canManualShoot) {
+          const auraDamageRate = 7.5; // HP per second
+          boss.hp -= auraDamageRate * dt;
+        }
+
+        // Update player bullets
+        for (let i = playerBullets.length - 1; i >= 0; i--) {
+          const b = playerBullets[i];
+          b.y += b.vy * dt;
+          if (b.y + b.radius < 0) {
+            playerBullets.splice(i, 1);
+            continue;
+          }
+          const bx = b.x - b.radius;
+          const by = b.y - b.radius;
+          const bw = b.radius * 2;
+          const bh = b.radius * 2;
+          if (rectsIntersect(bx, by, bw, bh, boss.x, boss.y, boss.w, boss.h)) {
+            boss.hp -= 8 + bossStageIndex * 1.2;
+            playerBullets.splice(i, 1);
+            continue;
+          }
+          for (let j = goons.length - 1; j >= 0; j--) {
+            const g = goons[j];
+            if (rectsIntersect(bx, by, bw, bh, g.x, g.y, g.w, g.h)) {
+              goons.splice(j, 1);
+              playerBullets.splice(i, 1);
+              break;
+            }
+          }
+        }
+
+        // Update boss bullets
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const b = bullets[i];
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          const offX = b.x < -40 || b.x > canvas.width + 40;
+          const offY = b.y < -40 || b.y > canvas.height + 40;
+          if (offX || offY) {
+            bullets.splice(i, 1);
+            continue;
+          }
+          const bx = b.x - b.radius;
+          const by = b.y - b.radius;
+          const bw = b.radius * 2;
+          const bh = b.radius * 2;
+          if (rectsIntersect(bx, by, bw, bh, player.x, player.y, player.w, player.h)) {
+            failRun('You were blasted by a Centrix bullet.');
+            return;
+          }
+        }
+
+        // Update goons
+        for (let i = goons.length - 1; i >= 0; i--) {
+          const g = goons[i];
+          const gcx = g.x + g.w / 2;
+          const gcy = g.y + g.h / 2;
+          const pcx = player.x + player.w / 2;
+          const pcy = player.y + player.h / 2;
+          let dx = pcx - gcx;
+          let dy = pcy - gcy;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          dx /= len;
+          dy /= len;
+          g.x += dx * g.speed * dt;
+          g.y += dy * g.speed * dt;
+
+          if (rectsIntersect(g.x, g.y, g.w, g.h, player.x, player.y, player.w, player.h)) {
+            failRun('A Centrix goon tackled you.');
+            return;
+          }
+        }
+
+        // Spawn bullets & goons
+        bossShootTimer -= dt;
+        if (bossShootTimer <= 0) {
+          spawnBossBullets();
+          const baseDelay = 1.2;
+          const delay = Math.max(baseDelay - bossStageIndex * 0.08, 0.35);
+          bossShootTimer = delay;
+        }
+
+        goonSpawnTimer -= dt;
+        if (goonSpawnTimer <= 0) {
+          const maxGoons = 2 + Math.floor(bossStageIndex * 0.8);
+          if (goons.length < maxGoons) {
+            spawnGoon();
+          }
+          goonSpawnTimer = Math.max(2.5 - bossStageIndex * 0.18, 0.85);
+        }
+
+        // Check boss defeat
+        if (boss.hp <= 0) {
+          if (bossStageIndex === 8) {
+            gameState = GAME_STATE.VICTORY;
+            updateStatusLabel();
+            showBanner('You defeated Ultra Centrix! World-Class Doctor unlocked.');
+            showStatePanel('Victory!', 'You survived the final Ultra Centrix barrage and reached the World-Class Doctor IQ form. That brain is glowing.', 'Play Again from 0 IQ');
+            iq = maxIq;
+            updateHud();
+          } else {
+            gameState = GAME_STATE.STUDY;
+            showBanner('Centrix defeated! Back to studying for the next IQ jump.');
+            updateStatusLabel();
+            boss = null;
+            bullets = [];
+            playerBullets = [];
+            goons = [];
+          }
+        }
+      }
+
+      function update(dt) {
+        if (gameState === GAME_STATE.MENU || isPaused) {
+          if (bannerTimer > 0) {
+            bannerTimer -= dt;
+            if (bannerTimer <= 0) bannerText = '';
+          }
+          return;
+        }
+
+        if (bannerTimer > 0) {
+          bannerTimer -= dt;
+          if (bannerTimer <= 0) bannerText = '';
+        }
+
+        if (gameState === GAME_STATE.STUDY) {
+          updateStudy(dt);
+        } else if (gameState === GAME_STATE.BOSS) {
+          updateBossPhase(dt);
+        }
+
+        updateHud();
+      }
+
+      function drawBackgroundGrid() {
+        const spacing = 40;
+        ctx.strokeStyle = 'rgba(30,64,175,0.26)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (let x = 0; x <= canvas.width; x += spacing) {
+          ctx.moveTo(x + 0.5, 0);
+          ctx.lineTo(x + 0.5, canvas.height);
+        }
+        for (let y = 0; y <= canvas.height; y += spacing) {
+          ctx.moveTo(0, y + 0.5);
+          ctx.lineTo(canvas.width, y + 0.5);
+        }
+        ctx.stroke();
+      }
+
+      function drawPlayer() {
+        const level = getLevelForIq(iq);
+        const cx = player.x + player.w / 2;
+
+        const grad = ctx.createLinearGradient(player.x, player.y, player.x + player.w, player.y + player.h);
+        grad.addColorStop(0, '#facc15');
+        grad.addColorStop(1, '#22c55e');
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2;
+
+        const radius = 8;
+        const x = player.x;
+        const y = player.y;
+        const w = player.w;
+        const h = player.h;
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + w - radius, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+        ctx.lineTo(x + w, y + h - radius);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+        ctx.lineTo(x + radius, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '14px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText(iq + ' IQ', cx, player.y - 6);
+
+        ctx.font = '11px system-ui';
+        ctx.fillStyle = '#a5b4fc';
+        ctx.textBaseline = 'top';
+        ctx.fillText(level.short, cx, player.y + player.h + 6);
+      }
+
+      function drawStudyScene() {
+        const w = canvas.width;
+        const h = canvas.height;
+
+        const grd = ctx.createRadialGradient(
+          w / 2,
+          h * 0.2,
+          40,
+          w / 2,
+          h / 2,
+          Math.max(w, h)
+        );
+        grd.addColorStop(0, '#020617');
+        grd.addColorStop(0.4, '#020617');
+        grd.addColorStop(1, '#000000');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+
+        drawBackgroundGrid();
+
+        // Items
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          const r = 6;
+          const x = it.x;
+          const y = it.y;
+          const size = it.size;
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.lineTo(x + size - r, y);
+          ctx.quadraticCurveTo(x + size, y, x + size, y + r);
+          ctx.lineTo(x + size, y + size - r);
+          ctx.quadraticCurveTo(x + size, y + size, x + size - r, y + size);
+          ctx.lineTo(x + r, y + size);
+          ctx.quadraticCurveTo(x, y + size, x, y + size - r);
+          ctx.lineTo(x, y + r);
+          ctx.quadraticCurveTo(x, y, x + r, y);
+          ctx.closePath();
+          if (it.type === 'homework') {
+            const grad = ctx.createLinearGradient(x, y, x + size, y + size);
+            grad.addColorStop(0, '#4ade80');
+            grad.addColorStop(1, '#16a34a');
+            ctx.fillStyle = grad;
+          } else {
+            const grad = ctx.createLinearGradient(x, y, x + size, y + size);
+            grad.addColorStop(0, '#38bdf8');
+            grad.addColorStop(1, '#1d4ed8');
+            ctx.fillStyle = grad;
+          }
+          ctx.fill();
+
+          ctx.font = '11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText(it.type === 'homework' ? 'HW' : 'T', x + size / 2, y + size / 2 + 0.5);
+        }
+
+        drawPlayer();
+
+        // Study phase label
+        ctx.font = '13px system-ui';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(148,163,184,0.9)';
+        ctx.fillText('Study Phase: stack IQ by collecting homework and tutors.', 16, 12);
+      }
+
+      function drawBossScene() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const grd = ctx.createLinearGradient(0, 0, 0, h);
+        grd.addColorStop(0, '#020617');
+        grd.addColorStop(0.5, '#020617');
+        grd.addColorStop(1, '#020617');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+
+        // Arena edges
+        ctx.strokeStyle = 'rgba(56,189,248,0.45)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(12.5, 12.5, w - 25, h - 25);
+
+        // Boss
+        if (boss) {
+          const bx = boss.x;
+          const by = boss.y;
+          const bw = boss.w;
+          const bh = boss.h;
+          const r = 14;
+          const grad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+          grad.addColorStop(0, '#22c55e');
+          grad.addColorStop(0.5, '#0ea5e9');
+          grad.addColorStop(1, '#a855f7');
+          ctx.fillStyle = grad;
+          ctx.strokeStyle = '#020617';
+          ctx.lineWidth = 3;
+
+          ctx.beginPath();
+          ctx.moveTo(bx + r, by);
+          ctx.lineTo(bx + bw - r, by);
+          ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r);
+          ctx.lineTo(bx + bw, by + bh - r);
+          ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+          ctx.lineTo(bx + r, by + bh);
+          ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
+          ctx.lineTo(bx, by + r);
+          ctx.quadraticCurveTo(bx, by, bx + r, by);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.font = '14px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#020617';
+          const bossName = bossStageIndex === 8 ? 'Ultra Centrix' : 'Centrix';
+          ctx.fillText(bossName, bx + bw / 2, by + bh / 2 - 4);
+
+          // Boss HP bar
+          const barWidth = 260;
+          const barHeight = 10;
+          const barX = (w - barWidth) / 2;
+          const barY = by - 24;
+          ctx.fillStyle = 'rgba(15,23,42,0.95)';
+          ctx.fillRect(barX, barY, barWidth, barHeight);
+          const ratio = Math.max(0, boss.hp / boss.maxHp);
+          const innerWidth = barWidth * ratio;
+          const hpGrad = ctx.createLinearGradient(barX, barY, barX + barWidth, barY);
+          hpGrad.addColorStop(0, '#22c55e');
+          hpGrad.addColorStop(0.5, '#eab308');
+          hpGrad.addColorStop(1, '#fb7185');
+          ctx.fillStyle = hpGrad;
+          ctx.fillRect(barX, barY, innerWidth, barHeight);
+          ctx.strokeStyle = 'rgba(148,163,184,0.8)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(barX + 0.5, barY + 0.5, barWidth - 1, barHeight - 1);
+
+          ctx.font = '11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillStyle = '#e5e7eb';
+          ctx.fillText('Centrix IQ Shield', barX + barWidth / 2, barY - 3);
+        }
+
+        // Bullets
+        for (let i = 0; i < bullets.length; i++) {
+          const b = bullets[i];
+          const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius + 2);
+          g.addColorStop(0, '#fecaca');
+          g.addColorStop(0.4, '#f97373');
+          g.addColorStop(1, '#b91c1c');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Player bullets
+        for (let i = 0; i < playerBullets.length; i++) {
+          const b = playerBullets[i];
+          const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius + 1);
+          g.addColorStop(0, '#fef9c3');
+          g.addColorStop(1, '#facc15');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Goons
+        for (let i = 0; i < goons.length; i++) {
+          const g = goons[i];
+          const r = 8;
+          const x = g.x;
+          const y = g.y;
+          const size = g.w;
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.lineTo(x + size - r, y);
+          ctx.quadraticCurveTo(x + size, y, x + size, y + r);
+          ctx.lineTo(x + size, y + size - r);
+          ctx.quadraticCurveTo(x + size, y + size, x + size - r, y + size);
+          ctx.lineTo(x + r, y + size);
+          ctx.quadraticCurveTo(x, y + size, x, y + size - r);
+          ctx.lineTo(x, y + r);
+          ctx.quadraticCurveTo(x, y, x + r, y);
+          ctx.closePath();
+          const grad = ctx.createLinearGradient(x, y, x + size, y + size);
+          grad.addColorStop(0, '#fed7aa');
+          grad.addColorStop(1, '#ea580c');
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          ctx.font = '11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText('G', x + size / 2, y + size / 2);
+        }
+
+        drawPlayer();
+
+        ctx.font = '13px system-ui';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(148,163,184,0.95)';
+        if (bossStageIndex === 8) {
+          ctx.fillText('Final Boss: no blaster  just dodge while your IQ drains Ultra Centrix.', 16, 16);
+        } else {
+          ctx.fillText('Boss Fight: dodge red bullets, delete orange goons, blast Centrix with IQ.', 16, 16);
+        }
+      }
+
+      function drawMenuScene() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const grd = ctx.createRadialGradient(w / 2, h * 0.25, 40, w / 2, h / 2, Math.max(w, h));
+        grd.addColorStop(0, '#020617');
+        grd.addColorStop(0.5, '#020617');
+        grd.addColorStop(1, '#000000');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+
+        drawBackgroundGrid();
+
+        ctx.font = '28px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText('IQ CLIMBER TRAINING GROUND', w / 2, h * 0.3);
+
+        ctx.font = '14px system-ui';
+        ctx.fillStyle = 'rgba(148,163,184,0.9)';
+        ctx.fillText('Move with WASD / Arrows. Collect study power-ups. Survive Centrix.', w / 2, h * 0.3 + 32);
+
+        ctx.font = '13px system-ui';
+        ctx.fillStyle = 'rgba(94,234,212,0.95)';
+        ctx.fillText('Press "Start New Run" to begin at 0 IQ.', w / 2, h * 0.3 + 56);
+      }
+
+      function drawBanner() {
+        if (!bannerText || bannerTimer <= 0) return;
+        const alpha = Math.min(1, bannerTimer / 0.4);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        const paddingX = 18;
+        const paddingY = 8;
+        const maxWidth = canvas.width * 0.8;
+
+        ctx.font = '14px system-ui';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        const x = canvas.width / 2;
+        const y = 32;
+
+        ctx.fillStyle = 'rgba(15,23,42,0.92)';
+        ctx.strokeStyle = 'rgba(148,163,184,0.9)';
+        ctx.lineWidth = 1.5;
+
+        const textMetrics = ctx.measureText(bannerText);
+        const textWidth = Math.min(maxWidth, textMetrics.width);
+        const boxWidth = textWidth + paddingX * 2;
+        const boxHeight = 30 + paddingY * 2;
+        const left = x - boxWidth / 2;
+        const top = y;
+        const r = 16;
+
+        ctx.beginPath();
+        ctx.moveTo(left + r, top);
+        ctx.lineTo(left + boxWidth - r, top);
+        ctx.quadraticCurveTo(left + boxWidth, top, left + boxWidth, top + r);
+        ctx.lineTo(left + boxWidth, top + boxHeight - r);
+        ctx.quadraticCurveTo(left + boxWidth, top + boxHeight, left + boxWidth - r, top + boxHeight);
+        ctx.lineTo(left + r, top + boxHeight);
+        ctx.quadraticCurveTo(left, top + boxHeight, left, top + boxHeight - r);
+        ctx.lineTo(left, top + r);
+        ctx.quadraticCurveTo(left, top, left + r, top);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText(bannerText, x, y + paddingY + 6);
+        ctx.restore();
+      }
+
+      function draw() {
+        if (gameState === GAME_STATE.MENU) {
+          drawMenuScene();
+        } else if (gameState === GAME_STATE.STUDY) {
+          drawStudyScene();
+        } else {
+          // Boss, gameover, victory all share boss arena visuals
+          drawBossScene();
+        }
+
+        drawBanner();
+      }
+
+      let lastTime = performance.now();
+
+      function gameLoop(now) {
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+        update(dt);
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+
+      updateHud();
+      updateStatusLabel();
+      requestAnimationFrame(gameLoop);
+    })();
+  </script>
+</body>
+</html>

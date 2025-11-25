@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Be A Failure or Asian IQ Brain-minded</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            width: 900px;
+            height: 650px;
+            background: #0a0a1a;
+            border-radius: 15px;
+            box-shadow: 0 0 50px rgba(0, 200, 255, 0.3);
+            overflow: hidden;
+        }
+        #gameCanvas {
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .ui-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            padding: 10px 15px;
+            color: #fff;
+        }
+        #iqDisplay {
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00d4ff;
+        }
+        #characterInfo {
+            text-align: right;
+        }
+        #characterName {
+            font-size: 18px;
+            color: #ffd700;
+        }
+        #progressBar {
+            width: 200px;
+            height: 15px;
+            background: #333;
+            border-radius: 10px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        #progressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            transition: width 0.3s;
+        }
+        #menu, #gameOver, #victory, #bossIntro {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+        }
+        #menu h1, #gameOver h1, #victory h1 {
+            font-size: 36px;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        #menu h2 {
+            font-size: 18px;
+            color: #00d4ff;
+            margin-bottom: 30px;
+        }
+        .btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border: none;
+            border-radius: 30px;
+            color: #fff;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+        .btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px #00d4ff;
+        }
+        #instructions {
+            color: #aaa;
+            text-align: center;
+            margin-top: 20px;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+        #bossIntro {
+            display: none;
+        }
+        #bossIntro h2 {
+            font-size: 48px;
+            color: #ff4444;
+            text-shadow: 0 0 30px #ff0000;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        #bossHealth {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 25px;
+            background: #333;
+            border: 3px solid #ff4444;
+            border-radius: 15px;
+            overflow: hidden;
+            display: none;
+            z-index: 10;
+        }
+        #bossHealthFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ff8800);
+            transition: width 0.2s;
+        }
+        #bossLabel {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff4444;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+            z-index: 10;
+        }
+        .hidden { display: none !important; }
+        #collectionCounter {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 10px;
+            color: #fff;
+            z-index: 10;
+        }
+        #phaseIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            z-index: 50;
+            animation: fadeOut 2s forwards;
+            pointer-events: none;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+        #studyGunIndicator {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 10px;
+            color: #ffd700;
+            font-weight: bold;
+            z-index: 10;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="900" height="650"></canvas>
+        
+        <div id="ui">
+            <div class="ui-panel">
+                <div id="iqDisplay">IQ: 0</div>
+            </div>
+            <div class="ui-panel" id="characterInfo">
+                <div id="characterName">Saharsh Gobinath</div>
+                <div id="progressBar"><div id="progressFill" style="width: 0%"></div></div>
+            </div>
+        </div>
+        
+        <div id="collectionCounter" class="hidden">
+            <div>📗 Homework: <span id="homeworkCount">0</span>/50</div>
+            <div>📘 Tutors: <span id="tutorCount">0</span>/50</div>
+        </div>
+        
+        <div id="studyGunIndicator">📚 STUDY GUN ACTIVE!</div>
+        
+        <div id="bossLabel">CENTRIX BOSS</div>
+        <div id="bossHealth"><div id="bossHealthFill" style="width: 100%"></div></div>
+        
+        <div id="menu">
+            <h1>🧠 Be A Failure or Asian IQ Brain-minded 🧠</h1>
+            <h2>Rise from 0 IQ to Asian Doctor!</h2>
+            <button class="btn" onclick="startGame()">START GAME</button>
+            <div id="instructions">
+                <p><strong>Controls:</strong> WASD or Arrow Keys to move, SPACE/Click to shoot</p>
+                <p><strong>Goal:</strong> Collect 50 📗Homework + 50 📘Tutors to upgrade your IQ!</p>
+                <p><strong>Boss Fights:</strong> Every 50 IQ, face the Centrix Boss!</p>
+                <p><strong>Warning:</strong> If you die, you reset to 0 IQ!</p>
+                <p style="color: #ff4444; margin-top: 10px;"><strong>Final Boss at 450 IQ is 100x harder!</strong></p>
+            </div>
+        </div>
+        
+        <div id="gameOver" class="hidden">
+            <h1>💀 GAME OVER 💀</h1>
+            <p style="color: #ff4444; font-size: 24px; margin-bottom: 20px;">You failed! Back to 0 IQ...</p>
+            <button class="btn" onclick="restartGame()">TRY AGAIN</button>
+        </div>
+        
+        <div id="victory" class="hidden">
+            <h1>🏆 ULTIMATE VICTORY! 🏆</h1>
+            <p style="color: #ffd700; font-size: 24px; margin-bottom: 20px;">You became the ASIAN DOCTOR!</p>
+            <p style="color: #00ff88; font-size: 18px;">Maximum IQ achieved: 450+</p>
+            <button class="btn" onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+        
+        <div id="bossIntro" class="hidden">
+            <h2>⚠️ BOSS INCOMING! ⚠️</h2>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Character definitions
+        const characters = [
+            { iq: 0, name: "Saharsh Gobinath", color: "#ff6b6b", emoji: "🎮", desc: "Game Addiction" },
+            { iq: 50, name: "Hamster", color: "#ffa94d", emoji: "🐹", desc: "Small but trying" },
+            { iq: 100, name: "Toddler", color: "#ffd43b", emoji: "👶", desc: "Learning basics" },
+            { iq: 150, name: "Anbu", color: "#69db7c", emoji: "🧑", desc: "Getting there" },
+            { iq: 200, name: "Calvin the Troller", color: "#4dabf7", emoji: "💻", desc: "Smart Coder" },
+            { iq: 250, name: "Teacher", color: "#9775fa", emoji: "👩‍🏫", desc: "Wisdom grows" },
+            { iq: 300, name: "Stanford Student", color: "#f06595", emoji: "🎓", desc: "Elite learner" },
+            { iq: 350, name: "Professor", color: "#20c997", emoji: "👨‍🔬", desc: "Knowledge master" },
+            { iq: 400, name: "Stephen Hawking", color: "#fff", emoji: "🌌", desc: "English Master" },
+            { iq: 450, name: "Asian Doctor", color: "#ffd700", emoji: "👨‍⚕️", desc: "ULTIMATE!" }
+        ];
+        
+        // Load Saharsh image
+        const saharshImg = new Image();
+        saharshImg.src = "https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg";
+        saharshImg.crossOrigin = "anonymous";
+        
+        // Game state
+        let game = {
+            state: 'menu', // menu, collecting, boss, gameOver, victory
+            iq: 0,
+            homework: 0,
+            tutors: 0,
+            hasStudyGun: false,
+            bossLevel: 0,
+            particles: [],
+            screenShake: 0
+        };
+        
+        // Player
+        let player = {
+            x: 450, y: 325,
+            vx: 0, vy: 0,
+            size: 40,
+            health: 100,
+            maxHealth: 100,
+            shootCooldown: 0,
+            invincible: 0
+        };
+        
+        // Entities
+        let collectibles = [];
+        let bullets = [];
+        let enemyBullets = [];
+        let enemies = [];
+        let boss = null;
+        
+        // Input
+        let keys = {};
+        let mouse = { x: 450, y: 325, down: false };
+        
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                shoot();
+            }
+        });
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+        canvas.addEventListener('mousedown', () => { mouse.down = true; shoot(); });
+        canvas.addEventListener('mouseup', () => mouse.down = false);
+        
+        function getCurrentCharacter() {
+            let char = characters[0];
+            for (let c of characters) {
+                if (game.iq >= c.iq) char = c;
+            }
+            return char;
+        }
+        
+        function getCharacterIndex() {
+            return Math.min(Math.floor(game.iq / 50), 9);
+        }
+        
+        function startGame() {
+            document.getElementById('menu').classList.add('hidden');
+            game.state = 'collecting';
+            game.iq = 0;
+            game.homework = 0;
+            game.tutors = 0;
+            game.hasStudyGun = false;
+            game.bossLevel = 0;
+            resetPlayer();
+            spawnCollectibles();
+            document.getElementById('collectionCounter').classList.remove('hidden');
+            updateUI();
+        }
+        
+        function restartGame() {
+            document.getElementById('gameOver').classList.add('hidden');
+            document.getElementById('victory').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+        }
+        
+        function resetPlayer() {
+            player.x = 450;
+            player.y = 325;
+            player.vx = 0;
+            player.vy = 0;
+            player.health = 100;
+            player.invincible = 0;
+            bullets = [];
+            enemyBullets = [];
+            enemies = [];
+            boss = null;
+        }
+        
+        function spawnCollectibles() {
+            collectibles = [];
+            // Spawn lots of homework (green) initially
+            for (let i = 0; i < 25; i++) {
+                collectibles.push({
+                    x: Math.random() * 800 + 50,
+                    y: Math.random() * 550 + 50,
+                    type: 'homework',
+                    size: 25,
+                    angle: Math.random() * Math.PI * 2
+                });
+            }
+            // Spawn lots of tutors (blue) initially
+            for (let i = 0; i < 25; i++) {
+                collectibles.push({
+                    x: Math.random() * 800 + 50,
+                    y: Math.random() * 550 + 50,
+                    type: 'tutor',
+                    size: 30,
+                    angle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        
+        function shoot() {
+            if (game.state !== 'boss' && game.state !== 'collecting') return;
+            if (player.shootCooldown > 0) return;
+            if (game.state === 'collecting' && !game.hasStudyGun) return;
+            
+            const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(angle) * 12,
+                vy: Math.sin(angle) * 12,
+                size: 8,
+                damage: 10 + game.iq / 10
+            });
+            player.shootCooldown = 15;
+            
+            // Muzzle flash particle
+            for (let i = 0; i < 5; i++) {
+                game.particles.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(angle) * (3 + Math.random() * 3),
+                    vy: Math.sin(angle) * (3 + Math.random() * 3),
+                    life: 10,
+                    color: '#ffff00',
+                    size: 5
+                });
+            }
+        }
+        
+        function startBossFight() {
+            game.state = 'boss';
+            document.getElementById('collectionCounter').classList.add('hidden');
+            document.getElementById('bossHealth').style.display = 'block';
+            document.getElementById('bossLabel').style.display = 'block';
+            
+            // Give study gun for boss fight
+            game.hasStudyGun = true;
+            document.getElementById('studyGunIndicator').style.display = 'block';
+            
+            const level = getCharacterIndex();
+            const isFinalBoss = level >= 9;
+            const multiplier = isFinalBoss ? 100 : 1;
+            
+            const bossSize = 60 + level * 5;
+            
+            boss = {
+                x: 700,
+                y: 325,
+                size: bossSize,
+                health: (200 + level * 100) * multiplier,
+                maxHealth: (200 + level * 100) * multiplier,
+                shootCooldown: 0,
+                shootRate: Math.max(30, 80 - level * 5),
+                phase: 0,
+                moveAngle: 0,
+                isFinal: isFinalBoss
+            };
+            
+            enemies = [];
+            enemyBullets = [];
+            bullets = [];
+            
+            // Reset player position for boss fight (don't call resetPlayer as it nullifies boss)
+            player.x = 150;
+            player.y = 325;
+            player.vx = 0;
+            player.vy = 0;
+            player.health = 100;
+            player.invincible = 60; // Brief invincibility at start
+            bullets = [];
+            enemyBullets = [];
+            enemies = [];
+            
+            showPhaseText("⚔️ BOSS FIGHT! ⚔️");
+        }
+        
+        function showPhaseText(text) {
+            const div = document.createElement('div');
+            div.id = 'phaseIndicator';
+            div.textContent = text;
+            document.getElementById('gameContainer').appendChild(div);
+            setTimeout(() => div.remove(), 2000);
+        }
+        
+        function spawnGoon() {
+            const level = getCharacterIndex();
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            
+            switch(side) {
+                case 0: x = 0; y = Math.random() * 650; break;
+                case 1: x = 900; y = Math.random() * 650; break;
+                case 2: x = Math.random() * 900; y = 0; break;
+                case 3: x = Math.random() * 900; y = 650; break;
+            }
+            
+            enemies.push({
+                x, y,
+                size: 25 + level * 2,
+                health: 30 + level * 15,
+                maxHealth: 30 + level * 15,
+                speed: 1.5 + level * 0.2,
+                shootCooldown: Math.random() * 60
+            });
+        }
+        
+        function updateGame() {
+            if (game.state === 'menu' || game.state === 'gameOver' || game.state === 'victory') return;
+            
+            // Player movement
+            const speed = 5;
+            player.vx = 0;
+            player.vy = 0;
+            if (keys['w'] || keys['arrowup']) player.vy = -speed;
+            if (keys['s'] || keys['arrowdown']) player.vy = speed;
+            if (keys['a'] || keys['arrowleft']) player.vx = -speed;
+            if (keys['d'] || keys['arrowright']) player.vx = speed;
+            
+            player.x += player.vx;
+            player.y += player.vy;
+            // Clamp player to stay within canvas bounds
+            player.x = Math.max(player.size / 2, Math.min(900 - player.size / 2, player.x));
+            player.y = Math.max(player.size / 2, Math.min(650 - player.size / 2, player.y));
+            
+            if (player.shootCooldown > 0) player.shootCooldown--;
+            if (player.invincible > 0) player.invincible--;
+            
+            // Continuous shooting if mouse held
+            if (mouse.down && player.shootCooldown <= 0) shoot();
+            
+            // Update particles
+            game.particles = game.particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                p.size *= 0.95;
+                return p.life > 0;
+            });
+            
+            if (game.screenShake > 0) game.screenShake--;
+            
+            if (game.state === 'collecting') {
+                updateCollecting();
+            } else if (game.state === 'boss') {
+                updateBoss();
+            }
+            
+            // Update bullets
+            bullets = bullets.filter(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+                return b.x > 0 && b.x < 900 && b.y > 0 && b.y < 650;
+            });
+            
+            updateUI();
+        }
+        
+        function updateCollecting() {
+            // Collectible spawning - spawn much faster!
+            if (collectibles.length < 30) {
+                // Spawn multiple collectibles per frame for faster collection
+                for (let spawn = 0; spawn < 3; spawn++) {
+                    if (Math.random() < 0.15) {
+                        // Decide type based on what player needs more
+                        let type;
+                        if (game.homework >= 50) {
+                            type = 'tutor';
+                        } else if (game.tutors >= 50) {
+                            type = 'homework';
+                        } else {
+                            type = Math.random() < 0.5 ? 'homework' : 'tutor';
+                        }
+                        
+                        collectibles.push({
+                            x: Math.random() * 800 + 50,
+                            y: Math.random() * 550 + 50,
+                            type: type,
+                            size: type === 'homework' ? 25 : 30,
+                            angle: Math.random() * Math.PI * 2
+                        });
+                    }
+                }
+            }
+            
+            // Collect items
+            collectibles = collectibles.filter(c => {
+                const dx = player.x - c.x;
+                const dy = player.y - c.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < player.size + c.size / 2) {
+                    if (c.type === 'homework' && game.homework < 50) {
+                        game.homework++;
+                        createCollectParticles(c.x, c.y, '#00ff88');
+                    } else if (c.type === 'tutor' && game.tutors < 50) {
+                        game.tutors++;
+                        createCollectParticles(c.x, c.y, '#4dabf7');
+                    }
+                    return false;
+                }
+                
+                // Float animation
+                c.angle += 0.02;
+                return true;
+            });
+            
+            // Check if ready for boss
+            if (game.homework >= 50 && game.tutors >= 50) {
+                game.homework = 0;
+                game.tutors = 0;
+                startBossFight();
+            }
+        }
+        
+        function updateBoss() {
+            if (!boss) return;
+            
+            // Boss movement - keep boss in center-right area and always visible
+            boss.moveAngle += 0.015;
+            const targetY = 325 + Math.sin(boss.moveAngle) * 150;
+            boss.y += (targetY - boss.y) * 0.05;
+            // Keep boss X between 500 and 700 so it's always clearly visible
+            const targetX = 600 + Math.cos(boss.moveAngle * 0.7) * 100;
+            boss.x += (targetX - boss.x) * 0.03;
+            // Clamp boss to stay well within visible screen area
+            boss.x = Math.max(400, Math.min(800, boss.x));
+            boss.y = Math.max(100, Math.min(550, boss.y));
+            
+            // Boss shooting
+            boss.shootCooldown--;
+            if (boss.shootCooldown <= 0) {
+                const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+                const bulletSpeed = boss.isFinal ? 8 : 5;
+                const bulletCount = boss.isFinal ? 5 : 1 + Math.floor(getCharacterIndex() / 3);
+                
+                for (let i = 0; i < bulletCount; i++) {
+                    const spread = (i - (bulletCount - 1) / 2) * 0.2;
+                    enemyBullets.push({
+                        x: boss.x,
+                        y: boss.y,
+                        vx: Math.cos(angle + spread) * bulletSpeed,
+                        vy: Math.sin(angle + spread) * bulletSpeed,
+                        size: 10,
+                        damage: 10 + getCharacterIndex() * 5
+                    });
+                }
+                boss.shootCooldown = boss.shootRate;
+            }
+            
+            // Spawn goons
+            const goonCount = Math.floor(getCharacterIndex() / 2) + 1;
+            if (enemies.length < goonCount * 2 && Math.random() < 0.01) {
+                spawnGoon();
+            }
+            
+            // Update enemies
+            enemies.forEach(e => {
+                const dx = player.x - e.x;
+                const dy = player.y - e.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                e.x += (dx / dist) * e.speed;
+                e.y += (dy / dist) * e.speed;
+                
+                e.shootCooldown--;
+                if (e.shootCooldown <= 0) {
+                    const angle = Math.atan2(player.y - e.y, player.x - e.x);
+                    enemyBullets.push({
+                        x: e.x,
+                        y: e.y,
+                        vx: Math.cos(angle) * 4,
+                        vy: Math.sin(angle) * 4,
+                        size: 6,
+                        damage: 5
+                    });
+                    e.shootCooldown = 90;
+                }
+                
+                // Collision with player
+                if (dist < player.size + e.size && player.invincible <= 0) {
+                    player.health -= 10;
+                    player.invincible = 30;
+                    game.screenShake = 10;
+                }
+            });
+            
+            // Bullet vs enemy collision
+            bullets = bullets.filter(b => {
+                let hit = false;
+                
+                // Check boss
+                if (boss) {
+                    const dx = boss.x - b.x;
+                    const dy = boss.y - b.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < boss.size) {
+                        boss.health -= b.damage;
+                        createCollectParticles(b.x, b.y, '#ff4444');
+                        hit = true;
+                    }
+                }
+                
+                // Check enemies
+                enemies = enemies.filter(e => {
+                    const dx = e.x - b.x;
+                    const dy = e.y - b.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < e.size) {
+                        e.health -= b.damage;
+                        hit = true;
+                        if (e.health <= 0) {
+                            createCollectParticles(e.x, e.y, '#ff8800');
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                
+                return !hit;
+            });
+            
+            // Enemy bullets vs player
+            enemyBullets = enemyBullets.filter(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+                
+                if (b.x < 0 || b.x > 900 || b.y < 0 || b.y > 650) return false;
+                
+                const dx = player.x - b.x;
+                const dy = player.y - b.y;
+                if (Math.sqrt(dx * dx + dy * dy) < player.size && player.invincible <= 0) {
+                    player.health -= b.damage;
+                    player.invincible = 20;
+                    game.screenShake = 5;
+                    return false;
+                }
+                return true;
+            });
+            
+            // Update boss health bar
+            if (boss) {
+                document.getElementById('bossHealthFill').style.width = (boss.health / boss.maxHealth * 100) + '%';
+                
+                // Boss defeated
+                if (boss.health <= 0) {
+                    createExplosion(boss.x, boss.y);
+                    
+                    if (boss.isFinal) {
+                        // Victory!
+                        game.state = 'victory';
+                        document.getElementById('victory').classList.remove('hidden');
+                        document.getElementById('bossHealth').style.display = 'none';
+                        document.getElementById('bossLabel').style.display = 'none';
+                        document.getElementById('studyGunIndicator').style.display = 'none';
+                    } else {
+                        game.iq += 50;
+                        game.hasStudyGun = false;
+                        document.getElementById('studyGunIndicator').style.display = 'none';
+                        boss = null;
+                        enemies = [];
+                        enemyBullets = [];
+                        
+                        if (game.iq >= 450) {
+                            startBossFight(); // Final boss
+                        } else {
+                            game.state = 'collecting';
+                            document.getElementById('bossHealth').style.display = 'none';
+                            document.getElementById('bossLabel').style.display = 'none';
+                            document.getElementById('collectionCounter').classList.remove('hidden');
+                            resetPlayer();
+                            spawnCollectibles();
+                            showPhaseText("⬆️ IQ UPGRADED TO " + game.iq + "! ⬆️");
+                        }
+                    }
+                }
+            }
+            
+            // Player death
+            if (player.health <= 0) {
+                gameOver();
+            }
+        }
+        
+        function createCollectParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 3;
+                game.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 20 + Math.random() * 10,
+                    color,
+                    size: 4 + Math.random() * 4
+                });
+            }
+        }
+        
+        function createExplosion(x, y) {
+            for (let i = 0; i < 50; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random() * 8;
+                game.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 40 + Math.random() * 20,
+                    color: ['#ff4444', '#ff8800', '#ffff00', '#fff'][Math.floor(Math.random() * 4)],
+                    size: 6 + Math.random() * 8
+                });
+            }
+            game.screenShake = 20;
+        }
+        
+        function gameOver() {
+            game.state = 'gameOver';
+            document.getElementById('gameOver').classList.remove('hidden');
+            document.getElementById('collectionCounter').classList.add('hidden');
+            document.getElementById('bossHealth').style.display = 'none';
+            document.getElementById('bossLabel').style.display = 'none';
+            document.getElementById('studyGunIndicator').style.display = 'none';
+            game.iq = 0;
+            game.homework = 0;
+            game.tutors = 0;
+            game.hasStudyGun = false;
+        }
+        
+        function updateUI() {
+            document.getElementById('iqDisplay').textContent = 'IQ: ' + game.iq;
+            const char = getCurrentCharacter();
+            document.getElementById('characterName').textContent = char.emoji + ' ' + char.name;
+            
+            const progress = ((game.iq % 50) / 50) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            document.getElementById('homeworkCount').textContent = game.homework;
+            document.getElementById('tutorCount').textContent = game.tutors;
+        }
+        
+        function draw() {
+            ctx.save();
+            
+            // Screen shake
+            if (game.screenShake > 0) {
+                ctx.translate(
+                    (Math.random() - 0.5) * game.screenShake,
+                    (Math.random() - 0.5) * game.screenShake
+                );
+            }
+            
+            // Background
+            const gradient = ctx.createRadialGradient(450, 325, 0, 450, 325, 500);
+            gradient.addColorStop(0, '#1a1a3e');
+            gradient.addColorStop(1, '#0a0a1a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 900, 650);
+            
+            // Grid
+            ctx.strokeStyle = 'rgba(0, 100, 200, 0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 900; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 650);
+                ctx.stroke();
+            }
+            for (let y = 0; y < 650; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(900, y);
+                ctx.stroke();
+            }
+            
+            if (game.state === 'menu' || game.state === 'gameOver' || game.state === 'victory') {
+                ctx.restore();
+                return;
+            }
+            
+            // Draw collectibles
+            collectibles.forEach(c => {
+                const yOffset = Math.sin(c.angle) * 3;
+                ctx.save();
+                ctx.translate(c.x, c.y + yOffset);
+                
+                if (c.type === 'homework') {
+                    ctx.fillStyle = '#00ff88';
+                    ctx.shadowColor = '#00ff88';
+                    ctx.shadowBlur = 15;
+                    ctx.fillRect(-c.size/2, -c.size/2, c.size, c.size);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('📗', 0, 5);
+                } else {
+                    ctx.fillStyle = '#4dabf7';
+                    ctx.shadowColor = '#4dabf7';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, c.size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('📘', 0, 5);
+                }
+                ctx.restore();
+            });
+            
+            // Draw enemies
+            enemies.forEach(e => {
+                ctx.fillStyle = '#ff6b6b';
+                ctx.shadowColor = '#ff0000';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Health bar
+                ctx.fillStyle = '#333';
+                ctx.fillRect(e.x - 20, e.y - e.size - 10, 40, 6);
+                ctx.fillStyle = '#ff4444';
+                ctx.fillRect(e.x - 20, e.y - e.size - 10, 40 * (e.health / e.maxHealth), 6);
+                
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('👹', e.x, e.y + 5);
+            });
+            
+            // Draw boss
+            if (boss) {
+                ctx.fillStyle = boss.isFinal ? '#ff0000' : '#aa00ff';
+                ctx.shadowColor = boss.isFinal ? '#ff0000' : '#aa00ff';
+                ctx.shadowBlur = 30;
+                ctx.beginPath();
+                ctx.arc(boss.x, boss.y, boss.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#fff';
+                ctx.font = (boss.isFinal ? '40' : '30') + 'px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(boss.isFinal ? '👿' : '🤖', boss.x, boss.y + 10);
+                
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText('CENTRIX', boss.x, boss.y - boss.size - 10);
+            }
+            
+            // Draw player bullets
+            bullets.forEach(b => {
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Draw enemy bullets
+            enemyBullets.forEach(b => {
+                ctx.fillStyle = '#ff4444';
+                ctx.shadowColor = '#ff4444';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Draw particles
+            game.particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+            
+            // Draw player
+            const char = getCurrentCharacter();
+            const charIndex = getCharacterIndex();
+            
+            // Flash when invincible
+            if (player.invincible > 0 && player.invincible % 4 < 2) {
+                ctx.globalAlpha = 0.5;
+            }
+            
+            ctx.fillStyle = char.color;
+            ctx.shadowColor = char.color;
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw character image or emoji
+            ctx.shadowBlur = 0;
+            if (charIndex === 0 && saharshImg.complete) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.size - 5, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(saharshImg, player.x - player.size + 5, player.y - player.size + 5, (player.size - 5) * 2, (player.size - 5) * 2);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = '#fff';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(char.emoji, player.x, player.y + 8);
+            }
+            
+            // IQ display above player
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('IQ: ' + game.iq, player.x, player.y - player.size - 15);
+            
+            ctx.globalAlpha = 1;
+            
+            // Player health bar (during boss)
+            if (game.state === 'boss') {
+                ctx.fillStyle = '#333';
+                ctx.fillRect(20, 620, 200, 20);
+                ctx.fillStyle = '#00ff88';
+                ctx.fillRect(20, 620, 200 * (player.health / player.maxHealth), 20);
+                ctx.strokeStyle = '#fff';
+                ctx.strokeRect(20, 620, 200, 20);
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('HEALTH', 25, 635);
+            }
+            
+            ctx.restore();
+        }
+        
+        function gameLoop() {
+            updateGame();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start game loop
+        gameLoop();
+    </script>
+</body>
+</html>

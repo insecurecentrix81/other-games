@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .newtag{
+        color:red;
+        font-size:small;
+        font-weight:400
+      }
+      a:visited{
+          color:#00f
+      }
+      pre{
+          max-height:25vh;
+          overflow-y:scroll;
+          width:calc(100% - 40px);
+          white-space:pre-wrap;
+          border:1px solid #000;
+          margin-left:20px;
+          padding:10px
+      }
+      span.red-note{
+          color:#e00;
+          background-color:#fcc
+      }
+      span.blue-note{
+          color:#00c;
+          background-color:#ccf
+      }
+      span.note-detail{
+          border-radius:5px;
+          padding:2px 5px;
+          margin:0 5px;
+          font-weight:400
+      }
+      summary{
+          cursor:pointer;
+          font-size:1.2em;
+          margin:10px
+      }
+      .center {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="center">Saharsh Life</h1>
+    <p class="center">Requested by i forgor</p>
+    <h2><a href="gemini-3.0-pro.html">Gemini 3.0 Pro</a></h2>
+    <pre>Saharsh Life: School Survival<br>I have created a fully functional school survival RPG where you play as Saharsh. The game runs in a single HTML file with no external dependencies other than Tailwind CSS and fonts.<br><br>How to Play<br>Goal: Survive from 8:00 AM to 3:00 PM without failing out or having a mental breakdown.<br>Movement: Use WASD or Arrow Keys.<br>Classes: Stand in the labeled "Class" zones to raise your Grades. However, this is boring, so your Sanity will drop.<br>SecurCentrix: Hold SPACE anywhere to play the mobile game "SecurCentrix". This rapidly restores Sanity but causes your Grades to drop (especially fast if a Teacher sees you!).<br>Annoying People: Press E near other students (gray dots) to annoy them. This earns you Clout (Score) and restores a small amount of Sanity.<br>Bullies: Avoid the Red dots! They will chase you, damage your Sanity, and lower your Grades.<br>Features<br>Custom Character: Uses the specified image for Saharsh.<br>Dynamic Stats: Balance your GPA vs. Sanity.<br>NPC AI: Bullies chase, Teachers patrol, Students wander.<br>Minigame Overlay: Visual feedback when playing SecurCentrix.<br>Win/Loss States: Complete the school day to win.<br>Open the file in any modern browser to play</pre>
+    <h2><a href="gpt-5.1-high.html">GPT 5.1 High</a></h2>
+    <pre>Game Overview<br>You play as Saharsh during a single hectic school day.<br>Your goal is to keep three stats above zero for the entire day and finish with a good balance:<br><br>Grades<br>Fun<br>Social<br>The school day lasts 180 seconds. If time reaches 0, you either:<br><br>Win with a “You Made It!” victory screen if:<br>Grades ≥ 70<br>Fun ≥ 35<br>Social ≥ 35<br>Or get a “Day Over” summary explaining what went off-balance.<br>If any stat hits 0 before the timer ends, the day ends immediately with an explanation and a retry option.<br><br>Controls<br>Move: WASD or Arrow Keys<br>Interact (hold): E<br>Pause / Unpause: P<br>Restart (after day ends): R or the on-screen button<br>Movement is top-down: you control a glowing blue circle (Saharsh) walking around the school.<br><br>The Map & Zones<br>The school is shown in a top-down layout on the canvas. There are colored zones:<br><br>Classroom (Green, top-left)<br><br>Effect (hold E inside):<br>Grades: ++ fast<br>Fun: –<br>Social: –<br>Good for rescuing your grades, but drains energy and social time.<br>Secure Centrix Arcade (Purple, top-right)<br><br>Effect (hold E inside):<br>Fun: ++ very fast<br>Grades: –<br>Great for quick fun spikes, but your grades slip the longer you grind here.<br>Commons (Blue, bottom-right)<br><br>Effect (hold E inside):<br>Social: ++ fast<br>Fun: + a little<br>If you chat here for a long stretch, Grades start to slowly fall.<br>Ideal for keeping Social healthy and adding a bit of Fun, but overdoing it hurts focus.<br>Library (Gold/Brown, bottom-left)<br><br>Effect (hold E inside):<br>Grades: + steady<br>Fun: – small<br>Slower, steadier grade boost than the classroom, with a smaller fun cost.<br>Courtyard / Hallway (center & bottom area)<br><br>Neutral walking space.<br>No direct stat gain or loss (aside from the small global drift over time).<br>An “Exit Gate” area is drawn near the bottom middle as a visual cue for the end-of-day region, but you don’t interact with it — the bell simply rings when the timer ends.<br><br>Troublemakers (Red Circles)<br>There are a couple of moving red circles in the middle area:<br>They represent troublemakers / negative interactions.<br><br>If you bump into them:<br>Social drops sharply<br>Saharsh gets pushed away a bit<br>A short cooldown period prevents instant repeated hits<br>Tip: It’s usually better to walk around them instead of cutting straight through their paths.<br>They don’t end the game by themselves, but if Social drops to 0 from repeated hits, the day ends.<br><br>Stat Behavior<br>Passive Drift (all day long)<br>Even if you do nothing, stats slowly drift downward to simulate fatigue/forgetting:<br><br>Grades: slowly decrease over time<br>Fun: slowly decreases (you get worn out / bored)<br>Social: slowly decreases (you feel more isolated)<br>You counteract this drift by visiting the appropriate zones and holding E.<br><br>When Interacting (holding E)<br>Classroom (Green)<br><br>Grades: +20 per second<br>Fun: –6 per second<br>Social: –3 per second<br>Arcade – Secure Centrix81 (Purple)<br><br>Fun: +22 per second<br>Grades: –7.5 per second<br>Commons (Blue)<br><br>Social: +18 per second<br>Fun: +4 per second<br>Extra effect if you stay chatting too long (over ~6s in one stretch):<br>Grades: –4 per second (harder to refocus)<br>Library (Gold)<br><br>Grades: +9 per second<br>Fun: –3 per second<br>All stats are clamped between 0 and 100.<br><br>HUD & Feedback<br>On top of the canvas you get:<br><br>Bars + numbers for:<br>Grades, Fun, Social<br>Bars change color when low (e.g., red/orange if critical)<br>Timer (Time Left in seconds)<br>Current Area Label (Courtyard, Classroom, Arcade, Commons, Library)<br>A context message at the bottom:<br>Shows default control tips<br>Changes briefly when:<br>You study, chat, game, or read<br>You get bumped by troublemakers<br>You pause / unpause<br>Game States<br>Main Menu (start)<br><br>Big overlay with:<br>Game title<br>Explanation of zones<br>Win condition<br>Start Day button<br>Playing<br><br>You move around, manage stats, and race the clock.<br>Paused (P)<br><br>Game updates stop, message explains how to resume.<br>Game Over<br><br>Triggered if:<br>Grades, Fun, or Social hits 0<br>Overlay explains why (grades too low, burned out, or too many rough interactions).<br>Try Again button or press R to restart.<br>Victory<br><br>Triggered if the timer hits 0 and your stats meet the targets:<br>Grades ≥ 70, Fun ≥ 35, Social ≥ 35<br>Overlay shows a short summary of your final stats and congratulates you.<br>Play Another Day button or press R to restart.<br>Strategy Ideas<br>Regularly check in on the classroom or library so grades don’t crash.<br>Use the arcade as short, targeted fun boosts instead of staying there all day.<br>Visit the commons to keep Social healthy but avoid marathon chats.<br>Walk paths that avoid troublemakers; bumping into them repeatedly can tank Social.<br>Aim for ending around:<br>Grades: 70–90<br>Fun/Social: 40–70<br>rather than min-maxing a single stat.</pre>
+    <h2><a href="claude-opus-4-5-thinking-32k">Claude Opus 4.5 Thinking 32k</a></h2>
+    <pre>I've created Saharsh Life - a complete life simulation game! Here's what's included:<br><br>🎮 How to Play<br>Objective: Survive a full school week (Monday-Friday) while managing 4 stats:<br><br>📚 Grades - Start at 30% (you're already failing!)<br>⚡ Energy - Needed for all activities<br>🎮 Fun - Keep yourself entertained<br>⭐ Reputation - How others see you<br>🏫 Locations<br>Navigate between 5 school locations, each with unique actions and NPCs:<br><br>Classroom - Sleep, daydream, annoy classmates<br>Hallway - Pull pranks, socialize, encounter bullies<br>Computer Lab - Play SecurCentrix 81 (playable mini-game!), browse memes<br>Cafeteria - Eat, start food fights, steal food<br>Bathroom - Hide from problems, skip class, draw graffiti<br>👥 NPC Interactions<br>Click on NPCs to interact with them! Each has unique dialogue and choices:<br><br>Big Brad (the bully) - Will shake you down for lunch money<br>Nerdy Nathan - Can help with homework<br>Gamer Greg - Invites you to play SecurCentrix<br>Cool Casey - Doesn't know you exist<br>And more!<br>🕹️ SecurCentrix 81 Mini-Game<br>A fully playable space shooter inside the game!<br><br>Arrow Keys - Move left/right<br>Space - Shoot enemies<br>Survive waves of enemies, level up, and rack up a high score!<br>⚠️ Game Over Conditions<br>Any stat hits 0%<br>Survive to Friday to complete the week!<br>🎯 Features<br>Dynamic status messages based on your stats<br>Random events (pop quizzes, finding money, tripping in the hallway)<br>Bully encounters in the hallway<br>Event log tracking all your mishaps<br>Multiple ending tiers based on performance<br>Good luck living the Saharsh life! 😏</pre>
+    <h2><a href="grok-4-1-thinking.html">Grok 4.1 Thinking</a></h2>
+    <pre>Created index.html – a complete, fully playable single-page game "Saharsh Life".<br><br>Features:<br><br>7-day school life simulation<br>Real Saharsh avatar everywhere<br>Persistent Secure Centrix81 idle/clicker mini-game with auto-hackers<br>Failing grades, annoyance meter, bullying events, health system<br>Risk of getting caught playing in class<br>Multiple endings with Saharsh Score calculation<br>Polished UI with Tailwind, log terminal, and chaotic energy<br>Just open index.html and live the legend. 🗿</pre>
+    <h2><a href="minimax-m2.html">Minimax M2</a></h2>
+    <pre>Game Features:<br>Main Life Simulator:<br><br>Play as Saharsh, managing grades, happiness, energy, and social standing<br>Daily activities: Attend Class, Study, Play Secure Centrix, Socialize, Rest, Sleep<br>Time progression system (Morning → Afternoon → Evening → Night)<br>Random events including bullying incidents, surprise quizzes, and study opportunities<br>Game over conditions if grades drop too low or happiness reaches zero<br>Secure Centrix Minigame:<br><br>Complete action defense game within the main simulation<br>Mouse-controlled shield to defend against cyber attacks<br>Enemies spawn and move down the screen<br>Real-time collision detection and scoring<br>Difficulty selection affects gameplay<br>High scores give bonuses to main game stats<br>Visual Design:<br><br>Character drawn on canvas with school environment<br>Colorful stat bars with smooth animations<br>Professional UI with gradient backgrounds<br>Event popups and status messages<br>Responsive layout with sidebar controls<br>Gameplay Mechanics:<br><br>Each activity has strategic energy costs and trade-offs<br>Limited activities per day (you can only do each once per day)<br>Random events add unpredictability (30% chance per activity)<br>Progress log tracks all your decisions and outcomes<br>Strategic planning required to balance academics and happiness<br>The game simulates the authentic student experience of academic struggles, social challenges, and finding escape through gaming (Secure Centrix). The included minigame is fully playable and impacts your main character progression, creating a meta-gaming experience where your performance in Secure Centrix affects Saharsh's real-world outcomes.<br><br>Simply open the HTML file in any modern web browser to start playing!</pre>
+  </body>
+</html>

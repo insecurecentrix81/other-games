@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh Life - Student Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        #sidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #mainGame {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+        }
+
+        #characterCanvas {
+            width: 100%;
+            height: 100%;
+            background: #87CEEB;
+        }
+
+        .stat {
+            margin: 15px 0;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        .stat-bar {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stat-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .grade-fill { background: linear-gradient(90deg, #ff6b6b, #feca57); }
+        .happiness-fill { background: linear-gradient(90deg, #ff9ff3, #f368e0); }
+        .energy-fill { background: linear-gradient(90deg, #48cae4, #0077b6); }
+        .social-fill { background: linear-gradient(90deg, #00b894, #00cec9); }
+
+        .day-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .activity-buttons {
+            margin: 20px 0;
+        }
+
+        .activity-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+
+        .activity-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .activity-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #securcentrixModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #securcentrixGame {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        #securcentrixCanvas {
+            width: 100%;
+            height: 400px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .score-display {
+            text-align: center;
+            font-size: 24px;
+            margin: 10px 0;
+            color: #00ff88;
+        }
+
+        .event-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 2000;
+            max-width: 500px;
+            text-align: center;
+            display: none;
+        }
+
+        .event-popup button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #3498db;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .character-display {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .character-avatar {
+            width: 100px;
+            height: 100px;
+            background: #ff6b6b;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .status-message {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-style: italic;
+        }
+
+        .progress-log {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #3498db;
+            padding-left: 10px;
+        }
+
+        .difficulty-select {
+            margin: 15px 0;
+        }
+
+        .difficulty-select select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="sidebar">
+            <div class="day-info">
+                <h2 id="dayDisplay">Day 1</h2>
+                <p id="timeDisplay">Morning</p>
+            </div>
+
+            <div class="character-display">
+                <div class="character-avatar">S</div>
+                <h3>Saharsh</h3>
+                <p>Student Life Simulator</p>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Grades</div>
+                <div class="stat-bar">
+                    <div class="stat-fill grade-fill" id="gradesBar" style="width: 30%"></div>
+                </div>
+                <small id="gradesValue">30%</small>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Happiness</div>
+                <div class="stat-bar">
+                    <div class="stat-fill happiness-fill" id="happinessBar" style="width: 70%"></div>
+                </div>
+                <small id="happinessValue">70%</small>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Energy</div>
+                <div class="stat-bar">
+                    <div class="stat-fill energy-fill" id="energyBar" style="width: 80%"></div>
+                </div>
+                <small id="energyValue">80%</small>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Social Standing</div>
+                <div class="stat-bar">
+                    <div class="stat-fill social-fill" id="socialBar" style="width: 20%"></div>
+                </div>
+                <small id="socialValue">20%</small>
+            </div>
+
+            <div class="activity-buttons">
+                <button class="activity-btn" id="attendClass">Attend Class</button>
+                <button class="activity-btn" id="study">Study</button>
+                <button class="activity-btn" id="playGame">Play Secure Centrix</button>
+                <button class="activity-btn" id="socialize">Socialize</button>
+                <button class="activity-btn" id="rest">Rest</button>
+                <button class="activity-btn" id="skipDay">Sleep</button>
+            </div>
+
+            <div class="status-message" id="statusMessage">
+                Welcome to Saharsh Life! Choose an activity to begin your day.
+            </div>
+
+            <div class="progress-log" id="progressLog">
+                <div class="log-entry">Game started - Day 1 morning</div>
+            </div>
+        </div>
+
+        <div id="mainGame">
+            <canvas id="characterCanvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+
+    <!-- Secure Centrix Modal -->
+    <div id="securcentrixModal">
+        <div id="securcentrixGame">
+            <button class="modal-close" onclick="closeSecurcentrix()">&times;</button>
+            <div class="modal-header">
+                <h2>🎮 Secure Centrix</h2>
+                <p>Defend against cyber attacks!</p>
+            </div>
+
+            <div class="difficulty-select">
+                <label for="difficulty">Select Difficulty:</label>
+                <select id="difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+
+            <canvas id="securcentrixCanvas" width="600" height="300"></canvas>
+            
+            <div class="score-display">
+                Score: <span id="securcentrixScore">0</span>
+            </div>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="activity-btn" id="startSecurcentrix" style="width: auto; display: inline-block; margin: 5px;">Start Game</button>
+                <button class="activity-btn" id="stopSecurcentrix" style="width: auto; display: inline-block; margin: 5px;">Stop Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Popup -->
+    <div class="event-popup" id="eventPopup">
+        <h3 id="eventTitle">Random Event!</h3>
+        <p id="eventDescription"></p>
+        <button onclick="closeEvent()">Continue</button>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            day: 1,
+            time: 'Morning', // Morning, Afternoon, Evening, Night
+            grades: 30,
+            happiness: 70,
+            energy: 80,
+            social: 20,
+            activitiesUsed: {
+                attendClass: false,
+                study: false,
+                playGame: false,
+                socialize: false,
+                rest: false
+            }
+        };
+
+        // Canvas and Context
+        const canvas = document.getElementById('characterCanvas');
+        const ctx = canvas.getContext('2d');
+        const securcentrixCanvas = document.getElementById('securcentrixCanvas');
+        const sctx = securcentrixCanvas.getContext('2d');
+
+        // Game Variables
+        let isPlayingSecurcentrix = false;
+        let securcentrixScore = 0;
+        let securcentrixEnemies = [];
+        let securcentrixBullets = [];
+        let gameLoop;
+
+        // Random Events
+        const randomEvents = [
+            {
+                title: "Bullying Incident!",
+                description: "A group of students noticed you struggling with homework and made fun of you. Your confidence takes a hit.",
+                effects: { happiness: -10, social: -5 }
+            },
+            {
+                title: "Unexpected Quiz!",
+                description: "Your teacher surprise quizzes you on material you haven't studied yet. Your grades suffer.",
+                effects: { grades: -5, energy: -10 }
+            },
+            {
+                title: "Study Buddy!",
+                description: "You found someone to study with! They help you understand the material better.",
+                effects: { grades: +8, happiness: +5, social: +10 }
+            },
+            {
+                title: "Free Pizza!",
+                description: "There's free pizza in the cafeteria! You feel much happier and energized.",
+                effects: { happiness: +15, energy: +10 }
+            },
+            {
+                title: "Computer Lab Access",
+                description: "You got access to the computer lab after hours! Perfect time to practice coding.",
+                effects: { grades: +5, social: -2 }
+            },
+            {
+                title: "Social Media Drama",
+                description: "Someone posted an embarrassing photo of you online. Social standing takes a hit.",
+                effects: { happiness: -8, social: -10 }
+            }
+        ];
+
+        // Initialize Game
+        function init() {
+            updateUI();
+            drawCharacter();
+            setupEventListeners();
+        }
+
+        // Update UI Elements
+        function updateUI() {
+            document.getElementById('dayDisplay').textContent = `Day ${gameState.day}`;
+            document.getElementById('timeDisplay').textContent = gameState.time;
+
+            // Update stat bars
+            document.getElementById('gradesBar').style.width = `${gameState.grades}%`;
+            document.getElementById('happinessBar').style.width = `${gameState.happiness}%`;
+            document.getElementById('energyBar').style.width = `${gameState.energy}%`;
+            document.getElementById('socialBar').style.width = `${gameState.social}%`;
+
+            document.getElementById('gradesValue').textContent = `${gameState.grades}%`;
+            document.getElementById('happinessValue').textContent = `${gameState.happiness}%`;
+            document.getElementById('energyValue').textContent = `${gameState.energy}%`;
+            document.getElementById('socialValue').textContent = `${gameState.social}%`;
+
+            // Update button states
+            updateButtonStates();
+        }
+
+        // Update Button States
+        function updateButtonStates() {
+            const buttons = ['attendClass', 'study', 'playGame', 'socialize', 'rest'];
+            buttons.forEach(btn => {
+                const button = document.getElementById(btn);
+                button.disabled = gameState.activitiesUsed[btn];
+                if (gameState.activitiesUsed[btn]) {
+                    button.style.opacity = '0.5';
+                }
+            });
+        }
+
+        // Draw Character
+        function drawCharacter() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Background
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.7, '#98FB98');
+            gradient.addColorStop(1, '#90EE90');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // School building
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(50, 200, 200, 300);
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(70, 220, 160, 280);
+
+            // Windows
+            ctx.fillStyle = '#87CEEB';
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 4; j++) {
+                    ctx.fillRect(80 + j * 35, 240 + i * 60, 25, 40);
+                }
+            }
+
+            // Character (Saharsh)
+            const charX = 400;
+            const charY = 300;
+            
+            // Body
+            ctx.fillStyle = '#4169E1';
+            ctx.fillRect(charX - 15, charY, 30, 50);
+            
+            // Head
+            ctx.fillStyle = '#FFDBB5';
+            ctx.beginPath();
+            ctx.arc(charX, charY - 20, 20, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Hair
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(charX - 18, charY - 35, 36, 10);
+            ctx.fillRect(charX - 15, charY - 30, 30, 8);
+            
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(charX - 8, charY - 25, 3, 0, Math.PI * 2);
+            ctx.arc(charX + 8, charY - 25, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Arms
+            ctx.fillStyle = '#FFDBB5';
+            ctx.fillRect(charX - 25, charY + 10, 10, 30);
+            ctx.fillRect(charX + 15, charY + 10, 10, 30);
+            
+            // Legs
+            ctx.fillStyle = '#2F4F4F';
+            ctx.fillRect(charX - 12, charY + 50, 10, 30);
+            ctx.fillRect(charX + 2, charY + 50, 10, 30);
+
+            // Computer for studying/playing
+            ctx.fillStyle = '#000';
+            ctx.fillRect(charX - 80, charY + 20, 50, 30);
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(charX - 78, charY + 22, 46, 26);
+
+            // Text overlay
+            ctx.fillStyle = '#000';
+            ctx.font = '20px Arial';
+            ctx.fillText('Saharsh\'s School Life', 10, 30);
+            ctx.fillText(`Day ${gameState.day} - ${gameState.time}`, 10, 60);
+        }
+
+        // Add to progress log
+        function addLog(message) {
+            const log = document.getElementById('progressLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = `${gameState.time}: ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Show random event
+        function showRandomEvent() {
+            if (Math.random() < 0.3) { // 30% chance
+                const event = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+                
+                // Apply effects
+                Object.keys(event.effects).forEach(stat => {
+                    gameState[stat] = Math.max(0, Math.min(100, gameState[stat] + event.effects[stat]));
+                });
+                
+                document.getElementById('eventTitle').textContent = event.title;
+                document.getElementById('eventDescription').textContent = event.description;
+                document.getElementById('eventPopup').style.display = 'block';
+                
+                addLog(`${event.title} - ${event.description.substring(0, 50)}...`);
+            }
+        }
+
+        // Close event popup
+        function closeEvent() {
+            document.getElementById('eventPopup').style.display = 'none';
+            updateUI();
+        }
+
+        // Activity Functions
+        function attendClass() {
+            if (gameState.energy < 20) {
+                updateStatus("Too tired to attend class!");
+                return;
+            }
+            
+            const gradeChange = Math.random() > 0.6 ? -10 : -5;
+            gameState.grades = Math.max(0, gameState.grades + gradeChange);
+            gameState.energy = Math.max(0, gameState.energy - 25);
+            gameState.happiness = Math.max(0, gameState.happiness - 5);
+            
+            gameState.activitiesUsed.attendClass = true;
+            updateStatus(`Attended class - grades ${gradeChange > 0 ? 'improved' : 'dropped'} by ${Math.abs(gradeChange)}%`);
+            addLog(`Attended class. Grades: ${gradeChange > 0 ? '+' : ''}${gradeChange}%, Energy: -25%, Happiness: -5%`);
+            showRandomEvent();
+            updateUI();
+        }
+
+        function study() {
+            if (gameState.energy < 15) {
+                updateStatus("Too tired to study effectively!");
+                return;
+            }
+            
+            const gradeChange = Math.random() > 0.3 ? 8 : -3;
+            gameState.grades = Math.max(0, Math.min(100, gameState.grades + gradeChange));
+            gameState.energy = Math.max(0, gameState.energy - 30);
+            gameState.happiness = Math.max(0, gameState.happiness - 10);
+            
+            gameState.activitiesUsed.study = true;
+            updateStatus(`Studied hard - grades ${gradeChange > 0 ? 'improved' : 'dropped'} by ${Math.abs(gradeChange)}%`);
+            addLog(`Studied. Grades: ${gradeChange > 0 ? '+' : ''}${gradeChange}%, Energy: -30%, Happiness: -10%`);
+            showRandomEvent();
+            updateUI();
+        }
+
+        function playSecurcentrix() {
+            if (gameState.energy < 10) {
+                updateStatus("Too tired to play Secure Centrix!");
+                return;
+            }
+            
+            gameState.activitiesUsed.playGame = true;
+            updateStatus("Opening Secure Centrix...");
+            addLog("Started playing Secure Centrix");
+            openSecurcentrix();
+        }
+
+        function socialize() {
+            if (gameState.energy < 10) {
+                updateStatus("Too tired to socialize!");
+                return;
+            }
+            
+            const socialChange = Math.random() > 0.4 ? 12 : -5;
+            gameState.social = Math.max(0, Math.min(100, gameState.social + socialChange));
+            gameState.energy = Math.max(0, gameState.energy - 20);
+            gameState.happiness = Math.max(0, gameState.happiness + 5);
+            
+            gameState.activitiesUsed.socialize = true;
+            updateStatus(`Tried to socialize - social standing ${socialChange > 0 ? 'improved' : 'dropped'} by ${Math.abs(socialChange)}%`);
+            addLog(`Socialized. Social: ${socialChange > 0 ? '+' : ''}${socialChange}%, Energy: -20%, Happiness: +5%`);
+            showRandomEvent();
+            updateUI();
+        }
+
+        function rest() {
+            gameState.energy = Math.min(100, gameState.energy + 40);
+            gameState.happiness = Math.max(0, gameState.happiness + 5);
+            gameState.activitiesUsed.rest = true;
+            updateStatus("Rested and recovered energy!");
+            addLog("Rested. Energy: +40%, Happiness: +5%");
+            updateUI();
+        }
+
+        function skipDay() {
+            gameState.day++;
+            gameState.time = 'Morning';
+            gameState.energy = Math.min(100, gameState.energy + 20);
+            
+            // Reset daily activities
+            Object.keys(gameState.activitiesUsed).forEach(key => {
+                gameState.activitiesUsed[key] = false;
+            });
+            
+            updateStatus(`Slept through the night. Day ${gameState.day} begins!`);
+            addLog(`Slept. New day: ${gameState.day}, Energy: +20%`);
+            updateUI();
+            drawCharacter();
+        }
+
+        // Update status message
+        function updateStatus(message) {
+            document.getElementById('statusMessage').textContent = message;
+        }
+
+        // Secure Centrix Game
+        function openSecurcentrix() {
+            document.getElementById('securcentrixModal').style.display = 'flex';
+            drawSecurcentrixScreen();
+        }
+
+        function closeSecurcentrix() {
+            document.getElementById('securcentrixModal').style.display = 'none';
+            stopSecurcentrix();
+            if (securcentrixScore > 50) {
+                gameState.grades = Math.min(100, gameState.grades + 5);
+                gameState.happiness = Math.min(100, gameState.happiness + 10);
+                addLog(`Played Secure Centrix well! Grades: +5%, Happiness: +10%`);
+            }
+            updateUI();
+        }
+
+        function drawSecurcentrixScreen() {
+            sctx.clearRect(0, 0, securcentrixCanvas.width, securcentrixCanvas.height);
+            
+            // Background
+            const gradient = sctx.createLinearGradient(0, 0, 0, securcentrixCanvas.height);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#16213e');
+            sctx.fillStyle = gradient;
+            sctx.fillRect(0, 0, securcentrixCanvas.width, securcentrixCanvas.height);
+
+            // Title
+            sctx.fillStyle = '#00ff88';
+            sctx.font = '24px monospace';
+            sctx.fillText('SECURE CENTRIX', 200, 50);
+
+            // Instructions
+            sctx.fillStyle = '#ffffff';
+            sctx.font = '14px monospace';
+            sctx.fillText('Click START GAME, then defend against the red cyber attacks!', 100, 100);
+            sctx.fillText('Move mouse to position defense shield. Earn points by blocking attacks!', 80, 120);
+
+            // Game area outline
+            sctx.strokeStyle = '#00ff88';
+            sctx.lineWidth = 2;
+            sctx.strokeRect(50, 150, 500, 100);
+        }
+
+        function startSecurcentrix() {
+            if (isPlayingSecurcentrix) return;
+            
+            isPlayingSecurcentrix = true;
+            securcentrixScore = 0;
+            securcentrixEnemies = [];
+            securcentrixBullets = [];
+            
+            document.getElementById('securcentrixScore').textContent = securcentrixScore;
+            
+            gameLoop = setInterval(updateSecurcentrix, 16);
+            
+            // Spawn enemies
+            setInterval(spawnEnemy, 1000 + Math.random() * 1000);
+        }
+
+        function stopSecurcentrix() {
+            if (!isPlayingSecurcentrix) return;
+            
+            isPlayingSecurcentrix = false;
+            clearInterval(gameLoop);
+            clearInterval(this.spawnInterval);
+            drawSecurcentrixScreen();
+        }
+
+        function spawnEnemy() {
+            if (!isPlayingSecurcentrix) return;
+            
+            securcentrixEnemies.push({
+                x: Math.random() * (securcentrixCanvas.width - 100),
+                y: 150,
+                speed: 1 + Math.random() * 2,
+                size: 10 + Math.random() * 5
+            });
+        }
+
+        function updateSecurcentrix() {
+            sctx.clearRect(0, 0, securcentrixCanvas.width, securcentrixCanvas.height);
+            
+            // Background
+            const gradient = sctx.createLinearGradient(0, 0, 0, securcentrixCanvas.height);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#16213e');
+            sctx.fillStyle = gradient;
+            sctx.fillRect(0, 0, securcentrixCanvas.width, securcentrixCanvas.height);
+
+            // Draw shield based on mouse position
+            const rect = securcentrixCanvas.getBoundingClientRect();
+            const mouseX = (event.clientX - rect.left) * (securcentrixCanvas.width / rect.width);
+            const mouseY = (event.clientY - rect.top) * (securcentrixCanvas.height / rect.height);
+            
+            sctx.fillStyle = '#00ff88';
+            sctx.beginPath();
+            sctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
+            sctx.fill();
+            
+            // Update and draw enemies
+            securcentrixEnemies = securcentrixEnemies.filter(enemy => {
+                enemy.y += enemy.speed;
+                
+                sctx.fillStyle = '#ff4444';
+                sctx.beginPath();
+                sctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                sctx.fill();
+                
+                // Collision detection
+                const distance = Math.sqrt(Math.pow(mouseX - enemy.x, 2) + Math.pow(mouseY - enemy.y, 2));
+                if (distance < 20 + enemy.size) {
+                    securcentrixScore += 10;
+                    return false;
+                }
+                
+                return enemy.y < securcentrixCanvas.height;
+            });
+
+            // Draw score
+            sctx.fillStyle = '#00ff88';
+            sctx.font = '18px monospace';
+            sctx.fillText(`Score: ${securcentrixScore}`, 10, 30);
+            
+            document.getElementById('securcentrixScore').textContent = securcentrixScore;
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            document.getElementById('attendClass').addEventListener('click', attendClass);
+            document.getElementById('study').addEventListener('click', study);
+            document.getElementById('playGame').addEventListener('click', playSecurcentrix);
+            document.getElementById('socialize').addEventListener('click', socialize);
+            document.getElementById('rest').addEventListener('click', rest);
+            document.getElementById('skipDay').addEventListener('click', skipDay);
+
+            document.getElementById('startSecurcentrix').addEventListener('click', startSecurcentrix);
+            document.getElementById('stopSecurcentrix').addEventListener('click', stopSecurcentrix);
+        }
+
+        // Initialize the game
+        init();
+
+        // Game over conditions
+        function checkGameOver() {
+            if (gameState.grades <= 0) {
+                alert("Game Over! Your grades dropped too low. You might need to repeat the year!");
+                location.reload();
+            } else if (gameState.happiness <= 0) {
+                alert("Game Over! You became too depressed. Better luck next time!");
+                location.reload();
+            } else if (gameState.energy <= 0 && !gameState.activitiesUsed.rest && !gameState.activitiesUsed.skipDay) {
+                if (confirm("You're exhausted! Go to sleep now?")) {
+                    skipDay();
+                }
+            }
+        }
+
+        // Check game over periodically
+        setInterval(checkGameOver, 5000);
+    </script>
+</body>
+</html>

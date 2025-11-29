@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+  <title>Secure Centrix81: Saharsh Life</title>
+  <script src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top, #1f2937 0, #020617 55%, #000000 100%);
+    }
+    canvas {
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body class='min-h-screen flex flex-col text-slate-100'>
+  <main class='flex-1 flex flex-col items-center justify-start py-6 px-4 gap-4'>
+    <header class='text-center space-y-2'>
+      <h1 class='text-3xl md:text-4xl font-extrabold tracking-tight text-cyan-300 drop-shadow'>Secure Centrix81: Saharsh Life</h1>
+      <p class='max-w-2xl text-sm md:text-base text-slate-300 mx-auto'>
+        Guide Saharsh through a hectic school day. Balance classes, gaming on Secure Centrix81, and hanging out with friends
+        while staying away from troublemakers. Keep your grades, fun, and social energy above zero before the final bell.
+      </p>
+    </header>
+
+    <section class='w-full max-w-5xl flex flex-col items-center gap-4'>
+      <div class='relative bg-slate-900/70 border border-cyan-500/40 rounded-2xl p-4 md:p-5 shadow-2xl shadow-cyan-900/40 w-full overflow-hidden'>
+        <div class='relative mx-auto max-w-full flex justify-center'>
+          <canvas id='gameCanvas' width='900' height='540' class='bg-slate-950 rounded-xl border border-slate-700 shadow-inner shadow-black/80 max-w-full h-auto'></canvas>
+
+          <!-- HUD overlay -->
+          <div class='pointer-events-none absolute inset-0'>
+            <div class='absolute left-3 right-3 top-3 flex flex-col gap-2'>
+              <div class='grid grid-cols-3 gap-3 text-[11px] md:text-xs'>
+                <div class='flex flex-col gap-1'>
+                  <div class='flex items-center justify-between'>
+                    <span class='uppercase tracking-wide text-[10px] text-slate-300'>Grades</span>
+                    <span id='gradeValue' class='font-semibold text-emerald-300'>65</span>
+                  </div>
+                  <div class='h-2 rounded-full bg-slate-800 overflow-hidden'>
+                    <div id='gradeBar' class='h-full bg-emerald-400 transition-[width] duration-150' style='width:65%'></div>
+                  </div>
+                </div>
+
+                <div class='flex flex-col gap-1'>
+                  <div class='flex items-center justify-between'>
+                    <span class='uppercase tracking-wide text-[10px] text-slate-300'>Fun</span>
+                    <span id='funValue' class='font-semibold text-cyan-300'>50</span>
+                  </div>
+                  <div class='h-2 rounded-full bg-slate-800 overflow-hidden'>
+                    <div id='funBar' class='h-full bg-cyan-400 transition-[width] duration-150' style='width:50%'></div>
+                  </div>
+                </div>
+
+                <div class='flex flex-col gap-1'>
+                  <div class='flex items-center justify-between'>
+                    <span class='uppercase tracking-wide text-[10px] text-slate-300'>Social</span>
+                    <span id='socialValue' class='font-semibold text-violet-300'>50</span>
+                  </div>
+                  <div class='h-2 rounded-full bg-slate-800 overflow-hidden'>
+                    <div id='socialBar' class='h-full bg-violet-400 transition-[width] duration-150' style='width:50%'></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class='flex items-center justify-between text-[11px] md:text-xs text-slate-300 mt-1'>
+                <div>
+                  Time left: <span id='timeValue' class='font-semibold text-amber-300'>180.0</span> s
+                </div>
+                <div>
+                  Area: <span id='areaLabel' class='font-medium text-sky-300'>Courtyard</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Context + controls at bottom -->
+            <div class='absolute left-0 right-0 bottom-0 px-3 pb-2 md:px-4 md:pb-3'>
+              <div class='pointer-events-none bg-slate-950/85 border border-slate-700/80 rounded-lg px-3 py-2 flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center justify-between text-[10px] md:text-[11px] text-slate-200'>
+                <div id='contextText' class='flex-1 pr-1'>
+                  Use WASD or Arrow Keys to move. Walk into colored zones and hold E to interact.
+                </div>
+                <div class='text-[10px] text-slate-400 text-right leading-tight'>
+                  <div>Move: WASD / Arrows</div>
+                  <div>Interact: E (hold)</div>
+                  <div>Pause: P</div>
+                  <div>Restart: R (after the day ends)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Menu overlay -->
+          <div id='menuOverlay' class='absolute inset-0 bg-slate-950/90 flex items-center justify-center'>
+            <div class='pointer-events-auto bg-slate-900/95 border border-cyan-500/60 rounded-2xl px-5 py-6 max-w-md w-[92%] shadow-xl shadow-cyan-900/50 space-y-4'>
+              <h2 class='text-xl md:text-2xl font-bold text-cyan-300'>Saharsh's Semester: Day One</h2>
+              <p class='text-xs md:text-sm text-slate-200'>
+                Help Saharsh balance school, hobbies, and friends. Keep all three stats above zero until the final bell.
+                Reach the end of the day with at least 70 Grades, 35 Fun, and 35 Social to earn a successful day.
+              </p>
+              <ul class='text-xs md:text-sm text-slate-100 space-y-1.5 list-disc list-inside text-left'>
+                <li><span class='text-emerald-300 font-semibold'>Classroom (green):</span> Hold E to study. Grades rise, but it slowly drains fun and social energy.</li>
+                <li><span class='text-fuchsia-300 font-semibold'>Secure Centrix arcade (purple):</span> Hold E to play. Fun shoots up, but your grades drift down.</li>
+                <li><span class='text-sky-300 font-semibold'>Commons (blue):</span> Hold E to chat. Social rises and a bit of fun too, but focus slips if you linger.</li>
+                <li><span class='text-amber-300 font-semibold'>Library (gold):</span> Quiet focus. Grades improve gently with only a small fun cost.</li>
+                <li><span class='text-rose-300 font-semibold'>Red circles:</span> School troublemakers. Getting bumped shakes your confidence and lowers Social.</li>
+              </ul>
+              <div class='space-y-2'>
+                <button id='startButton' class='w-full px-4 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 active:bg-cyan-300 text-slate-950 font-semibold text-sm shadow shadow-cyan-900/50 transition-colors'>
+                  Start Day
+                </button>
+                <p class='text-[11px] text-slate-400'>Tip: Short, frequent breaks usually work better than doing only one thing all day.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game Over overlay -->
+          <div id='gameOverOverlay' class='absolute inset-0 bg-slate-950/90 hidden items-center justify-center'>
+            <div class='pointer-events-auto bg-slate-900/95 border border-rose-500/70 rounded-2xl px-5 py-6 max-w-md w-[92%] shadow-xl shadow-rose-900/60 space-y-4 text-center'>
+              <h2 class='text-2xl font-bold text-rose-300'>Day Over</h2>
+              <p id='gameOverReason' class='text-sm text-slate-200'></p>
+              <div class='grid grid-cols-1 gap-2 pt-1'>
+                <button id='retryButton' class='w-full px-4 py-2.5 rounded-lg bg-rose-500 hover:bg-rose-400 active:bg-rose-300 text-slate-950 font-semibold text-sm shadow shadow-rose-900/50 transition-colors'>
+                  Try Again
+                </button>
+              </div>
+              <p class='text-[11px] text-slate-400'>Every day is practice. Adjust how much time you spend in each area and try a new strategy.</p>
+            </div>
+          </div>
+
+          <!-- Victory overlay -->
+          <div id='victoryOverlay' class='absolute inset-0 bg-slate-950/90 hidden items-center justify-center'>
+            <div class='pointer-events-auto bg-slate-900/95 border border-emerald-500/70 rounded-2xl px-5 py-6 max-w-md w-[92%] shadow-xl shadow-emerald-900/60 space-y-4 text-center'>
+              <h2 class='text-2xl font-bold text-emerald-300'>You Made It!</h2>
+              <p id='victorySummary' class='text-sm text-slate-200'></p>
+              <div class='grid grid-cols-1 gap-2 pt-1'>
+                <button id='playAgainButton' class='w-full px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-300 text-slate-950 font-semibold text-sm shadow shadow-emerald-900/50 transition-colors'>
+                  Play Another Day
+                </button>
+              </div>
+              <p class='text-[11px] text-slate-400'>Nice balance of studying, gaming, and friends. Can you finish with even higher stats next time?</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class='w-full max-w-5xl grid md:grid-cols-2 gap-4 text-xs md:text-sm text-slate-300'>
+        <div class='bg-slate-900/70 border border-slate-700/80 rounded-xl p-3 md:p-4 space-y-1.5'>
+          <h3 class='text-sm md:text-base font-semibold text-cyan-300 mb-1'>Controls</h3>
+          <ul class='list-disc list-inside space-y-1'>
+            <li><span class='font-semibold text-sky-300'>Move:</span> WASD or Arrow Keys</li>
+            <li><span class='font-semibold text-sky-300'>Interact:</span> Hold E while inside a colored zone</li>
+            <li><span class='font-semibold text-sky-300'>Pause/Unpause:</span> P</li>
+            <li><span class='font-semibold text-sky-300'>Restart after the day ends:</span> R or the on-screen button</li>
+          </ul>
+        </div>
+        <div class='bg-slate-900/70 border border-slate-700/80 rounded-xl p-3 md:p-4 space-y-1.5'>
+          <h3 class='text-sm md:text-base font-semibold text-cyan-300 mb-1'>Tips</h3>
+          <ul class='list-disc list-inside space-y-1'>
+            <li>Grades slowly drift down during the day, so check in on class or the library regularly.</li>
+            <li>Short gaming breaks keep fun high; going all-in on games can tank your grades.</li>
+            <li>Commons time is great for Social, but too much talking makes it hard to stay focused later.</li>
+            <li>Walking around troublemakers is usually safer than cutting straight through them.</li>
+          </ul>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class='py-4 text-center text-[11px] text-slate-500 border-t border-slate-800/60 bg-slate-950/80'>
+    Secure Centrix81 • Single-day school life simulator
+  </footer>
+
+  <script>
+    (function() {
+      var canvas = document.getElementById('gameCanvas');
+      var ctx = canvas.getContext('2d');
+
+      var gradeValueEl = document.getElementById('gradeValue');
+      var funValueEl = document.getElementById('funValue');
+      var socialValueEl = document.getElementById('socialValue');
+      var gradeBarEl = document.getElementById('gradeBar');
+      var funBarEl = document.getElementById('funBar');
+      var socialBarEl = document.getElementById('socialBar');
+      var timeValueEl = document.getElementById('timeValue');
+      var areaLabelEl = document.getElementById('areaLabel');
+      var contextTextEl = document.getElementById('contextText');
+
+      var menuOverlay = document.getElementById('menuOverlay');
+      var gameOverOverlay = document.getElementById('gameOverOverlay');
+      var victoryOverlay = document.getElementById('victoryOverlay');
+      var startButton = document.getElementById('startButton');
+      var retryButton = document.getElementById('retryButton');
+      var playAgainButton = document.getElementById('playAgainButton');
+      var gameOverReasonEl = document.getElementById('gameOverReason');
+      var victorySummaryEl = document.getElementById('victorySummary');
+
+      var MAX_STAT = 100;
+      var DAY_LENGTH = 180;
+
+      var GameState = {
+        MENU: 'menu',
+        PLAYING: 'playing',
+        GAME_OVER: 'gameover',
+        VICTORY: 'victory'
+      };
+
+      var gameState = GameState.MENU;
+      var paused = false;
+
+      var stats = {
+        grade: 65,
+        fun: 50,
+        social: 50
+      };
+
+      var dayTime = DAY_LENGTH;
+      var lastTimestamp = 0;
+      var keysDown = {};
+      var currentAreaName = 'Courtyard';
+      var contextHintTimer = 0;
+
+      var player = {
+        x: canvas.width / 2,
+        y: canvas.height - 80,
+        radius: 16,
+        speed: 210,
+        color: '#38bdf8'
+      };
+
+      var zones = [];
+      var bullies = [];
+      var bullyHitCooldown = 0;
+      var commonsTalkTimer = 0;
+
+      function resetGame() {
+        stats.grade = 65;
+        stats.fun = 50;
+        stats.social = 50;
+        dayTime = DAY_LENGTH;
+        lastTimestamp = 0;
+        paused = false;
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 80;
+        bullyHitCooldown = 0;
+        commonsTalkTimer = 0;
+        contextHintTimer = 0;
+        currentAreaName = 'Courtyard';
+        setupZonesAndBullies();
+        updateHUD();
+        setContext('Use WASD or Arrow Keys to move. Walk into colored zones and hold E to interact.');
+      }
+
+      function setupZonesAndBullies() {
+        zones = [
+          {
+            x: 70,
+            y: 80,
+            width: 220,
+            height: 160,
+            type: 'classroom',
+            label: 'Classroom',
+            baseColor: '#166534',
+            borderColor: '#22c55e'
+          },
+          {
+            x: canvas.width - 260,
+            y: 60,
+            width: 190,
+            height: 150,
+            type: 'arcade',
+            label: 'Secure Centrix Arcade',
+            baseColor: '#6b21a8',
+            borderColor: '#e879f9'
+          },
+          {
+            x: canvas.width - 280,
+            y: canvas.height - 210,
+            width: 220,
+            height: 140,
+            type: 'commons',
+            label: 'Commons',
+            baseColor: '#0369a1',
+            borderColor: '#38bdf8'
+          },
+          {
+            x: 90,
+            y: canvas.height - 200,
+            width: 200,
+            height: 140,
+            type: 'library',
+            label: 'Library',
+            baseColor: '#92400e',
+            borderColor: '#facc15'
+          }
+        ];
+
+        bullies = [
+          {
+            x: canvas.width / 2 - 40,
+            y: canvas.height / 2 - 40,
+            radius: 14,
+            speed: 90,
+            dirX: 1,
+            dirY: 0,
+            bounds: {
+              minX: canvas.width / 2 - 120,
+              maxX: canvas.width / 2 + 60,
+              minY: canvas.height / 2 - 60,
+              maxY: canvas.height / 2 - 20
+            }
+          },
+          {
+            x: canvas.width / 2 + 80,
+            y: canvas.height / 2 + 60,
+            radius: 14,
+            speed: 85,
+            dirX: 0,
+            dirY: 1,
+            bounds: {
+              minX: canvas.width / 2 + 60,
+              maxX: canvas.width / 2 + 120,
+              minY: canvas.height / 2 + 30,
+              maxY: canvas.height / 2 + 110
+            }
+          }
+        ];
+      }
+
+      function clamp(value, min, max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+      }
+
+      function setContext(text) {
+        contextTextEl.textContent = text;
+        contextHintTimer = 3;
+      }
+
+      function updateHUD() {
+        var g = clamp(stats.grade, 0, MAX_STAT);
+        var f = clamp(stats.fun, 0, MAX_STAT);
+        var s = clamp(stats.social, 0, MAX_STAT);
+
+        gradeValueEl.textContent = Math.round(g);
+        funValueEl.textContent = Math.round(f);
+        socialValueEl.textContent = Math.round(s);
+
+        gradeBarEl.style.width = g + '%';
+        funBarEl.style.width = f + '%';
+        socialBarEl.style.width = s + '%';
+
+        gradeBarEl.style.backgroundColor = g < 30 ? '#fb7185' : '#4ade80';
+        funBarEl.style.backgroundColor = f < 30 ? '#fb923c' : '#22d3ee';
+        socialBarEl.style.backgroundColor = s < 30 ? '#f97316' : '#a855f7';
+
+        timeValueEl.textContent = dayTime.toFixed(1);
+        areaLabelEl.textContent = currentAreaName;
+      }
+
+      function getCurrentZone() {
+        for (var i = 0; i < zones.length; i++) {
+          var z = zones[i];
+          if (player.x > z.x && player.x < z.x + z.width && player.y > z.y && player.y < z.y + z.height) {
+            return z;
+          }
+        }
+        return null;
+      }
+
+      function update(dt) {
+        if (gameState !== GameState.PLAYING || paused) {
+          return;
+        }
+
+        dayTime -= dt;
+        if (dayTime < 0) dayTime = 0;
+
+        var baseGradeDrift = -2.3;
+        var baseFunDrift = -1.3;
+        var baseSocialDrift = -1.6;
+        stats.grade += baseGradeDrift * dt;
+        stats.fun += baseFunDrift * dt;
+        stats.social += baseSocialDrift * dt;
+
+        var dx = 0;
+        var dy = 0;
+        if (keysDown['ArrowUp'] || keysDown['KeyW']) dy -= 1;
+        if (keysDown['ArrowDown'] || keysDown['KeyS']) dy += 1;
+        if (keysDown['ArrowLeft'] || keysDown['KeyA']) dx -= 1;
+        if (keysDown['ArrowRight'] || keysDown['KeyD']) dx += 1;
+
+        if (dx !== 0 || dy !== 0) {
+          var len = Math.sqrt(dx * dx + dy * dy);
+          dx /= len;
+          dy /= len;
+          player.x += dx * player.speed * dt;
+          player.y += dy * player.speed * dt;
+        }
+
+        player.x = clamp(player.x, player.radius + 4, canvas.width - player.radius - 4);
+        player.y = clamp(player.y, player.radius + 4, canvas.height - player.radius - 4);
+
+        var zone = getCurrentZone();
+        var areaName = 'Hallway';
+        if (zone) {
+          if (zone.type === 'classroom') areaName = 'Classroom';
+          else if (zone.type === 'arcade') areaName = 'Secure Centrix Arcade';
+          else if (zone.type === 'commons') areaName = 'Commons';
+          else if (zone.type === 'library') areaName = 'Library';
+        } else if (player.y > canvas.height - 150) {
+          areaName = 'Courtyard';
+        } else {
+          areaName = 'Hallway';
+        }
+
+        currentAreaName = areaName;
+
+        var interacting = keysDown['KeyE'];
+        commonsTalkTimer = zone && zone.type === 'commons' && interacting ? commonsTalkTimer + dt : 0;
+
+        if (zone && interacting) {
+          if (zone.type === 'classroom') {
+            stats.grade += 20 * dt;
+            stats.fun += -6 * dt;
+            stats.social += -3 * dt;
+            if (contextHintTimer <= 0) {
+              setContext('Studying hard. Grades climb, but it is tiring and uses up social energy.');
+            }
+          } else if (zone.type === 'arcade') {
+            stats.fun += 22 * dt;
+            stats.grade += -7.5 * dt;
+            if (contextHintTimer <= 0) {
+              setContext('Playing Secure Centrix81. Fun jumps up, but class focus slides.');
+            }
+          } else if (zone.type === 'commons') {
+            stats.social += 18 * dt;
+            stats.fun += 4 * dt;
+            if (commonsTalkTimer > 6) {
+              stats.grade += -4 * dt;
+              if (contextHintTimer <= 0) {
+                setContext('Lots of chatting. It is fun, but staying too long makes it hard to refocus.');
+              }
+            } else if (contextHintTimer <= 0) {
+              setContext('Catching up with classmates. Social energy goes up, and it is a little fun too.');
+            }
+          } else if (zone.type === 'library') {
+            stats.grade += 9 * dt;
+            stats.fun += -3 * dt;
+            if (contextHintTimer <= 0) {
+              setContext('Quiet focus in the library. Grades rise steadily with a small fun cost.');
+            }
+          }
+        }
+
+        stats.grade = clamp(stats.grade, 0, MAX_STAT);
+        stats.fun = clamp(stats.fun, 0, MAX_STAT);
+        stats.social = clamp(stats.social, 0, MAX_STAT);
+
+        if (contextHintTimer > 0) {
+          contextHintTimer -= dt;
+          if (contextHintTimer <= 0) {
+            contextHintTimer = 0;
+            contextTextEl.textContent = 'Use WASD or Arrow Keys to move. Walk into colored zones and hold E to interact.';
+          }
+        }
+
+        for (var i = 0; i < bullies.length; i++) {
+          var b = bullies[i];
+          b.x += b.dirX * b.speed * dt;
+          b.y += b.dirY * b.speed * dt;
+
+          if (b.x - b.radius < b.bounds.minX || b.x + b.radius > b.bounds.maxX) {
+            b.dirX *= -1;
+          }
+          if (b.y - b.radius < b.bounds.minY || b.y + b.radius > b.bounds.maxY) {
+            b.dirY *= -1;
+          }
+        }
+
+        if (bullyHitCooldown > 0) {
+          bullyHitCooldown -= dt;
+          if (bullyHitCooldown < 0) bullyHitCooldown = 0;
+        }
+
+        if (bullyHitCooldown <= 0) {
+          for (var j = 0; j < bullies.length; j++) {
+            var bl = bullies[j];
+            var dxb = player.x - bl.x;
+            var dyb = player.y - bl.y;
+            var dist = Math.sqrt(dxb * dxb + dyb * dyb);
+            if (dist < player.radius + bl.radius + 2) {
+              stats.social += -12;
+              stats.social = clamp(stats.social, 0, MAX_STAT);
+              bullyHitCooldown = 1.2;
+              setContext('A troublemaker bumped into you. Take a breath somewhere calmer for a bit.');
+              var pushStrength = 10;
+              if (dist !== 0) {
+                player.x += (dxb / dist) * pushStrength;
+                player.y += (dyb / dist) * pushStrength;
+              }
+              break;
+            }
+          }
+        }
+
+        updateHUD();
+
+        if (stats.grade <= 0 || stats.fun <= 0 || stats.social <= 0) {
+          var reason = '';
+          if (stats.grade <= 0) {
+            reason = 'Your grades slipped too far this time. With a different balance of study and breaks, you can do better.';
+          } else if (stats.fun <= 0) {
+            reason = 'You burned out by pushing too hard without taking care of yourself. Next time, keep some fun in the mix.';
+          } else if (stats.social <= 0) {
+            reason = 'Too many rough interactions left you feeling isolated. Try to give yourself space from troublemakers and spend time in supportive areas.';
+          }
+          endDay(false, reason);
+          return;
+        }
+
+        if (dayTime <= 0) {
+          var success = stats.grade >= 70 && stats.fun >= 35 && stats.social >= 35;
+          if (success) {
+            var msg = 'You finished the day with solid balance:\n';
+            msg += 'Grades: ' + Math.round(stats.grade) + ', Fun: ' + Math.round(stats.fun) + ', Social: ' + Math.round(stats.social) + '.\n';
+            msg += 'Nice work keeping up with school while still finding time for gaming and friends.';
+            endDay(true, msg);
+          } else {
+            var lowStat = 'balance';
+            if (stats.grade < 70 && stats.grade <= stats.fun && stats.grade <= stats.social) lowStat = 'grades';
+            else if (stats.fun < 35 && stats.fun <= stats.grade && stats.fun <= stats.social) lowStat = 'fun';
+            else if (stats.social < 35 && stats.social <= stats.grade && stats.social <= stats.fun) lowStat = 'social';
+
+            var msg2 = 'The final bell rang, but your balance could be better. ';
+            if (lowStat === 'grades') {
+              msg2 += 'Your grades ended lower than the target. A little more time in the classroom or library would help.';
+            } else if (lowStat === 'fun') {
+              msg2 += 'You reached the end feeling worn out. Try adding a few more short breaks or gaming sessions.';
+            } else if (lowStat === 'social') {
+              msg2 += 'You finished the day feeling a bit disconnected. Spending more time in the commons could help.';
+            } else {
+              msg2 += 'Try mixing your time differently between study, gaming, and friends.';
+            }
+            endDay(false, msg2);
+          }
+        }
+      }
+
+      function endDay(victory, message) {
+        gameState = victory ? GameState.VICTORY : GameState.GAME_OVER;
+        paused = true;
+        if (victory) {
+          victorySummaryEl.textContent = message;
+          victoryOverlay.classList.remove('hidden');
+          victoryOverlay.classList.add('flex');
+        } else {
+          gameOverReasonEl.textContent = message;
+          gameOverOverlay.classList.remove('hidden');
+          gameOverOverlay.classList.add('flex');
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        var gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#020617');
+        gradient.addColorStop(0.4, '#020617');
+        gradient.addColorStop(0.7, '#030712');
+        gradient.addColorStop(1, '#020617');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(30,64,175,0.4)';
+        ctx.lineWidth = 1;
+        for (var gx = 0; gx < canvas.width; gx += 45) {
+          ctx.beginPath();
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, canvas.height);
+          ctx.stroke();
+        }
+        for (var gy = 0; gy < canvas.height; gy += 45) {
+          ctx.beginPath();
+          ctx.moveTo(0, gy);
+          ctx.lineTo(canvas.width, gy);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+        ctx.fillStyle = 'rgba(15,23,42,0.9)';
+        ctx.fillRect(0, 40, canvas.width, canvas.height - 160);
+
+        ctx.strokeStyle = 'rgba(148,163,184,0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(50.5, 60.5, canvas.width - 101, canvas.height - 141);
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(80.5, 90.5, canvas.width - 161, canvas.height - 201);
+
+        for (var i = 0; i < zones.length; i++) {
+          var z = zones[i];
+          ctx.save();
+          ctx.fillStyle = z.baseColor;
+          ctx.globalAlpha = 0.75;
+          ctx.fillRect(z.x, z.y, z.width, z.height);
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = z.borderColor;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(z.x + 1.5, z.y + 1.5, z.width - 3, z.height - 3);
+
+          ctx.fillStyle = '#e5e7eb';
+          ctx.font = 'bold 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.fillText(z.label, z.x + 10, z.y + 8);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(0, canvas.height - 120, canvas.width, 6);
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(canvas.width / 2 - 60, canvas.height - 110, 120, 70);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.strokeRect(canvas.width / 2 - 60 + 1, canvas.height - 110 + 1, 118, 68);
+        ctx.fillStyle = '#e5e7eb';
+        ctx.font = 'bold 13px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Exit Gate', canvas.width / 2, canvas.height - 100);
+
+        for (var k = 0; k < bullies.length; k++) {
+          var b = bullies[k];
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.closePath();
+          var bullyGradient = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.radius);
+          bullyGradient.addColorStop(0, '#fecaca');
+          bullyGradient.addColorStop(0.6, '#f87171');
+          bullyGradient.addColorStop(1, '#b91c1c');
+          ctx.fillStyle = bullyGradient;
+          ctx.fill();
+          ctx.strokeStyle = '#fee2e2';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(b.x - 6, b.y - 4);
+          ctx.lineTo(b.x - 2, b.y - 6);
+          ctx.moveTo(b.x + 6, b.y - 4);
+          ctx.lineTo(b.x + 2, b.y - 6);
+          ctx.strokeStyle = '#450a0a';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(b.x, b.y + 3, 4, 0, Math.PI);
+          ctx.strokeStyle = '#7f1d1d';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.save();
+        var pulsing = gameState === GameState.PLAYING && !paused;
+        var outlineColor = pulsing ? '#22d3ee' : '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.closePath();
+        var pg = ctx.createRadialGradient(player.x - 4, player.y - 4, 2, player.x, player.y, player.radius);
+        pg.addColorStop(0, '#e0f2fe');
+        pg.addColorStop(0.5, '#38bdf8');
+        pg.addColorStop(1, '#0f766e');
+        ctx.fillStyle = pg;
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = outlineColor;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(player.x - 4, player.y - 3, 2, 0, Math.PI * 2);
+        ctx.arc(player.x + 4, player.y - 3, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 2, 6, 0.2 * Math.PI, 0.8 * Math.PI);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        ctx.restore();
+
+        if (gameState === GameState.MENU) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(15,23,42,0.6)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        }
+      }
+
+      function loop(timestamp) {
+        if (!lastTimestamp) lastTimestamp = timestamp;
+        var dt = (timestamp - lastTimestamp) / 1000;
+        if (dt > 0.1) dt = 0.1;
+        lastTimestamp = timestamp;
+
+        update(dt);
+        draw();
+
+        requestAnimationFrame(loop);
+      }
+
+      window.addEventListener('keydown', function(e) {
+        keysDown[e.code] = true;
+
+        if (gameState === GameState.PLAYING) {
+          if (e.code === 'KeyP') {
+            paused = !paused;
+            if (paused) {
+              setContext('Paused. Press P again to continue the day.');
+            } else {
+              setContext('Back to it. Balance study, gaming, and friends.');
+            }
+          }
+        }
+
+        if ((gameState === GameState.GAME_OVER || gameState === GameState.VICTORY) && e.code === 'KeyR') {
+          hideOverlays();
+          resetGame();
+          gameState = GameState.PLAYING;
+        }
+      });
+
+      window.addEventListener('keyup', function(e) {
+        delete keysDown[e.code];
+      });
+
+      function hideOverlays() {
+        menuOverlay.classList.add('hidden');
+        menuOverlay.classList.remove('flex');
+        gameOverOverlay.classList.add('hidden');
+        gameOverOverlay.classList.remove('flex');
+        victoryOverlay.classList.add('hidden');
+        victoryOverlay.classList.remove('flex');
+      }
+
+      startButton.addEventListener('click', function() {
+        hideOverlays();
+        resetGame();
+        gameState = GameState.PLAYING;
+      });
+
+      retryButton.addEventListener('click', function() {
+        hideOverlays();
+        resetGame();
+        gameState = GameState.PLAYING;
+      });
+
+      playAgainButton.addEventListener('click', function() {
+        hideOverlays();
+        resetGame();
+        gameState = GameState.PLAYING;
+      });
+
+      setupZonesAndBullies();
+      updateHUD();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

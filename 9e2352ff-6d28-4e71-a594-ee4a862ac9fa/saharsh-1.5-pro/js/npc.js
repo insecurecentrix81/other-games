@@ -1,5 +1,4 @@
 // npc.js
-import * as THREE from 'three';
 
 export class NPC {
   constructor(type, scene) {

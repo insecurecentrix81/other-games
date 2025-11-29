@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh Life: School Survival</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: 'Roboto', sans-serif;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .stat-bar-container {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 4px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            width: 200px;
+            border: 2px solid #fff;
+        }
+
+        .stat-bar-fill {
+            height: 16px;
+            border-radius: 2px;
+            transition: width 0.2s;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        #game-over-screen, #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            pointer-events: auto;
+            z-index: 50;
+        }
+
+        #minigame-overlay {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 200px;
+            background: #0f172a;
+            border: 4px solid #22c55e;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            font-family: 'Courier New', monospace;
+            color: #22c55e;
+            box-shadow: 0 0 20px #22c55e;
+        }
+
+        .floating-text {
+            position: absolute;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-30px) scale(1.2); opacity: 0; }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="p-4 hidden">
+        <div class="absolute top-4 left-4">
+            <div class="stat-bar-container">
+                <div class="text-white text-xs mb-1 font-bold flex justify-between">
+                    <span>GRADES (GPA)</span>
+                    <span id="grade-val">4.0</span>
+                </div>
+                <div id="grade-bar" class="stat-bar-fill bg-blue-500" style="width: 100%;"></div>
+            </div>
+
+            <div class="stat-bar-container">
+                <div class="text-white text-xs mb-1 font-bold flex justify-between">
+                    <span>SANITY</span>
+                    <span id="sanity-val">100%</span>
+                </div>
+                <div id="sanity-bar" class="stat-bar-fill bg-green-500" style="width: 100%;"></div>
+            </div>
+
+            <div class="text-white mt-4 pixel-font text-yellow-400 text-shadow shadow-black">
+                CLOUT: <span id="score-val">0</span>
+            </div>
+        </div>
+
+        <div class="absolute top-4 right-4 text-right">
+            <div class="text-white text-xl font-bold pixel-font bg-black/50 p-2 rounded border border-white">
+                <span id="clock">08:00 AM</span>
+            </div>
+            <div class="text-white text-sm mt-2 bg-black/50 p-2 rounded" id="current-task">
+                Current Objective: Get to Class!
+            </div>
+        </div>
+
+        <div class="absolute bottom-4 left-4 text-white text-sm bg-black/70 p-3 rounded border border-gray-500">
+            <p><span class="font-bold text-yellow-400">[W,A,S,D]</span> Move</p>
+            <p><span class="font-bold text-yellow-400">[E]</span> Annoy Students (Get Clout)</p>
+            <p><span class="font-bold text-yellow-400">[SPACE]</span> Play SecurCentrix (Restore Sanity)</p>
+            <p class="text-gray-400 italic mt-1 text-xs">Warning: Don't let grades hit 0.0!</p>
+        </div>
+    </div>
+
+    <!-- Minigame Overlay -->
+    <div id="minigame-overlay">
+        <div class="text-xs mb-2">SECURCENTRIX 8.1 MOBILE</div>
+        <div class="w-full h-full bg-black relative overflow-hidden" id="minigame-screen">
+            <!-- Matrix rain effect or simple clicker -->
+            <div class="absolute inset-0 flex items-center justify-center text-center p-2">
+                <p class="text-[10px]">HACKING...<br>Sanity +++<br>Grades ---</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1 class="text-4xl md:text-6xl text-yellow-400 mb-4 pixel-font text-center px-4">SAHARSH LIFE</h1>
+        <div class="flex flex-col items-center gap-4 max-w-md text-center text-gray-300 mb-8">
+            <p>You are Saharsh.</p>
+            <p>You are failing your classes. You are getting bullied.</p>
+            <p>But you have <b>SecurCentrix</b> and a burning desire to annoy everyone.</p>
+            <ul class="text-left text-sm bg-gray-800 p-4 rounded border border-gray-600 list-disc pl-8">
+                <li>Attend class areas to maintain <b>Grades</b> (but lose Sanity).</li>
+                <li>Hold <b>SPACE</b> to play games and restore <b>Sanity</b> (but lose Grades).</li>
+                <li>Press <b>E</b> near students to annoy them for <b>Clout</b>.</li>
+                <li>Avoid <b>Bullies</b>!</li>
+                <li>Don't let Grades hit 0.0 or Sanity hit 0%!</li>
+            </ul>
+        </div>
+        <button id="start-btn" class="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded text-xl pixel-font transition transform hover:scale-105">
+            START DAY
+        </button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="hidden">
+        <h1 class="text-5xl text-red-500 mb-2 pixel-font">GAME OVER</h1>
+        <h2 id="death-reason" class="text-xl text-white mb-6">You failed.</h2>
+        <p class="text-yellow-400 mb-8 pixel-font">Final Clout: <span id="final-score">0</span></p>
+        <button id="restart-btn" class="px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded text-lg pixel-font">
+            TRY AGAIN
+        </button>
+    </div>
+
+    <script>
+        // Assets
+        const SAHARSH_IMG_SRC = "https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg";
+        
+        // Game State
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameRunning = false;
+        let width, height;
+        
+        // Stats
+        const MAX_GRADES = 4.0;
+        const MAX_SANITY = 100;
+        
+        let state = {
+            grades: 3.5,
+            sanity: 50,
+            score: 0,
+            time: 8 * 60, // 8:00 AM in minutes
+            dayEnd: 15 * 60, // 3:00 PM
+            playingMinigame: false,
+            lastTime: 0
+        };
+
+        // Image Loading
+        const playerImg = new Image();
+        playerImg.src = SAHARSH_IMG_SRC;
+        let playerImgLoaded = false;
+        playerImg.onload = () => playerImgLoaded = true;
+
+        // Input Handling
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
+            " ": false, e: false
+        };
+        
+        let ePressed = false; // Toggle for single press
+
+        window.addEventListener('keydown', (e) => {
+            if(keys.hasOwnProperty(e.key)) keys[e.key] = true;
+            if(e.key === "e" || e.key === "E") ePressed = true;
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            if(keys.hasOwnProperty(e.key)) keys[e.key] = false;
+            if(e.key === "e" || e.key === "E") ePressed = false;
+        });
+
+        // Entities
+        class Entity {
+            constructor(x, y, size, color, speed) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.color = color;
+                this.speed = speed;
+                this.vx = 0;
+                this.vy = 0;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                // Boundary checks
+                if (this.x < this.size) this.x = this.size;
+                if (this.x > width - this.size) this.x = width - this.size;
+                if (this.y < this.size) this.y = this.size;
+                if (this.y > height - this.size) this.y = height - this.size;
+            }
+        }
+
+        class Player extends Entity {
+            constructor() {
+                super(width/2, height/2, 25, '#fff', 250);
+                this.annoyCooldown = 0;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                // Draw circular clipping for image
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+
+                if (playerImgLoaded) {
+                    ctx.drawImage(playerImg, this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
+                } else {
+                    ctx.fillStyle = "#3b82f6";
+                    ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
+                }
+                ctx.restore();
+
+                // Ring indicator for "Playing Game"
+                if (state.playingMinigame) {
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            update(dt) {
+                this.vx = 0;
+                this.vy = 0;
+
+                // Movement inhibited slightly while playing minigame
+                let currentSpeed = state.playingMinigame ? this.speed * 0.5 : this.speed;
+
+                if (keys.w || keys.ArrowUp) this.vy = -currentSpeed;
+                if (keys.s || keys.ArrowDown) this.vy = currentSpeed;
+                if (keys.a || keys.ArrowLeft) this.vx = -currentSpeed;
+                if (keys.d || keys.ArrowRight) this.vx = currentSpeed;
+
+                super.update(dt);
+
+                if (this.annoyCooldown > 0) this.annoyCooldown -= dt;
+            }
+        }
+
+        class NPC extends Entity {
+            constructor(type) {
+                // Types: 'student', 'bully', 'teacher'
+                let color = '#aaa';
+                let speed = 50;
+                let size = 20;
+                
+                if (type === 'bully') {
+                    color = '#ef4444'; // Red
+                    speed = 140;
+                    size = 22;
+                } else if (type === 'teacher') {
+                    color = '#eab308'; // Yellow
+                    speed = 80;
+                    size = 24;
+                } else {
+                    color = '#94a3b8'; // Grayish blue
+                    speed = 60 + Math.random() * 40;
+                }
+
+                super(Math.random() * width, Math.random() * height, size, color, speed);
+                this.type = type;
+                this.changeDirTimer = 0;
+                this.stunned = 0;
+            }
+
+            update(dt, player) {
+                if (this.stunned > 0) {
+                    this.stunned -= dt;
+                    return;
+                }
+
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (this.type === 'bully') {
+                    // Chase player if close
+                    if (dist < 300) {
+                        this.vx = (dx / dist) * this.speed;
+                        this.vy = (dy / dist) * this.speed;
+                    } else {
+                        this.wander(dt);
+                    }
+
+                    // Collision with player
+                    if (dist < this.size + player.size) {
+                        // Bully hit
+                        damagePlayer(10, 0.2); // 10 sanity, 0.2 grade
+                        knockback(player, this);
+                        createFloatingText("BULLIED!", player.x, player.y - 30, '#ef4444');
+                        this.stunned = 1.0; // Cooldown on damage
+                    }
+                } else if (this.type === 'teacher') {
+                    // Patrol
+                    this.wander(dt);
+                    
+                    // Detection
+                    if (dist < 200) {
+                        // Draw vision cone line (debug style)
+                        ctx.strokeStyle = 'rgba(234, 179, 8, 0.2)';
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y);
+                        ctx.lineTo(player.x, player.y);
+                        ctx.stroke();
+
+                        if (state.playingMinigame) {
+                            state.grades -= 1.0 * dt; // Massive penalty
+                            if (Math.random() < 0.05) createFloatingText("DETENTION!", player.x, player.y, '#eab308');
+                        }
+                    }
+                } else {
+                    // Student - Run away if annoyed, else wander
+                    if (dist < 100 && player.annoyCooldown > 0) {
+                        this.vx = -(dx / dist) * this.speed * 1.5;
+                        this.vy = -(dy / dist) * this.speed * 1.5;
+                    } else {
+                        this.wander(dt);
+                    }
+                }
+
+                super.update(dt);
+            }
+
+            wander(dt) {
+                this.changeDirTimer -= dt;
+                if (this.changeDirTimer <= 0) {
+                    const angle = Math.random() * Math.PI * 2;
+                    this.vx = Math.cos(angle) * this.speed;
+                    this.vy = Math.sin(angle) * this.speed;
+                    this.changeDirTimer = 1 + Math.random() * 2;
+                }
+            }
+        }
+
+        // Game Objects
+        let player;
+        let npcs = [];
+        let floatingTexts = [];
+        let particles = [];
+
+        // Zones
+        let zones = [];
+
+        function initGame() {
+            resize();
+            player = new Player();
+            npcs = [];
+            // Spawn NPCs
+            for(let i=0; i<8; i++) npcs.push(new NPC('student'));
+            for(let i=0; i<3; i++) npcs.push(new NPC('bully'));
+            for(let i=0; i<2; i++) npcs.push(new NPC('teacher'));
+            
+            // Reset State
+            state.grades = 3.5;
+            state.sanity = 50;
+            state.score = 0;
+            state.time = 8 * 60;
+            
+            // Define Classrooms (Simple Rectangles)
+            zones = [
+                {x: 50, y: 50, w: 300, h: 300, name: "Math Class", type: "class"},
+                {x: width - 350, y: height - 350, w: 300, h: 300, name: "Science Class", type: "class"},
+                {x: width/2 - 100, y: height/2 - 100, w: 200, h: 200, name: "Cafeteria", type: "safe"}
+            ];
+
+            document.getElementById('ui-layer').classList.remove('hidden');
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+            
+            gameRunning = true;
+            state.lastTime = performance.now();
+            requestAnimationFrame(loop);
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+
+        function createFloatingText(text, x, y, color) {
+            const el = document.createElement('div');
+            el.textContent = text;
+            el.className = 'floating-text';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.color = color;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function damagePlayer(sanityDmg, gradeDmg) {
+            state.sanity -= sanityDmg;
+            state.grades -= gradeDmg;
+            // Screen shake effect logic could go here
+            canvas.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
+            setTimeout(() => canvas.style.transform = 'none', 100);
+        }
+
+        function knockback(ent1, ent2) {
+            // Simple bounce back
+            const dx = ent1.x - ent2.x;
+            const dy = ent1.y - ent2.y;
+            const len = Math.sqrt(dx*dx + dy*dy);
+            if(len > 0) {
+                ent1.x += (dx/len) * 50;
+                ent1.y += (dy/len) * 50;
+            }
+        }
+
+        function updateUI() {
+            // Format Time
+            let h = Math.floor(state.time / 60);
+            let m = Math.floor(state.time % 60);
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            if(h > 12) h -= 12;
+            let timeStr = `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m} ${ampm}`;
+            document.getElementById('clock').innerText = timeStr;
+
+            // Bars
+            document.getElementById('grade-val').innerText = state.grades.toFixed(2);
+            document.getElementById('grade-bar').style.width = (state.grades / MAX_GRADES * 100) + '%';
+            document.getElementById('grade-bar').className = `stat-bar-fill ${state.grades < 2.0 ? 'bg-red-500' : 'bg-blue-500'}`;
+
+            document.getElementById('sanity-val').innerText = Math.floor(state.sanity) + '%';
+            document.getElementById('sanity-bar').style.width = Math.max(0, state.sanity) + '%';
+            document.getElementById('sanity-bar').className = `stat-bar-fill ${state.sanity < 30 ? 'bg-red-500' : 'bg-green-500'}`;
+
+            document.getElementById('score-val').innerText = state.score;
+
+            // Overlay
+            const minigame = document.getElementById('minigame-overlay');
+            if (state.playingMinigame) {
+                minigame.style.display = 'flex';
+            } else {
+                minigame.style.display = 'none';
+            }
+        }
+
+        function loop(now) {
+            if (!gameRunning) return;
+            
+            let dt = (now - state.lastTime) / 1000;
+            if (dt > 0.1) dt = 0.1; // Cap lag
+            state.lastTime = now;
+
+            // Update Time
+            state.time += dt * 2; // Game time speed multiplier
+            if (state.time >= state.dayEnd) {
+                gameOver("You survived school!", true);
+                return;
+            }
+
+            // Clear
+            ctx.fillStyle = '#1a1a1a'; // Floor color
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Zones
+            zones.forEach(zone => {
+                ctx.fillStyle = zone.type === 'class' ? '#2d3748' : '#475569';
+                ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+                
+                // Label
+                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                ctx.font = "20px Arial";
+                ctx.fillText(zone.name, zone.x + 10, zone.y + 30);
+                
+                // Floor details (tiles)
+                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.beginPath();
+                for(let i=0; i<zone.w; i+=50) {
+                    ctx.moveTo(zone.x + i, zone.y);
+                    ctx.lineTo(zone.x + i, zone.y + zone.h);
+                }
+                for(let i=0; i<zone.h; i+=50) {
+                    ctx.moveTo(zone.x, zone.y + i);
+                    ctx.lineTo(zone.x + zone.w, zone.y + i);
+                }
+                ctx.stroke();
+            });
+
+            // Player Logic
+            player.update(dt);
+
+            // Check Zone Presence
+            let inClass = false;
+            zones.forEach(zone => {
+                if (player.x > zone.x && player.x < zone.x + zone.w &&
+                    player.y > zone.y && player.y < zone.y + zone.h) {
+                    if (zone.type === 'class') inClass = true;
+                }
+            });
+
+            // SecurCentrix Mechanics
+            state.playingMinigame = keys[" "];
+            if (state.playingMinigame) {
+                state.sanity += 10 * dt;
+                state.grades -= 0.05 * dt; // Losing grades while gaming
+                if (state.sanity > MAX_SANITY) state.sanity = MAX_SANITY;
+            } else {
+                // Passive Decay
+                if (inClass) {
+                    state.grades += 0.02 * dt; // Gaining grades
+                    state.sanity -= 2 * dt; // Losing sanity (boring)
+                    if (state.grades > MAX_GRADES) state.grades = MAX_GRADES;
+                } else {
+                    state.grades -= 0.01 * dt; // Skipping class penalty
+                }
+            }
+
+            // Annoy Mechanics
+            if (ePressed && player.annoyCooldown <= 0) {
+                // Find nearby students
+                let annoyed = 0;
+                npcs.forEach(npc => {
+                    if (npc.type === 'student') {
+                        let d = Math.hypot(npc.x - player.x, npc.y - player.y);
+                        if (d < 100) {
+                            annoyed++;
+                            // Reaction
+                            npc.vx = (npc.x - player.x) * 5;
+                            npc.vy = (npc.y - player.y) * 5;
+                            createFloatingText("Annoyed!", npc.x, npc.y - 20, '#fff');
+                        }
+                    }
+                });
+                
+                if (annoyed > 0) {
+                    state.score += annoyed * 100;
+                    state.sanity += annoyed * 5; // Annoying people restores sanity
+                    player.annoyCooldown = 1.0;
+                    createFloatingText(`+${annoyed*100} Clout`, player.x, player.y, '#fbbf24');
+                    // Sound effect simulated visually
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, 100, 0, Math.PI*2);
+                    ctx.strokeStyle = 'white';
+                    ctx.stroke();
+                }
+                ePressed = false; // Reset trigger
+            }
+
+            // NPC Logic
+            npcs.forEach(npc => {
+                npc.update(dt, player);
+                npc.draw(ctx);
+            });
+
+            // Draw Player
+            player.draw(ctx);
+
+            // Game Over Checks
+            if (state.grades <= 0) gameOver("You failed all your classes.", false);
+            if (state.sanity <= 0) gameOver("You had a mental breakdown.", false);
+
+            updateUI();
+            requestAnimationFrame(loop);
+        }
+
+        function gameOver(reason, win) {
+            gameRunning = false;
+            document.getElementById('ui-layer').classList.add('hidden');
+            document.getElementById('minigame-overlay').style.display = 'none';
+            const goScreen = document.getElementById('game-over-screen');
+            goScreen.classList.remove('hidden');
+            
+            const title = goScreen.querySelector('h1');
+            title.textContent = win ? "DAY COMPLETE" : "GAME OVER";
+            title.className = win ? "text-5xl text-green-500 mb-2 pixel-font" : "text-5xl text-red-500 mb-2 pixel-font";
+            
+            document.getElementById('death-reason').textContent = reason;
+            document.getElementById('final-score').textContent = state.score;
+        }
+
+        // Buttons
+        document.getElementById('start-btn').addEventListener('click', initGame);
+        document.getElementById('restart-btn').addEventListener('click', initGame);
+
+    </script>
+</body>
+</html>

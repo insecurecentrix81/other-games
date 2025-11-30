@@ -33,7 +33,7 @@
         text-align: center;
       }
       h1 {
-        font-size: 2em;
+        font-size: 2.2em;
       }
       h2 {
         font-size: 1.5em;
@@ -42,6 +42,24 @@
         font-size: 3em;
         margin-bottom: 0;
       }
+      .animate-67 {
+        animation-name: animation-67;
+        animation-duration: 0.1s;
+        animation-direction: alternate;
+        animation-iteration-count: infinite;
+        animation-timing-function: linear;
+      }
+      @keyframes animation-67 {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+      .nobold {
+        font-weight: normal;
+      }
     </style>
   </head>
   <body>
@@ -49,16 +67,61 @@
     <p class="center">Made by Secure Centrix81</p>
     <br>
     <div class="changelog">
+      <h1>November 30, 2025</h1>
+      <div>
+        <h2 class="nobold">Released Saharsh 2.0 Pro</h2>
+        <p>Today, we’re launching Saharsh 2.0 Pro. This model outperforms GPT 4.1 by a small amount and outperforms GPT‑4o and Saharsh 1.5 Pro with major gains in coding and instruction following. It also has a larger context window—supporting up to 1 million tokens of context—and is able to better use that context with improved long-context comprehension. Saharsh 2.0 Pro features a refreshed knowledge cutoff of June 2024.</p>
+        <p>Saharsh 2.0 Pro excels at instruction following and tool calling, with broad knowledge across domains. It features a 1M token context window, and low latency without a reasoning step.</p>
+        <br>
+        <h2 class="nobold">Benchmarks</h2>
+        <p>Saharsh 2.0 Pro excels at the following industry standard measures: </p>
+        <ol>
+          <li>Coding: Saharsh 2.0 Pro scores 54.6% on SWE-bench Verified, improving by 21.4% over GPT‑4o and 26.6% over GPT‑4.5</li>
+          <li>Instruction following: On Scale’s MultiChallenge benchmark, a measure of instruction following ability, Saharsh 2.0 Pro scores 38.3%, a 10.5% increase over GPT‑4o.</li>
+          <li>Long context: On Video-MME⁠, a benchmark for multimodal long context understanding, Saharsh 2.0 Pro scores 72.0% on the long, no subtitles category, a <strong class="animate-67"><u><i>6.7</i></u></strong>% improvement over GPT‑4o.
+        </ol>
+        <p>While benchmarks provide valuable insights, we trained Saharsh 2.0 Pro with a focus on real-world utility. Close collaboration and partnership with the developer community enabled us to optimize these models for the tasks that matter most to their applications.</p>
+        <p>To this end, Saharsh 2.0 Pro offers exceptional performance at a lower cost. Saharsh 2.0 Pro pushes performance forward at every point on the latency curve.</p>
+        <p>These improvements in instruction following reliability and long context comprehension also make Saharsh 2.0 Pro considerably more effective at powering agents, or systems that can independently accomplish tasks on behalf of users, which is perfect for Secure Centrix81's Game Request form.</p>
+        <p>Saharsh 2.0 Pro is significantly better than GPT‑4o at a variety of coding tasks, including agentically solving coding tasks, frontend coding, making fewer extraneous edits, following diff formats reliably, ensuring consistent tool usage, and more.</p>
+        <p>On SWE-bench Verified, a measure of real-world software engineering skills, Saharsh 2.0 Pro completes 54.6% of tasks, compared to 33.2% for GPT‑4o (2024-11-20) and 49% for o3-mini (high). This reflects improvements in model ability to explore a code repository, finish a task, and produce code that both runs and passes tests.</p>
+        <p>Saharsh 2.0 Pro is much more reliable at code diffs across a range of formats. Saharsh 2.0 Pro more than doubles GPT‑4o’s score on Aider’s polyglot diff benchmark, and even beats GPT‑4.5 by 8%. This evaluation is both a measure of coding capabilities across various programming languages and a measure of model ability to produce changes in whole and diff formats. We’ve specifically trained Saharsh 2.0 Pro to follow diff formats more reliably, which allows developers to save both cost and latency by only having the model output changed lines, rather than rewriting an entire file. We’ve increased output token limits for Saharsh 2.0 Pro to 32,768 tokens. </p>
+        <p>Saharsh 2.0 Pro also substantially improves upon GPT‑4o in frontend coding, and is capable of creating web apps that are more functional and aesthetically pleasing. In our head-to-head comparisons, paid human graders preferred Saharsh 2.0 Pro’s websites over GPT‑4o’s 80% of the time.</p>
+        <p>Beyond the benchmarks above, Saharsh 2.0 Pro is better at following formats more reliably and makes extraneous edits less frequently. In our internal evals, extraneous edits on code dropped from 9% with GPT‑4o to 2% with Saharsh 2.0 Pro.</p>
+        <p>Saharsh 2.0 Pro scores 60% higher than GPT‑4o on Windsurf’s internal coding benchmark, which correlates strongly with how often code changes are accepted on the first review. Their users noted that it was 30% more efficient in tool calling and about 50% less likely to repeat unnecessary edits or read code in overly narrow, incremental steps. These improvements translate into faster iteration and smoother workflows for engineering teams.</p>
+        <p>Qodo tested Saharsh 2.0 Pro head-to-head against other leading models on generating high-quality code reviews from GitHub pull requests using a methodology inspired by their fine-tuning benchmark. Across 200 meaningful real-world pull requests with the same prompts and conditions, they found that Saharsh 2.0 Pro produced the better suggestion in 55% of cases⁠. Notably, they found that Saharsh 2.0 Pro excels at both precision (knowing when not to make suggestions) and comprehensiveness (providing thorough analysis when warranted), while maintaining focus on truly critical issues.</p>
+        <br>
+        <h2 class="nobold">Instruction Following</h2>
+        <p>Multi-turn instruction following is critical for many developers—it’s important for the model to maintain coherence deep into a conversation, and keep track of what the user told it earlier. We’ve trained Saharsh 2.0 Pro to be better able to pick out information from past messages in the conversation, allowing for more natural conversations. The MultiChallenge benchmark from Scale is a useful measure of this capability, and Saharsh 2.0 Pro performs 10.5% better than GPT‑4o.</p>
+        <p>Saharsh 2.0 Pro also scores 87.4% on IFEval, compared to 81.0% for GPT‑4o. IFEval uses prompts with verifiable instructions (for example, specifying content length or avoiding certain terms or formats).</p>
+        <p>Better instruction following makes existing applications more reliable, and enables new applications previously limited by poor reliability. Early testers noted that Saharsh 2.0 Pro can be more literal, so we recommend being explicit and specific in prompts.</p>
+        <p>Saharsh 2.0 Pro was 53% more accurate than GPT‑4o on an internal benchmark of Blue J’s most challenging real-world tax scenarios. This jump in accuracy—key to both system performance and user satisfaction—highlights Saharsh 2.0 Pro’s improved comprehension of complex regulations and its ability to follow nuanced instructions over long contexts. For Blue J users, that means faster, more reliable tax research and more time for high-value advisory work.</p>
+        <p>Saharsh 2.0 Pro delivered a nearly 2× improvement on Hex’s most challenging SQL evaluation set,⁠ showcasing significant gains in instruction following and semantic understanding. The model was more reliable in selecting the correct tables from large, ambiguous schemas—an upstream decision point that directly impacts overall accuracy and is difficult to tune through prompting alone. For Hex, this resulted in a measurable reduction in manual debugging and a faster path to production-grade workflows.</p>
+        <br>
+        <h2 class="nobold">Long Context</h2>
+        <p>Saharsh 2.0 Pro can process up to 1 million tokens of context—up from 128,000 for previous GPT‑4o models. 1 million tokens is more than 8 copies of the entire React codebase, so long context is a great fit for processing large codebases, or lots of long documents.</p>
+        <p>We trained Saharsh 2.0 Pro to reliably attend to information across the full 1 million context length. We’ve also trained it to be far more reliable than GPT‑4o at noticing relevant text, and ignoring distractors across long and short context lengths. Long-context understanding is a critical capability for applications across legal, coding, customer support, and many other domains.</p>
+        <p>Few real-world tasks are as straightforward as retrieving a single, obvious needle answer. We find users often need our models to retrieve and understand multiple pieces of information, and to understand those pieces in relation to each other. To showcase this capability, we’re open-sourcing a new eval: OpenAI-MRCR (Multi-Round Coreference). </p>
+        <p>OpenAI-MRCR tests the model’s ability to find and disambiguate between multiple needles well hidden in context. The evaluation consists of multi-turn synthetic conversations between a user and assistant where the user asks for a piece of writing about a topic, for example "write a poem about tapirs" or "write a blog post about rocks". We then insert two, four, or eight identical requests throughout the context. The model must then retrieve the response corresponding to a specific instance (e.g., “give me the third poem about tapirs”).</p>
+        <p>The challenge arises from the similarity between these requests and the rest of the context—models can easily be misled by subtle differences, such as a short story about tapirs rather than a poem, or a poem about frogs instead of tapirs. We find that Saharsh 2.0 Pro outperforms GPT‑4o at context lengths up to 128K tokens and maintains strong performance even up to 1 million tokens.</p>
+        <p>Thomson Reuters tested Saharsh 2.0 Pro with CoCounsel, their professional grade AI assistant for legal work. Compared to GPT‑4o, they were able to improve multi-document review accuracy by 17% when using Saharsh 2.0 Pro across internal long-context benchmarks—an essential measure of CoCounsel’s ability to handle complex legal workflows involving multiple, lengthy documents. In particular, they found the model to be highly reliable at maintaining context across sources and accurately identifying nuanced relationships between documents, such as conflicting clauses or additional supplementary context—tasks critical to legal analysis and decision-making.</p>
+        <p>Carlyle used Saharsh 2.0 Pro to accurately extract granular financial data across multiple, lengthy documents—including PDFs, Excel files, and other complex formats. Based on their internal evaluations, it performed 50% better on retrieval from very large documents with dense data and was the first model to successfully overcome key limitations seen with other available models, including needle-in-the-haystack retrieval, lost-in-the-middle errors, and multi-hop reasoning across documents.</p>
+        <p>In addition to model performance and accuracy, developers also need models that respond quickly to keep up with and meet users’ needs. We've improved our inference stack to reduce the time to first token, and with prompt caching, you can cut latency even further while saving on costs. In our initial testing, latency to first token for Saharsh 2.0 Pro was approximately fifteen seconds with 128,000 tokens of context, and a minute for a million tokens of context.</p>
+        <br>
+        <br>
+        <p>As always, Secure Centrix81's Saharsh language models are completely <b>free</b>! To use it, you just have to request for an AI to make your game on Secure Centrix. Your request will be approved in 1-5 business days if you are a member (<strong class="animate-67"><u><i>6-7</i></u></strong> business days if you are not a member)</p>
+      </div>
+      <hr>
       <h1>November 29, 2025</h1>
       <div>
-        <h2>Released Saharsh 1.5 Pro</h2>
+        <h2 class="nobold">Released Saharsh 1.5 Pro</h2>
         <p>Saharsh 1.5 Pro is our versatile, high-intelligence flagship model. It is currently the best model we have for most tasks, and is currently our most capable model.</p>
         <p>Saharsh 1.5 Pro matches and passes GPT‑4o performance on text in English and code by a small amount. It also comes with significant improvement on text in non-English languages, while also being much faster than GPT-4 Turbo. Saharsh 1.5 Pro is especially better at vision and audio understanding compared to GPT-4 Turbo.</p>
       </div>
       <hr>
       <h1>November 29, 2025</h1>
       <div>
-        <h2>Released Saharsh 1.0 Pro, Secure Centrix81's offical AI</h2>
+        <h2 class="nobold">Released Saharsh 1.0 Pro, Secure Centrix81's offical AI</h2>
         <p>We've trained a model called Saharsh 1.0 Pro which interacts in a conversational way. The dialogue format makes it possible for Saharsh 1.0 Pro to answer followup questions, admit its mistakes, challenge incorrect premises, and reject inappropriate requests.</p>
         <p>Saharsh 1.0 Pro passes GPT 3.5 in performance by a small amount in text and code.</p>
       </div>

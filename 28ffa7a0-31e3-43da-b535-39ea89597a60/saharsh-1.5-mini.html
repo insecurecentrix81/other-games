@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh 1.5 Mini</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fafafa;
+            min-height: 100vh;
+        }
+        
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.4s ease;
+        }
+        
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-icon {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 24px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .loading-status {
+            color: #666;
+            font-size: 0.875rem;
+            max-width: 300px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .loading-progress {
+            width: 240px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .loading-progress-bar {
+            height: 100%;
+            background: #333;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        /* Main Container */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 16px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0 16px;
+        }
+        
+        h1 {
+            margin: 0;
+            color: #333;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .btn-clear {
+            padding: 6px 12px;
+            background: transparent;
+            color: #666;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-clear:hover {
+            background: #f0f0f0;
+        }
+        
+        /* Chat Box */
+        #chat-box {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 8px 0;
+        }
+        
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            line-height: 1.55;
+            word-wrap: break-word;
+            font-size: 0.95rem;
+        }
+        
+        .user-msg {
+            align-self: flex-end;
+            background: #333;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .bot-msg {
+            align-self: flex-start;
+            background: #fff;
+            color: #333;
+            border: 1px solid #e5e5e5;
+            border-bottom-left-radius: 4px;
+        }
+        
+        /* Markdown Styles */
+        .bot-msg p { margin: 0 0 8px; }
+        .bot-msg p:last-child { margin-bottom: 0; }
+        .bot-msg ul, .bot-msg ol { margin: 8px 0; padding-left: 20px; }
+        .bot-msg li { margin: 4px 0; }
+        
+        .bot-msg code {
+            background: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+        
+        .bot-msg pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+        
+        .bot-msg pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        /* Think Indicator (during streaming) */
+        .think-indicator {
+            color: #888;
+            font-size: 0.85em;
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .think-indicator::before {
+            content: '';
+            width: 14px;
+            height: 14px;
+            border: 2px solid #ddd;
+            border-top-color: #888;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        /* Think Block (after streaming complete) */
+        .think-block {
+            margin: 6px 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fafafa;
+            font-size: 0.9em;
+        }
+        
+        .think-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            cursor: pointer;
+            user-select: none;
+            color: #888;
+        }
+        
+        .think-toggle:hover { background: #f0f0f0; }
+        
+        .think-icon {
+            font-size: 0.65rem;
+            transition: transform 0.2s;
+        }
+        
+        .think-block.expanded .think-icon {
+            transform: rotate(90deg);
+        }
+        
+        .think-content {
+            display: none;
+            padding: 10px 12px;
+            border-top: 1px solid #e0e0e0;
+            color: #555;
+            background: #fff;
+        }
+        
+        .think-block.expanded .think-content {
+            display: block;
+        }
+
+        /* Typing Cursor */
+        .typing-cursor::after {
+            content: '▋';
+            animation: blink 1s step-end infinite;
+            color: #999;
+        }
+        
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        
+        /* Input Area */
+        .input-area {
+            display: flex;
+            gap: 8px;
+            padding-top: 12px;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        #user-input:focus {
+            border-color: #999;
+        }
+        
+        #send-btn {
+            padding: 0 20px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        #send-btn:hover { background: #444; }
+        #send-btn:disabled { background: #ccc; cursor: not-allowed; }
+        #send-btn.stop { background: #c0392b; }
+        #send-btn.stop:hover { background: #a93226; }
+        
+        /* Empty State */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-screen">
+    <div class="loading-icon"></div>
+    <div class="loading-title">Saharsh 1.5 Mini</div>
+    <div class="loading-status" id="loading-status">Initializing...</div>
+    <div class="loading-progress">
+        <div class="loading-progress-bar" id="loading-progress-bar"></div>
+    </div>
+</div>
+
+<!-- Main Container -->
+<div class="container" id="main-container" style="display: none;">
+    <div class="header">
+        <h1>Saharsh 1.5 Mini</h1>
+        <button class="btn-clear" id="clear-btn">Clear</button>
+    </div>
+
+    <div id="chat-box">
+        <div class="empty-state" id="empty-state">Send a message to start</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Type a message..." />
+        <button id="send-btn">Send</button>
+    </div>
+</div>
+<script>addEventListener("error",(e)=>{alert(e.message)})</script>
+<script type="module">
+    import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+
+    const SELECTED_MODEL = "Qwen3-4B-q4f16_1-MLC";//"Qwen3-0.6B-q4f16_1-MLC";
+    
+    const loadingScreen = document.getElementById('loading-screen');
+    const loadingStatus = document.getElementById('loading-status');
+    const loadingProgressBar = document.getElementById('loading-progress-bar');
+    const mainContainer = document.getElementById('main-container');
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const emptyState = document.getElementById('empty-state');
+
+    let engine;
+    let isGenerating = false;
+    let shouldStop = false;
+    
+    const systemPrompt = "You are an AI assistant named Saharsh 1.5 Mini hosted on Secure Centrix81, a gaming website. Keep answers short and to the point. ";
+    let messages = [{ role: "system", content: systemPrompt }];
+    marked.setOptions({ breaks: true, gfm: true });
+
+    async function init() {
+        try {
+            loadingStatus.textContent = "Downloading model...";
+            
+            engine = await CreateMLCEngine(SELECTED_MODEL, {
+                initProgressCallback: (progress) => {
+                    const percent = Math.ceil(progress.progress * 100);
+                    loadingProgressBar.style.width = percent + '%';
+                    loadingStatus.textContent = progress.text;
+                }
+            });
+
+            loadingScreen.classList.add('hidden');
+            mainContainer.style.display = 'flex';
+            userInput.focus();
+            
+        } catch (err) {
+            loadingStatus.textContent = "Error: " + err.message;
+            loadingProgressBar.style.background = '#c0392b';
+        }
+    }
+    
+    let showingThinkingIndicator = false
+    function updateStreamingDisplay(container, text) {
+        const openTags = (text.match(/<think>/gi) || []).length;
+        const closeTags = (text.match(/<\/think>/gi) || []).length;
+        const isThinking = openTags > closeTags;
+        
+        // Get content outside complete think blocks
+        let content = text.replace(/<think>[\s\S]*?<\/think>/g, '');
+        
+        // Remove incomplete think tag and its content
+        if (isThinking) {
+            const idx = content.lastIndexOf('<think>');
+            if (idx !== -1) {
+                content = content.substring(0, idx);
+            }
+        }
+        content = content.trim();
+        
+        // Show thinking indicator if inside a think block
+        if (showingThinkingIndicator) return
+        if (isThinking) {
+            const div = document.createElement('div');
+            div.className = 'think-indicator';
+            div.textContent = 'Thinking...';
+            container.appendChild(div);
+            showingThinkingIndicator = true
+        } else {
+        	container.innerHTML = '';
+        }
+        
+        // Show content with cursor when not thinking
+        const span = document.createElement('span');
+        span.textContent = content;
+        if (!isThinking) {
+            span.className = 'typing-cursor';
+        }
+        container.appendChild(span);
+    }
+
+    function parseThinkBlocks(text) {
+        const thinkRegex = /<think>([\s\S]*?)<\/think>/gi;
+        let thinkBlocks = [];
+        let match;
+        
+        while ((match = thinkRegex.exec(text)) !== null) {
+            thinkBlocks.push(match[1].trim());
+        }
+        
+        let content = text.replace(thinkRegex, '').trim();
+        
+        if (!/<\/think>/.test(text)) {
+        	thinkBlocks.push(content);
+            content = "";
+        }
+        
+        return { content, thinkBlocks };
+    }
+
+    function renderFinalMessage(container, text) {
+        const { content, thinkBlocks } = parseThinkBlocks(text);
+        container.innerHTML = '';
+        
+        thinkBlocks.forEach(think => {
+            const block = document.createElement('div');
+            block.className = 'think-block';
+            block.classList.toggle("expanded");
+            block.innerHTML = `
+                <div class="think-toggle">
+                    <span class="think-icon">▶</span>
+                    <span>Thought process</span>
+                </div>
+                <div class="think-content">${marked.parse(think)}</div>
+            `;
+            block.querySelector('.think-toggle').onclick = () => block.classList.toggle('expanded');
+            container.appendChild(block);
+        });
+        
+        if (content) {
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = marked.parse(content);
+            container.appendChild(contentDiv);
+            
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(contentDiv, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\[', right: '\\]', display: true},
+                        {left: '\\(', right: '\\)', display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
+        }
+    }
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text || isGenerating) return;
+
+        emptyState.style.display = 'none';
+        appendUserMessage(text);
+        userInput.value = '';
+        
+        isGenerating = true;
+        shouldStop = false;
+        sendBtn.textContent = 'Stop';
+        sendBtn.classList.add('stop');
+        userInput.disabled = true;
+
+        messages.push({ role: "user", content: text });
+
+        const botDiv = document.createElement('div');
+        botDiv.className = 'message bot-msg';
+        chatBox.appendChild(botDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            let fullResponse = "";
+
+            const completion = await engine.chat.completions.create({
+                messages,
+                stream: true,
+            });
+
+            for await (const chunk of completion) {
+                if (shouldStop) break;
+                const content = chunk.choices[0]?.delta?.content || "";
+                fullResponse += content;
+                //updateStreamingDisplay(botDiv, fullResponse);
+                renderFinalMessage(botDiv, fullResponse);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            renderFinalMessage(botDiv, fullResponse);
+            
+            if (!shouldStop) {
+                messages.push({ role: "assistant", content: fullResponse });
+            }
+            
+        } catch (err) {
+            botDiv.textContent = "Error: " + err.message;
+        } finally {
+            isGenerating = false;
+            sendBtn.textContent = 'Send';
+            sendBtn.classList.remove('stop');
+            userInput.disabled = false;
+            userInput.focus();
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+
+    function appendUserMessage(text) {
+        const div = document.createElement('div');
+        div.className = 'message user-msg';
+        div.textContent = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function clearChat() {
+        messages = [{ role: "system", content: systemPrompt }];
+        chatBox.innerHTML = '<div class="empty-state" id="empty-state">Send a message to start</div>';
+    }
+
+    sendBtn.onclick = () => {
+        if (isGenerating) {
+            shouldStop = true;
+        } else {
+            sendMessage();
+        }
+    };
+    
+    userInput.onkeypress = (e) => {
+        if (e.key === 'Enter' && !isGenerating) sendMessage();
+    };
+    
+    clearBtn.onclick = clearChat;
+
+    init();
+</script>
+
+</body>
+</html>

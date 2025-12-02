@@ -339,7 +339,7 @@
 <script type="module">
     import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
-    const SELECTED_MODEL = "Qwen3-4B-q4f16_1-MLC";//"Qwen3-0.6B-q4f16_1-MLC";
+    const SELECTED_MODEL = "Qwen3-1.7B-q4f16_1-MLC";//"Qwen3-4B-q4f16_1-MLC";
     
     const loadingScreen = document.getElementById('loading-screen');
     const loadingStatus = document.getElementById('loading-status');
@@ -449,12 +449,10 @@
             block.classList.toggle("expanded");
             block.innerHTML = `
                 <div class="think-toggle">
-                    <span class="think-icon">▶</span>
                     <span>Thought process</span>
                 </div>
                 <div class="think-content">${marked.parse(think)}</div>
             `;
-            block.querySelector('.think-toggle').onclick = () => block.classList.toggle('expanded');
             container.appendChild(block);
         });
         

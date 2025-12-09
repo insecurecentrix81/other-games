@@ -1,1 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh & Anbu Dating Sim</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 900px;
+            height: 650px;
+            background: #1a1a2e;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Title Screen */
+        #title-screen {
+            background: linear-gradient(180deg, #ff6b95 0%, #c44569 100%);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-tree {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: sway 3s ease-in-out infinite;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+
+        .title-text {
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .title-text h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .title-text p {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .hearts-floating {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .floating-heart {
+            position: absolute;
+            font-size: 24px;
+            animation: floatUp 6s linear infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #fff 0%, #ffe4e8 100%);
+            border: none;
+            padding: 15px 50px;
+            font-size: 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            color: #c44569;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        /* Game Screen */
+        #game-screen {
+            background: #2d2d44;
+        }
+
+        .scene-bg {
+            flex: 1;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 180px;
+        }
+
+        .characters {
+            display: flex;
+            gap: 100px;
+            align-items: flex-end;
+        }
+
+        .character {
+            text-align: center;
+            transition: all 0.5s;
+        }
+
+        .character.speaking {
+            transform: scale(1.05);
+        }
+
+        .character-portrait {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+        }
+
+        .character-portrait img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .character-name {
+            color: white;
+            margin-top: 10px;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .dialogue-box {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(30,30,50,0.95) 100%);
+            padding: 25px 30px;
+            min-height: 170px;
+            border-top: 3px solid #ff6b95;
+        }
+
+        .speaker-name {
+            color: #ff6b95;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .dialogue-text {
+            color: white;
+            font-size: 18px;
+            line-height: 1.6;
+            min-height: 50px;
+        }
+
+        .choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .choice-btn {
+            background: linear-gradient(135deg, #ff6b95 0%, #c44569 100%);
+            border: none;
+            padding: 12px 20px;
+            color: white;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .choice-btn:hover {
+            transform: translateX(10px);
+            box-shadow: 0 5px 20px rgba(255,107,149,0.4);
+        }
+
+        .continue-hint {
+            color: #888;
+            font-size: 14px;
+            margin-top: 15px;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .affection-meters {
+            display: flex;
+            gap: 30px;
+        }
+
+        .meter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .meter-label {
+            color: #ff6b95;
+            font-size: 14px;
+        }
+
+        .meter-bar {
+            width: 120px;
+            height: 15px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b95, #ff9a9e);
+            transition: width 0.5s;
+            border-radius: 10px;
+        }
+
+        .chapter-indicator {
+            color: white;
+            font-size: 14px;
+        }
+
+        /* Ending Screen */
+        #ending-screen {
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .ending-title {
+            font-size: 36px;
+            color: #ff6b95;
+            margin-bottom: 20px;
+        }
+
+        .ending-image {
+            font-size: 120px;
+            margin-bottom: 30px;
+        }
+
+        .ending-text {
+            color: white;
+            font-size: 18px;
+            line-height: 1.8;
+            max-width: 600px;
+            margin-bottom: 40px;
+        }
+
+        /* Scene backgrounds */
+        .bg-school {
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 60%, #228B22 100%);
+        }
+
+        .bg-cafe {
+            background: linear-gradient(180deg, #DEB887 0%, #D2691E 100%);
+        }
+
+        .bg-park {
+            background: linear-gradient(180deg, #87CEEB 0%, #90EE90 50%, #228B22 100%);
+        }
+
+        .bg-tree {
+            background: linear-gradient(180deg, #FFB6C1 0%, #FF69B4 30%, #228B22 70%, #006400 100%);
+        }
+
+        .bg-sunset {
+            background: linear-gradient(180deg, #FF6347 0%, #FF8C00 30%, #FFD700 60%, #228B22 100%);
+        }
+
+        .bg-night {
+            background: linear-gradient(180deg, #191970 0%, #000080 50%, #1a1a2e 100%);
+        }
+
+        .scene-decoration {
+            position: absolute;
+            font-size: 40px;
+            pointer-events: none;
+        }
+
+        .tree-big {
+            position: absolute;
+            font-size: 200px;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Title Screen -->
+        <div id="title-screen" class="screen active">
+            <div class="hearts-floating" id="hearts-container"></div>
+            <div class="title-tree">🌳</div>
+            <div class="title-text">
+                <h1>Saharsh & Anbu</h1>
+                <p>✨ A Love Story in the Making ✨</p>
+                <p style="font-size: 14px; opacity: 0.7;">~ Sitting in a tree, K-I-S-S-I-N-G ~</p>
+            </div>
+            <br><br>
+            <button class="btn" onclick="startGame()">💕 Begin Story 💕</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="stats-bar">
+                <div class="affection-meters">
+                    <div class="meter">
+                        <span class="meter-label">💖 Saharsh</span>
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="saharsh-meter" style="width: 30%"></div>
+                        </div>
+                    </div>
+                    <div class="meter">
+                        <span class="meter-label">💜 Anbu</span>
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="anbu-meter" style="width: 30%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chapter-indicator" id="chapter-indicator">Chapter 1</div>
+            </div>
+            <div class="scene-bg" id="scene-bg">
+                <div class="characters" id="characters-container"></div>
+                <div class="dialogue-box">
+                    <div class="speaker-name" id="speaker-name"></div>
+                    <div class="dialogue-text" id="dialogue-text"></div>
+                    <div class="choices-container" id="choices-container"></div>
+                    <div class="continue-hint" id="continue-hint">Click to continue...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ending Screen -->
+        <div id="ending-screen" class="screen">
+            <div class="ending-title" id="ending-title"></div>
+            <div class="ending-image" id="ending-image"></div>
+            <div class="ending-text" id="ending-text"></div>
+            <button class="btn" onclick="restartGame()">💕 Play Again 💕</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            saharshAffection: 30,
+            anbuAffection: 30,
+            currentScene: 0,
+            currentDialogue: 0,
+            chapter: 1,
+            flags: {}
+        };
+
+        const SAHARSH_IMG = "https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg";
+
+        // Story Scenes
+        const story = [
+            // Chapter 1: The Meeting
+            {
+                chapter: 1,
+                background: "bg-school",
+                characters: ["saharsh", "anbu"],
+                speaking: null,
+                dialogues: [
+                    { speaker: "Narrator", text: "It was a beautiful spring day at Secure Centrix81 Academy. The cherry blossoms were in full bloom..." },
+                    { speaker: "Narrator", text: "Two students were about to have a fateful encounter that would change everything." },
+                    { speaker: "Saharsh", text: "Hmm, I wonder where the new study room is...", emotion: "thinking" },
+                    { speaker: "Anbu", text: "*walking while reading a book* The mysteries of the universe are truly fascinating...", emotion: "focused" },
+                    { speaker: "Narrator", text: "💥 BUMP! 💥 They collided in the hallway!" },
+                    { speaker: "Saharsh", text: "Oh! I'm so sorry! Are you okay?", emotion: "worried" },
+                    { speaker: "Anbu", text: "*looks up* Oh... it's fine. I wasn't paying attention either.", emotion: "surprised" },
+                    {
+                        speaker: "Choice",
+                        choices: [
+                            { text: "Help Anbu pick up their book 📚", saharsh: 5, anbu: 10, flag: "helped_anbu" },
+                            { text: "Apologize profusely to Saharsh 🙇", saharsh: 10, anbu: 5, flag: "apologized" },
+                            { text: "Make a joke to lighten the mood 😄", saharsh: 8, anbu: 8, flag: "made_joke" }
+                        ]
+                    },
+                    { speaker: "Saharsh", text: "I'm Saharsh, by the way. Nice to meet you!", emotion: "happy" },
+                    { speaker: "Anbu", text: "I'm Anbu. That's... a nice name you have.", emotion: "shy" },
+                    { speaker: "Saharsh", text: "Anbu... that's a beautiful name too! ✨", emotion: "charmed" },
+                    { speaker: "Narrator", text: "And so began an unexpected friendship... or perhaps something more? 💕" }
+                ]
+            },
+            // Chapter 2: The Café
+            {
+                chapter: 2,
+                background: "bg-cafe",
+                characters: ["saharsh", "anbu"],
+                dialogues: [
+                    { speaker: "Narrator", text: "A few days later, Saharsh and Anbu found themselves at the same café..." },
+                    { speaker: "Saharsh", text: "Oh hey! Anbu! What a coincidence!", emotion: "excited" },
+                    { speaker: "Anbu", text: "Saharsh! *blushes slightly* Y-yeah, what a coincidence...", emotion: "shy" },
+                    { speaker: "Saharsh", text: "Mind if I join you? I hate drinking coffee alone.", emotion: "hopeful" },
+                    {
+                        speaker: "Choice",
+                        choices: [
+                            { text: "\"Of course! Please sit down!\" 😊", saharsh: 10, anbu: 5 },
+                            { text: "\"I'd love some company...\" 💕", saharsh: 5, anbu: 10 },
+                            { text: "Pull out the chair for them like a gentleman 🪑", saharsh: 8, anbu: 8 }
+                        ]
+                    },
+                    { speaker: "Anbu", text: "So... what do you like to do for fun, Saharsh?", emotion: "curious" },
+                    { speaker: "Saharsh", text: "Well, I love stargazing, and solving puzzles... and meeting interesting people like you!", emotion: "flirty" },
+                    { speaker: "Anbu", text: "*nearly spills coffee* I-interesting?! Me?!", emotion: "flustered" },
+                    { speaker: "Saharsh", text: "Haha, you're cute when you're flustered! 😄", emotion: "amused" },
+                    { speaker: "Anbu", text: "...You're pretty bold, you know that?", emotion: "smiling" },
+                    {
+                        speaker: "Choice",
+                        choices: [
+                            { text: "Compliment Anbu's eyes 👀💫", saharsh: 5, anbu: 15 },
+                            { text: "Talk about shared interests 🎮", saharsh: 10, anbu: 10 },
+                            { text: "Invite them to stargaze together 🌟", saharsh: 12, anbu: 12, flag: "stargazing_date" }
+                        ]
+                    },
+                    { speaker: "Narrator", text: "The afternoon flew by as they talked and laughed together..." },
+                    { speaker: "Saharsh", text: "I had a really great time today, Anbu.", emotion: "sincere" },
+                    { speaker: "Anbu", text: "Me too... Let's do this again sometime?", emotion: "hopeful" }
+                ]
+            },
+            // Chapter 3: The Park
+            {
+                chapter: 3,
+                background: "bg-park",
+                characters: ["saharsh", "anbu"],
+                dialogues: [
+                    { speaker: "Narrator", text: "Spring turned to summer. Saharsh and Anbu became inseparable..." },
+                    { speaker: "Narrator", text: "One golden afternoon, they walked through the park together." },
+                    { speaker: "Anbu", text: "Saharsh... can I tell you something?", emotion: "nervous" },
+                    { speaker: "Saharsh", text: "Of course! You can tell me anything.", emotion: "caring" },
+                    { speaker: "Anbu", text: "Before I met you, I always felt... kind of alone.", emotion: "sad" },
+                    { speaker: "Anbu", text: "But when I'm with you, everything feels brighter somehow.", emotion: "sincere" },
+                    { speaker: "Saharsh", text: "Anbu...", emotion: "touched" },
+                    {
+                        speaker: "Choice",
+                        choices: [
+                            { text: "\"I feel the same way about you.\" 💕", saharsh: 12, anbu: 15 },
+                            { text: "Take their hand gently 🤝", saharsh: 15, anbu: 12 },
+                            { text: "\"You'll never be alone again. I promise.\" ✨", saharsh: 15, anbu: 15, flag: "promise_made" }
+                        ]
+                    },
+                    { speaker: "Saharsh", text: "Look! There's a big tree up ahead. Let's go see it!", emotion: "excited" },
+                    { speaker: "Anbu", text: "Race you there! 🏃", emotion: "playful" },
+                    { speaker: "Narrator", text: "They ran together, laughter echoing through the park..." }
+                ]
+            },
+            // Chapter 4: The Tree
+            {
+                chapter: 4,
+                background: "bg-tree",
+                characters: ["saharsh", "anbu"],
+                dialogues: [
+                    { speaker: "Narrator", text: "They arrived at the most magnificent tree either had ever seen..." },
+                    { speaker: "Saharsh", text: "Wow... it's beautiful. Just like... um...", emotion: "nervous" },
+                    { speaker: "Anbu", text: "Like what? 😊", emotion: "teasing" },
+                    { speaker: "Saharsh", text: "*ahem* N-nothing! Hey, want to climb it?", emotion: "flustered" },
+                    { speaker: "Anbu", text: "Climb a tree? Are we five years old?", emotion: "amused" },
+                    { speaker: "Saharsh", text: "You're never too old for adventure! Come on!", emotion: "encouraging" },
+                    {
+                        speaker: "Choice",
+                        choices: [
+                            { text: "Help each other climb up 🌳", saharsh: 10, anbu: 10 },
+                            { text: "\"I'll catch you if you fall!\" 💪", saharsh: 15, anbu: 10 },
+                            { text: "\"Together, we can do anything!\" ✨", saharsh: 12, anbu: 12, flag: "climbed_together" }
+                        ]
+                    },
+                    { speaker: "Narrator", text: "They sat together on a sturdy branch, the sunset painting the sky in shades of pink and gold..." },
+                    { speaker: "Anbu", text: "This is... actually really nice.", emotion: "content" },
+                    { speaker: "Saharsh", text: "You know what they say about two people sitting in a tree...", emotion: "shy" },
+                    { speaker: "Anbu", text: "K-I-S-S-I-N-G?", emotion: "blushing" },
+                    { speaker: "Saharsh", text: "Haha... yeah... that one...", emotion: "shy" },
+                    {
+                        speaker: "Choice",
+                        choices: [
+                            { text: "Lean in closer... 💋", saharsh: 20, anbu: 20, flag: "first_kiss" },
+                            { text: "\"Anbu, I think I'm falling for you.\" 💕", saharsh: 18, anbu: 18, flag: "confession" },
+                            { text: "Hold their hand and watch the sunset 🌅", saharsh: 15, anbu: 15, flag: "romantic_moment" }
+                        ]
+                    },
+                    { speaker: "Narrator", text: "💕 Time seemed to stop in that perfect moment... 💕" }
+                ]
+            },
+            // Chapter 5: The Confession
+            {
+                chapter: 5,
+                background: "bg-sunset",
+                characters: ["saharsh", "anbu"],
+                dialogues: [
+                    { speaker: "Narrator", text: "As summer waned, the moment of truth arrived..." },
+                    { speaker: "Saharsh", text: "Anbu, there's something I've been meaning to tell you.", emotion: "serious" },
+                    { speaker: "Anbu", text: "...I think I know what it is.", emotion: "nervous" },
+                    { speaker: "Saharsh", text: "From the moment we bumped into each other, I felt something special.", emotion: "sincere" },
+                    { speaker: "Saharsh", text: "Every moment with you makes me happier than I've ever been.", emotion: "loving" },
+                    { speaker: "Anbu", text: "Saharsh... 💕", emotion: "touched" },
+                    {
+                        speaker: "Choice",
+                        choices: [
+                            { text: "\"I love you, Anbu.\" ❤️", saharsh: 25, anbu: 25, flag: "love_confession" },
+                            { text: "\"Will you be mine?\" 💍", saharsh: 25, anbu: 25, flag: "dating_official" },
+                            { text: "\"Let's climb that tree again... together, forever.\" 🌳", saharsh: 25, anbu: 25, flag: "poetic_confession" }
+                        ]
+                    },
+                    { speaker: "Anbu", text: "I... I feel the same way! I've felt this way for so long!", emotion: "happy_crying" },
+                    { speaker: "Saharsh", text: "Really?! You do?!", emotion: "overjoyed" },
+                    { speaker: "Anbu", text: "Yes! A thousand times yes!", emotion: "joyful" },
+                    { speaker: "Narrator", text: "🌳 Saharsh and Anbu, sitting in a tree... 🌳" },
+                    { speaker: "Narrator", text: "💋 K-I-S-S-I-N-G! 💋" },
+                    { speaker: "Narrator", text: "First comes love, then comes... well, that's a story for another day! 💕" }
+                ]
+            }
+        ];
+
+        // Initialize floating hearts
+        function createFloatingHearts() {
+            const container = document.getElementById('hearts-container');
+            const hearts = ['💕', '💖', '💗', '💓', '💝', '❤️', '💘'];
+            
+            for (let i = 0; i < 15; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'floating-heart';
+                heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+                heart.style.left = Math.random() * 100 + '%';
+                heart.style.animationDelay = Math.random() * 6 + 's';
+                heart.style.fontSize = (Math.random() * 20 + 15) + 'px';
+                container.appendChild(heart);
+            }
+        }
+
+        // Screen management
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Update affection meters
+        function updateMeters() {
+            document.getElementById('saharsh-meter').style.width = Math.min(100, gameState.saharshAffection) + '%';
+            document.getElementById('anbu-meter').style.width = Math.min(100, gameState.anbuAffection) + '%';
+        }
+
+        // Render characters
+        function renderCharacters(chars, speaking) {
+            const container = document.getElementById('characters-container');
+            container.innerHTML = '';
+            
+            chars.forEach(char => {
+                const div = document.createElement('div');
+                div.className = 'character' + (speaking === char ? ' speaking' : '');
+                
+                const portrait = document.createElement('div');
+                portrait.className = 'character-portrait';
+                
+                if (char === 'saharsh') {
+                    const img = document.createElement('img');
+                    img.src = SAHARSH_IMG;
+                    img.alt = 'Saharsh';
+                    img.onerror = () => { portrait.textContent = '😊'; };
+                    portrait.appendChild(img);
+                } else if (char === 'anbu') {
+                    portrait.textContent = '🥰';
+                    portrait.style.background = 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)';
+                }
+                
+                const name = document.createElement('div');
+                name.className = 'character-name';
+                name.textContent = char.charAt(0).toUpperCase() + char.slice(1);
+                
+                div.appendChild(portrait);
+                div.appendChild(name);
+                container.appendChild(div);
+            });
+        }
+
+        // Process dialogue
+        function showDialogue() {
+            const scene = story[gameState.currentScene];
+            const dialogue = scene.dialogues[gameState.currentDialogue];
+            
+            document.getElementById('chapter-indicator').textContent = 'Chapter ' + scene.chapter;
+            document.getElementById('scene-bg').className = 'scene-bg ' + scene.background;
+            
+            renderCharacters(scene.characters, 
+                dialogue.speaker.toLowerCase() === 'saharsh' ? 'saharsh' : 
+                dialogue.speaker.toLowerCase() === 'anbu' ? 'anbu' : null);
+            
+            const choicesContainer = document.getElementById('choices-container');
+            const continueHint = document.getElementById('continue-hint');
+            
+            if (dialogue.speaker === 'Choice') {
+                document.getElementById('speaker-name').textContent = '💭 What will you do?';
+                document.getElementById('dialogue-text').textContent = '';
+                continueHint.style.display = 'none';
+                
+                choicesContainer.innerHTML = '';
+                dialogue.choices.forEach((choice, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.textContent = choice.text;
+                    btn.onclick = () => makeChoice(index);
+                    choicesContainer.appendChild(btn);
+                });
+            } else {
+                const speakerName = document.getElementById('speaker-name');
+                speakerName.textContent = dialogue.speaker === 'Narrator' ? '📖 ' + dialogue.speaker : 
+                    (dialogue.speaker === 'Saharsh' ? '💖 ' : '💜 ') + dialogue.speaker;
+                
+                // Typewriter effect
+                const textEl = document.getElementById('dialogue-text');
+                textEl.textContent = '';
+                let charIndex = 0;
+                const typeInterval = setInterval(() => {
+                    if (charIndex < dialogue.text.length) {
+                        textEl.textContent += dialogue.text.charAt(charIndex);
+                        charIndex++;
+                    } else {
+                        clearInterval(typeInterval);
+                    }
+                }, 30);
+                
+                choicesContainer.innerHTML = '';
+                continueHint.style.display = 'block';
+            }
+        }
+
+        // Make a choice
+        function makeChoice(index) {
+            const scene = story[gameState.currentScene];
+            const dialogue = scene.dialogues[gameState.currentDialogue];
+            const choice = dialogue.choices[index];
+            
+            gameState.saharshAffection += choice.saharsh || 0;
+            gameState.anbuAffection += choice.anbu || 0;
+            
+            if (choice.flag) {
+                gameState.flags[choice.flag] = true;
+            }
+            
+            updateMeters();
+            advanceDialogue();
+        }
+
+        // Advance to next dialogue
+        function advanceDialogue() {
+            const scene = story[gameState.currentScene];
+            
+            if (gameState.currentDialogue < scene.dialogues.length - 1) {
+                gameState.currentDialogue++;
+                showDialogue();
+            } else if (gameState.currentScene < story.length - 1) {
+                gameState.currentScene++;
+                gameState.currentDialogue = 0;
+                gameState.chapter++;
+                showDialogue();
+            } else {
+                showEnding();
+            }
+        }
+
+        // Show ending
+        function showEnding() {
+            showScreen('ending-screen');
+            
+            const totalAffection = gameState.saharshAffection + gameState.anbuAffection;
+            let ending;
+            
+            if (totalAffection >= 180) {
+                ending = {
+                    title: "💕 True Love Ending 💕",
+                    image: "🌳💑🌳",
+                    text: "Saharsh and Anbu's love blossomed like the most beautiful flower. They continued to visit their special tree, where their love story began. Years later, they would tell their friends about the day they bumped into each other in the hallway... and how a simple K-I-S-S-I-N-G rhyme became their reality.\n\n~ And they lived happily ever after ~"
+                };
+            } else if (totalAffection >= 120) {
+                ending = {
+                    title: "💖 Sweet Romance Ending 💖",
+                    image: "👫🌸",
+                    text: "Saharsh and Anbu began dating, their relationship growing stronger each day. While they still had much to learn about each other, their love was genuine and true. The tree in the park remained their favorite spot to spend time together.\n\n~ A beautiful beginning to forever ~"
+                };
+            } else {
+                ending = {
+                    title: "🌱 Friendship Blooms 🌱",
+                    image: "🤝✨",
+                    text: "Saharsh and Anbu became the best of friends. While romance didn't blossom just yet, they shared something equally precious - a deep and meaningful friendship. Perhaps one day, when the time is right, that friendship might grow into something more...\n\n~ Sometimes the best love stories take time ~"
+                };
+            }
+            
+            document.getElementById('ending-title').textContent = ending.title;
+            document.getElementById('ending-image').textContent = ending.image;
+            document.getElementById('ending-text').textContent = ending.text;
+        }
+
+        // Start game
+        function startGame() {
+            gameState = {
+                saharshAffection: 30,
+                anbuAffection: 30,
+                currentScene: 0,
+                currentDialogue: 0,
+                chapter: 1,
+                flags: {}
+            };
+            
+            updateMeters();
+            showScreen('game-screen');
+            showDialogue();
+        }
+
+        // Restart game
+        function restartGame() {
+            showScreen('title-screen');
+        }
+
+        // Click handler for advancing dialogue
+        document.getElementById('game-screen').addEventListener('click', (e) => {
+            if (e.target.classList.contains('choice-btn')) return;
+            
+            const scene = story[gameState.currentScene];
+            const dialogue = scene.dialogues[gameState.currentDialogue];
+            
+            if (dialogue.speaker !== 'Choice') {
+                advanceDialogue();
+            }
+        });
+
+        // Initialize
+        createFloatingHearts();
+    </script>
+</body>
+</html>

@@ -1,1 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Secure Centrix81 — Saharsh & Anbu Dating Sim</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:#121732;
+    --accent:#7ad6ff;
+    --accent2:#ff7ad6;
+    --text:#eef2ff;
+    --muted:#a9b1d6;
+    --good:#7cffc3;
+    --bad:#ff8b7a;
+    --warn:#ffd77a;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;
+    margin:0;
+    overflow:hidden;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #1a2040 0%, var(--bg) 55%),
+      linear-gradient(180deg, #0a0f2b 0%, var(--bg) 100%);
+    color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+  }
+  #game{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    display:grid;
+    grid-template-rows: 64px 1fr 48px;
+    grid-template-columns: 260px 1fr 320px;
+    gap:10px;
+    padding:10px;
+  }
+  header, footer{
+    grid-column: 1 / -1;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 14px;
+    backdrop-filter: blur(6px);
+  }
+  header h1{
+    font-size:18px;
+    letter-spacing:0.4px;
+    margin:0;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  header h1 span.logo{
+    display:inline-grid;
+    place-items:center;
+    width:28px;height:28px;
+    border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#0e0e1a;
+    font-weight:900;
+  }
+  header .session{
+    display:flex; gap:18px; align-items:center;
+    font-size:14px; color:var(--muted);
+  }
+  #left,#center,#right{
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;
+    position:relative;
+    overflow:hidden;
+    backdrop-filter: blur(6px);
+  }
+  #left{
+    padding:10px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  #right{
+    padding:10px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  #center{
+    display:grid; grid-template-rows: 1fr auto;
+  }
+  .panel-title{
+    font-size:13px; text-transform:uppercase; letter-spacing:1px;
+    color:var(--muted);
+    border-bottom:1px dashed rgba(255,255,255,0.12);
+    padding-bottom:6px;
+  }
+  .stat{
+    display:flex; align-items:center; gap:8px;
+    margin:6px 0;
+  }
+  .bar{
+    flex:1; height:8px; border-radius:99px;
+    background:rgba(255,255,255,0.08);
+    position:relative; overflow:hidden;
+  }
+  .bar > i{
+    position:absolute; left:0; top:0; bottom:0;
+    border-radius:99px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    box-shadow:0 0 12px rgba(122,214,255,0.4);
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.12);
+    color:var(--text); font-size:13px; margin:4px 6px 0 0;
+    background:rgba(255,255,255,0.04);
+  }
+  .list{
+    display:flex; flex-direction:column; gap:8px;
+    max-height:40vh; overflow:auto;
+    padding-right:4px;
+  }
+  .card{
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px; padding:10px;
+    background:rgba(255,255,255,0.05);
+  }
+  .btn{
+    appearance:none; border:none; outline:none;
+    color:#0a0f2b; font-weight:700;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius:12px; padding:10px 14px;
+    cursor:pointer; transition:transform .06s ease, box-shadow .2s ease;
+    box-shadow:0 6px 20px rgba(122,214,255,0.25);
+  }
+  .btn.secondary{
+    background:linear-gradient(135deg,#8aa1ff,#9af4ff);
+  }
+  .btn.ghost{
+    background:transparent; color:var(--text);
+    border:1px solid rgba(255,255,255,0.18);
+    box-shadow:none;
+  }
+  .btn:active{ transform:translateY(1px) scale(0.99) }
+  .row{ display:flex; gap:8px; flex-wrap:wrap }
+  .grow{ flex:1 }
+  .portrait{
+    width:100%; aspect-ratio: 1.35/1; border-radius:12px;
+    border:1px solid rgba(255,255,255,0.1);
+    overflow:hidden; position:relative;
+    background:
+      radial-gradient(800px 400px at 80% -10%, #1a2040 0%, #0e1330 65%),
+      linear-gradient(180deg, #0a0f2b 0%, #0a0f2b 100%);
+  }
+  .portrait img{
+    width:100%; height:100%; object-fit:cover; opacity:0.93;
+    filter:saturate(1.1) contrast(1.05);
+  }
+  .portrait .label{
+    position:absolute; left:10px; bottom:10px;
+    background:rgba(0,0,0,0.45); color:var(--text);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:10px; padding:6px 10px; font-size:13px;
+  }
 
+  /* Dialogue area */
+  #scene{
+    position:relative; overflow:hidden;
+    background:
+      radial-gradient(1000px 600px at 20% -10%, rgba(255,122,214,0.18) 0%, transparent 50%),
+      radial-gradient(1000px 600px at 80% 110%, rgba(122,214,255,0.18) 0%, transparent 55%);
+  }
+  .bg-stars{
+    position:absolute; inset:0; pointer-events:none;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.8) 0, transparent 60%),
+      radial-gradient(2px 2px at 50% 60%, rgba(255,255,255,0.7) 0, transparent 60%),
+      radial-gradient(1px 1px at 80% 40%, rgba(255,255,255,0.6) 0, transparent 60%);
+    background-repeat:repeat;
+    background-size: 300px 300px;
+    opacity:0.6;
+  }
+  .characters{
+    position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center; gap:60px; padding-bottom:40px;
+  }
+  .char{
+    width:30%; min-width:220px; aspect-ratio: 3/4;
+    border-radius:14px; overflow:hidden;
+    border:1px solid rgba(255,255,255,0.12);
+    background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.2));
+    box-shadow:0 20px 50px rgba(0,0,0,0.4);
+    position:relative;
+    transform-origin:bottom center;
+    transition:transform .25s ease, filter .25s ease, opacity .25s ease;
+  }
+  .char.focus{ transform:scale(1.04); filter:saturate(1.05) contrast(1.05) }
+  .char .nameplate{
+    position:absolute; left:10px; top:10px;
+    background:rgba(0,0,0,0.45); color:var(--text);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:10px; padding:6px 10px; font-size:13px;
+  }
+  .char.saharsh{
+    background:
+      linear-gradient(180deg, rgba(122,214,255,0.18), rgba(0,0,0,0.2));
+  }
+  .char.anbu{
+    background:
+      linear-gradient(180deg, rgba(255,122,214,0.18), rgba(0,0,0,0.2));
+  }
+  .char .placeholder{
+    position:absolute; inset:0;
+    display:grid; place-items:center;
+    color:var(--muted); font-size:14px; text-align:center;
+    padding:16px;
+  }
+  .dialogue{
+    position:absolute; left:50%; transform:translateX(-50%);
+    bottom:0; width:min(860px, 92%); margin:0 auto 10px;
+    border-radius:14px; border:1px solid rgba(255,255,255,0.12);
+    background:rgba(9,12,26,0.72);
+    backdrop-filter: blur(6px);
+    overflow:hidden;
+  }
+  .dialogue .speaker{
+    font-size:14px; color:var(--muted); padding:8px 12px;
+    border-bottom:1px dashed rgba(255,255,255,0.12);
+  }
+  .dialogue .text{ padding:14px 12px; min-height:84px }
+  .choices{
+    display:flex; gap:10px; padding:10px; flex-wrap:wrap; border-top:1px dashed rgba(255,255,255,0.12);
+  }
+  .choice{
+    padding:10px 12px; border-radius:12px; cursor:pointer;
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.06);
+    transition:transform .06s ease, background .2s ease;
+    font-weight:600; font-size:14px; color:var(--text);
+  }
+  .choice:hover{ background:rgba(255,255,255,0.1) }
+  .choice:active{ transform:translateY(1px) scale(0.99) }
+
+  footer .hud{
+    display:flex; gap:16px; align-items:center; font-size:13px; color:var(--muted);
+  }
+  footer .hud .pill{
+    padding:6px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.04);
+    color:var(--text);
+  }
+  .hidden{ display:none !important }
+
+  /* Menus */
+  #overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    display:grid; place-items:center; z-index:50;
+  }
+  .modal{
+    width:min(900px,94vw); max-height:88vh; overflow:auto;
+    background:rgba(14,18,40,0.9); border:1px solid rgba(255,255,255,0.12);
+    border-radius:16px; backdrop-filter: blur(8px);
+    padding:16px;
+  }
+  .title{
+    font-size:20px; font-weight:800; margin-bottom:8px;
+  }
+  .subtitle{ color:var(--muted); margin-bottom:10px }
+  .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:12px }
+  .centered{ text-align:center }
+  .kbd{ padding:2px 6px; border:1px solid rgba(255,255,255,0.18); border-radius:6px; font-size:12px; color:var(--muted) }
+  .notice{ font-size:13px; color:var(--muted) }
+
+  /* Mini-game */
+  #puzzle{
+    border-top:1px dashed rgba(255,255,255,0.12);
+    padding:10px; background:rgba(255,255,255,0.03);
+  }
+  .tiles{ display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; max-width:420px }
+  .tile{
+    aspect-ratio:1/1; border-radius:10px;
+    background:linear-gradient(135deg,#20284a,#121732);
+    border:1px solid rgba(255,255,255,0.12);
+    display:grid; place-items:center; color:var(--text);
+    font-weight:800; font-size:18px; cursor:pointer;
+    user-select:none;
+  }
+  .tile.correct{ background:linear-gradient(135deg,#1f6fff,#18c3ff) }
+  .tile.wrong{ background:linear-gradient(135deg,#ff3e6c,#ff9ba5) }
+
+  /* Animations */
+  .fade-enter{ animation:fadeIn .28s ease both }
+  @keyframes fadeIn{
+    from{ opacity:0; transform:translateY(8px) }
+    to{ opacity:1; transform:translateY(0) }
+  }
+  .pulse{
+    animation:pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%{ transform:scale(1) }
+    50%{ transform:scale(1.04) }
+    100%{ transform:scale(1) }
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <header>
+    <h1><span class="logo">SC</span> Secure Centrix81 — Saharsh &amp; Anbu Dating Sim</h1>
+    <div class="session">
+      <div>Day <b id="hud-day">1</b>/<b id="hud-maxday">20</b></div>
+      <div>Phase: <b id="hud-phase">Morning</b></div>
+      <div>Coins: <b id="hud-coins">10</b></div>
+      <button class="btn ghost" id="btn-pause">Pause</button>
+    </div>
+  </header>
+
+  <section id="left">
+    <div class="panel-title">Relationship stats</div>
+    <div class="stat">
+      <span>Affection</span>
+      <div class="bar"><i id="bar-affection" style="width:0%"></i></div>
+    </div>
+    <div class="stat">
+      <span>Trust</span>
+      <div class="bar"><i id="bar-trust" style="width:0%"></i></div>
+    </div>
+    <div class="stat">
+      <span>Charm</span>
+      <div class="bar"><i id="bar-charm" style="width:0%"></i></div>
+    </div>
+    <div class="stat">
+      <span>Intellect</span>
+      <div class="bar"><i id="bar-intellect" style="width:0%"></i></div>
+    </div>
+    <div class="panel-title" style="margin-top:8px">Inventory</div>
+    <div id="inventory" class="list"></div>
+    <div class="row">
+      <button class="btn secondary grow" id="btn-shop">Gift shop</button>
+      <button class="btn ghost grow" id="btn-map">Map</button>
+    </div>
+    <div class="panel-title" style="margin-top:8px">Actions</div>
+    <div class="row">
+      <button class="btn grow" id="act-talk">Talk</button>
+      <button class="btn grow" id="act-gift">Gift</button>
+      <button class="btn grow" id="act-study">Study</button>
+      <button class="btn grow" id="act-puzzle">Puzzle</button>
+    </div>
+    <div class="notice">Each phase allows one major action. Balance studying, gifting, and honest conversation to earn trust.</div>
+  </section>
+
+  <section id="center">
+    <div id="scene">
+      <div class="bg-stars"></div>
+      <div class="characters">
+        <div class="char saharsh focus" id="char-saharsh">
+          <div class="nameplate">Saharsh</div>
+          <img alt="Saharsh portrait" id="saharsh-img" style="width:100%;height:100%;object-fit:cover;opacity:.95"/>
+          <div class="placeholder hidden" id="saharsh-ph">Portrait loading...</div>
+        </div>
+        <div class="char anbu" id="char-anbu">
+          <div class="nameplate">Anbu</div>
+          <div class="placeholder" id="anbu-ph">
+            A soft silhouette with bright, curious eyes.<br/>Anbu watches the stars, thoughtful and kind.
+          </div>
+        </div>
+      </div>
+      <div class="dialogue fade-enter" id="dialogue">
+        <div class="speaker" id="speaker">Narrator</div>
+        <div class="text" id="dialog-text">Two hearts, one quiet campus. Choices today ripple into tomorrow.</div>
+        <div class="choices" id="choices"></div>
+        <div id="puzzle" class="hidden">
+          <div class="panel-title">Word tiles — impress with wit</div>
+          <div class="tiles" id="tiles"></div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn ghost" id="puzzle-shuffle">Shuffle</button>
+            <button class="btn secondary" id="puzzle-giveup">Give up</button>
+          </div>
+          <div class="notice">Form the secret word to boost Intellect &amp; Charm.</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:10px; display:flex; gap:10px; align-items:center; justify-content:flex-end;">
+      <button class="btn ghost" id="btn-skip">Skip phase</button>
+      <button class="btn" id="btn-next">Next</button>
+    </div>
+  </section>
+
+  <section id="right">
+    <div class="panel-title">Journal & events</div>
+    <div id="journal" class="list"></div>
+    <div class="panel-title">Milestones</div>
+    <div id="milestones" class="list"></div>
+    <div class="panel-title">Endings tracker</div>
+    <div id="endings" class="list"></div>
+  </section>
+
+  <footer>
+    <div class="hud">
+      <span class="pill">Goal: unlock a sincere, mutual confession</span>
+      <span class="pill">Win by Day 20 with Affection & Trust ≥ 80</span>
+      <span class="pill">Multiple endings</span>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="btn-reset">Reset</button>
+      <button class="btn secondary" id="btn-save">Save</button>
+      <button class="btn" id="btn-load">Load</button>
+    </div>
+  </footer>
+</div>
+
+<!-- Overlay Menus -->
+<div id="overlay" class="hidden">
+  <div class="modal fade-enter" id="modal">
+    <div class="title" id="modal-title">Welcome to Secure Centrix81</div>
+    <div class="subtitle" id="modal-sub">A gentle romance with strategy, puzzles, and choices.</div>
+    <div id="modal-body">
+      <div class="grid2">
+        <div>
+          <div class="panel-title">Controls</div>
+          <p>
+            <span class="kbd">Space</span> advance, <span class="kbd">Enter</span> select, <span class="kbd">Esc</span> pause.<br/>
+            Arrow keys navigate choices.
+          </p>
+          <div class="panel-title" style="margin-top:8px">Objective</div>
+          <p>Balance actions over phases (Morning/Noon/Evening) to raise Affection and Trust. Your words matter.</p>
+        </div>
+        <div>
+          <div class="panel-title">Difficulty</div>
+          <div class="row">
+            <button class="btn ghost" data-diff="easy">Easy</button>
+            <button class="btn ghost" data-diff="normal">Normal</button>
+            <button class="btn ghost" data-diff="hard">Hard</button>
+          </div>
+          <p class="notice">Difficulty changes gift prices, puzzle strictness, and required stats.</p>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn secondary" id="btn-credits">Credits</button>
+      <button class="btn grow" id="btn-start">Start</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Prevent scrolling with arrows/space in this non-scroll game
+  const blockKeys = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"]);
+  window.addEventListener("keydown", (e)=>{
+    if(blockKeys.has(e.code)){ e.preventDefault(); }
+    if(e.code==="Escape"){ togglePause(true); }
+    if(e.code==="Space"){ advance(); }
+    if(e.code==="Enter"){ // default select first choice
+      const choice = document.querySelector(".choice");
+      if(choice) choice.click();
+    }
+  });
+
+  // Basic state
+  const state = {
+    day:1, maxDay:20,
+    phaseIndex:0, phases:["Morning","Noon","Evening"],
+    coins:10,
+    difficulty:"normal",
+    stats:{ affection:10, trust:10, charm:10, intellect:10 },
+    inventory:[],
+    journal:[],
+    milestones:[],
+    endings:[],
+    actionUsed:false,
+    focus:"saharsh",
+    sceneQueue:[],
+    puzzle:{ word:"KISSING", letters:[], solved:false, active:false },
+  };
+
+  // Elements
+  const el = {
+    day: $("#hud-day"), maxday:$("#hud-maxday"), phase:$("#hud-phase"), coins:$("#hud-coins"),
+    barAff: $("#bar-affection"), barTrust:$("#bar-trust"), barCharm:$("#bar-charm"), barIntel:$("#bar-intellect"),
+    inventory: $("#inventory"), journal:$("#journal"), milestones:$("#milestones"), endings:$("#endings"),
+    choices: $("#choices"), dialogText: $("#dialog-text"), speaker:$("#speaker"),
+    btnNext: $("#btn-next"), btnSkip: $("#btn-skip"),
+    btnTalk: $("#act-talk"), btnGift: $("#act-gift"), btnStudy: $("#act-study"), btnPuzzle: $("#act-puzzle"),
+    btnPause: $("#btn-pause"), btnShop: $("#btn-shop"), btnMap: $("#btn-map"),
+    btnReset: $("#btn-reset"), btnSave: $("#btn-save"), btnLoad: $("#btn-load"),
+    overlay: $("#overlay"), modal: $("#modal"), modalTitle: $("#modal-title"), modalSub: $("#modal-sub"),
+    btnStart: $("#btn-start"), btnCredits: $("#btn-credits"),
+    scene: $("#scene"), puzzle: $("#puzzle"), tiles: $("#tiles"),
+    puzzleShuffle: $("#puzzle-shuffle"), puzzleGiveup: $("#puzzle-giveup"),
+    charS: $("#char-saharsh"), charA: $("#char-anbu"), sahImg: $("#saharsh-img"), sahPh: $("#saharsh-ph"), anbuPh: $("#anbu-ph")
+  };
+
+  // Load Saharsh image
+  try{
+    el.sahImg.src = "https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg";
+    el.sahImg.addEventListener("load", ()=>{ el.sahPh.classList.add("hidden"); });
+    el.sahImg.addEventListener("error", ()=>{
+      el.sahImg.classList.add("hidden");
+      el.sahPh.classList.remove("hidden");
+    });
+  }catch(e){
+    el.sahImg.classList.add("hidden");
+    el.sahPh.classList.remove("hidden");
+  }
+
+  // Utility
+  function $(q){ return document.querySelector(q); }
+  function addJournal(text){ state.journal.unshift({day:state.day, phase:phase(), text}); renderJournal(); }
+  function addMilestone(text){ state.milestones.unshift({day:state.day, text}); renderMilestones(); }
+  function addEnding(name){ if(!state.endings.includes(name)){ state.endings.push(name); renderEndings(); } }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function phase(){ return state.phases[state.phaseIndex]; }
+  function updateBars(){
+    el.barAff.style.width = state.stats.affection+"%";
+    el.barTrust.style.width = state.stats.trust+"%";
+    el.barCharm.style.width = state.stats.charm+"%";
+    el.barIntel.style.width = state.stats.intellect+"%";
+    el.day.textContent = state.day;
+    el.maxday.textContent = state.maxDay;
+    el.phase.textContent = phase();
+    el.coins.textContent = state.coins;
+  }
+  function renderInventory(){
+    el.inventory.innerHTML = "";
+    if(state.inventory.length===0){
+      el.inventory.innerHTML = `<div class="notice">No gifts yet. Visit the shop.</div>`;
+      return;
+    }
+    state.inventory.forEach(item=>{
+      const div = document.createElement("div");
+      div.className="card";
+      div.innerHTML = `<div><b>${item.name}</b> — <span class="notice">${item.desc}</span></div>
+      <div class="row" style="margin-top:6px">
+        <span class="chip">Affinity +${item.affection}</span>
+        <span class="chip">Trust +${item.trust}</span>
+        <span class="chip">Charm +${item.charm}</span>
+      </div>`;
+      el.inventory.appendChild(div);
+    });
+  }
+  function renderJournal(){
+    el.journal.innerHTML = "";
+    state.journal.forEach(j=>{
+      const d = document.createElement("div");
+      d.className="card";
+      d.innerHTML = `<div><b>Day ${j.day} ${j.phase}</b></div><div class="notice">${j.text}</div>`;
+      el.journal.appendChild(d);
+    });
+  }
+  function renderMilestones(){
+    el.milestones.innerHTML = "";
+    if(state.milestones.length===0){
+      el.milestones.innerHTML = `<div class="notice">Milestones appear as bonds deepen.</div>`;
+      return;
+    }
+    state.milestones.forEach(m=>{
+      const d = document.createElement("div");
+      d.className="card";
+      d.innerHTML = `<div><b>Day ${m.day}</b> — ${m.text}</div>`;
+      el.milestones.appendChild(d);
+    });
+  }
+  function renderEndings(){
+    el.endings.innerHTML = "";
+    if(state.endings.length===0){
+      el.endings.innerHTML = `<div class="notice">Discover endings through choices.</div>`;
+      return;
+    }
+    state.endings.forEach(e=>{
+      const d = document.createElement("div");
+      d.className="card";
+      d.textContent = e;
+      el.endings.appendChild(d);
+    });
+  }
+  function setChoices(options){
+    el.choices.innerHTML = "";
+    options.forEach(opt=>{
+      const b = document.createElement("button");
+      b.className="choice";
+      b.textContent = opt.text;
+      b.addEventListener("click", ()=> opt.onSelect());
+      el.choices.appendChild(b);
+    });
+  }
+  function say(speaker, text){
+    el.speaker.textContent = speaker;
+    el.dialogText.textContent = text;
+  }
+  function focusChar(name){
+    state.focus = name;
+    el.charS.classList.toggle("focus", name==="saharsh");
+    el.charA.classList.toggle("focus", name==="anbu");
+  }
+
+  function togglePause(show){
+    el.overlay.classList.toggle("hidden", !show);
+    el.modalTitle.textContent = "Paused";
+    el.modalSub.textContent = "Take a breath. Hearts can wait.";
+    el.btnStart.textContent = "Resume";
+  }
+
+  function startGame(){
+    el.overlay.classList.add("hidden");
+    state.sceneQueue = introScenes();
+    stepScene();
+  }
+
+  function resetGame(){
+    state.day=1; state.phaseIndex=0; state.coins=10; state.difficulty="normal";
+    state.stats={ affection:10, trust:10, charm:10, intellect:10 };
+    state.inventory=[]; state.journal=[]; state.milestones=[]; state.endings=[];
+    state.actionUsed=false; state.puzzle.solved=false; state.puzzle.active=false;
+    state.sceneQueue = introScenes();
+    updateBars(); renderInventory(); renderJournal(); renderMilestones(); renderEndings();
+    el.puzzle.classList.add("hidden");
+    el.choices.innerHTML = "";
+    stepScene();
+  }
+
+  // Scenes
+  function introScenes(){
+    return [
+      { speaker:"Narrator", text:"Saharsh and Anbu sitting in a tree—K-I-S-S-I-N-G? Only if you earn it." ,
+        choices:[
+          { text:"Smile and wave to both", fx: ()=>{ focusChar("anbu"); addJournal("You smiled; Anbu blushed, Saharsh laughed."); modStats({affection:+4, trust:+2, charm:+3}); } },
+          { text:"Crack a gentle joke", fx: ()=>{ focusChar("saharsh"); addJournal("Your joke lands; Saharsh relaxes."); modStats({affection:+3, trust:+2, charm:+2}); } },
+        ]
+      },
+      { speaker:"Anbu", text:"I like the quiet moments. What do you cherish?" ,
+        choices:[
+          { text:"Honesty. Even when it’s awkward.", fx: ()=>{ addJournal("You choose honesty."); modStats({trust:+6}); } },
+          { text:"Surprises. Life needs sparkle.", fx: ()=>{ addJournal("You choose surprises."); modStats({affection:+5, charm:+3}); } },
+        ]
+      },
+      { speaker:"Saharsh", text:"Strategy wins hearts. What’s your plan today?",
+        choices:[
+          { text:"Study first, then talk.", fx: ()=>{ addJournal("You prioritize study."); modStats({intellect:+6, trust:+3}); } },
+          { text:"Gift, then puzzle.", fx: ()=>{ addJournal("You aim to charm."); modStats({affection:+5, charm:+5}); } },
+        ]
+      },
+      { speaker:"Narrator", text:"Three phases per day. One major action each. Choose with care.",
+        choices:[
+          { text:"Begin Day 1", fx: ()=>{} }
+        ]
+      }
+    ];
+  }
+
+  function stepScene(){
+    updateBars();
+    const scene = state.sceneQueue.shift();
+    if(!scene){
+      dayPhaseIntro();
+      return;
+    }
+    say(scene.speaker, scene.text);
+    setChoices(scene.choices.map(c=>({
+      text:c.text,
+      onSelect: ()=>{
+        c.fx();
+        stepScene();
+      }
+    })));
+  }
+
+  function dayPhaseIntro(){
+    say("Narrator", `Day ${state.day}, ${phase()}. The air feels expectant.`);
+    setChoices([
+      { text:"Talk", onSelect:()=>doTalk() },
+      { text:"Gift", onSelect:()=>doGift() },
+      { text:"Study", onSelect:()=>doStudy() },
+      { text:"Puzzle", onSelect:()=>doPuzzle() }
+    ]);
+  }
+
+  function modStats(delta){
+    for(const k in delta){
+      state.stats[k] = clamp(state.stats[k] + delta[k], 0, 100);
+    }
+    updateBars();
+    checkMilestones();
+  }
+
+  function checkMilestones(){
+    const s = state.stats;
+    if(s.affection>=30 && !hasMs("First Flutter")){
+      addMilestone("First Flutter — a shared laugh lingers.");
+    }
+    if(s.trust>=40 && !hasMs("Steady Steps")){
+      addMilestone("Steady Steps — promises start to mean something.");
+    }
+    if(s.intellect>=50 && !hasMs("Spark of Insight")){
+      addMilestone("Spark of Insight — puzzles reveal character.");
+    }
+    if(s.affection>=80 && s.trust>=80){
+      addMilestone("Hearts Aligned — space between them softens.");
+    }
+  }
+  function hasMs(snippet){
+    return state.milestones.some(m=> (m.text||"").includes(snippet));
+  }
+
+  function spendCoins(n){
+    if(state.coins>=n){ state.coins-=n; updateBars(); return true; }
+    say("Narrator","Not enough coins. Earn more by studying or clearing puzzles.");
+    return false;
+  }
+
+  // Actions
+  function useAction(){
+    if(state.actionUsed){
+      say("Narrator","You already chose a major action this phase.");
+      return false;
+    }
+    state.actionUsed = true;
+    return true;
+  }
+
+  function doTalk(){
+    if(!useAction()) return;
+    const options = [
+      { text:"Share a sincere memory", trust:+6, affection:+3, focus:"anbu" },
+      { text:"Playfully tease", trust:+2, affection:+5, charm:+3, focus:"saharsh" },
+      { text:"Ask about their day", trust:+4, affection:+2, focus:"anbu" },
+    ];
+    say("Narrator","Words carry warmth. Choose your tone.");
+    setChoices(options.map(o=>({
+      text:o.text,
+      onSelect:()=>{
+        addJournal(`Talk: ${o.text}`);
+        focusChar(o.focus);
+        modStats({
+          trust:o.trust||0, affection:o.affection||0, charm:o.charm||0
+        });
+        afterAction();
+      }
+    })));
+  }
+
+  function doGift(){
+    if(!useAction()) return;
+    say("Narrator","A gift is a gesture, not a shortcut.");
+    setChoices([
+      { text:"Open gift shop", onSelect:()=>openShop() },
+      { text:"Give from inventory", onSelect:()=>giveInventory() },
+    ]);
+  }
+
+  function openShop(){
+    const prices = { normal: {flower:6, book:7, charm:8}, easy:{flower:5,book:6,charm:7}, hard:{flower:8,book:9,charm:10} }[state.difficulty];
+    const items = [
+      { name:"Wildflower", cost:prices.flower, desc:"Simple, honest", affection:+6, trust:+2, charm:+3 },
+      { name:"Essay Collection", cost:prices.book, desc:"Reflective ideas", affection:+2, trust:+5, intellect:+4 },
+      { name:"Star Pendant", cost:prices.charm, desc:"A tiny sparkle", affection:+7, charm:+5 }
+    ];
+    say("Shop","Choose a gift to purchase.");
+    setChoices(items.map(it=>({
+      text:`${it.name} — ${it.cost} coins`,
+      onSelect:()=>{
+        if(spendCoins(it.cost)){
+          state.inventory.push(it);
+          renderInventory();
+          addJournal(`Purchased ${it.name}.`);
+        }
+        dayPhaseIntro();
+      }
+    })).concat([{ text:"Back", onSelect:()=>dayPhaseIntro() }]));
+  }
+
+  function giveInventory(){
+    if(state.inventory.length===0){
+      say("Narrator","Your hands are empty—maybe words will do for now.");
+      setChoices([{ text:"Back", onSelect:()=>dayPhaseIntro() }]);
+      return;
+    }
+    say("Narrator","Choose a gift to offer.");
+    setChoices(state.inventory.map((it,idx)=>({
+      text:`Give ${it.name}`,
+      onSelect:()=>{
+        addJournal(`Gifted ${it.name}.`);
+        modStats({
+          affection: it.affection||0,
+          trust: it.trust||0,
+          charm: it.charm||0,
+          intellect: it.intellect||0
+        });
+        state.inventory.splice(idx,1);
+        renderInventory();
+        afterAction();
+      }
+    })).concat([{ text:"Back", onSelect:()=>dayPhaseIntro() }]));
+  }
+
+  function doStudy(){
+    if(!useAction()) return;
+    const gain = state.difficulty==="hard" ? 5 : state.difficulty==="easy" ? 9 : 7;
+    addJournal("You studied quietly, and clarity grew.");
+    modStats({ intellect:+gain, trust:+2 });
+    state.coins += 4;
+    updateBars();
+    afterAction();
+  }
+
+  // Puzzle mini-game: form secret word "KISSING"
+  function doPuzzle(){
+    if(!useAction()) return;
+    state.puzzle.active = true;
+    el.puzzle.classList.remove("hidden");
+    initPuzzle();
+    say("Narrator","Arrange the letters to spell a secret the tree whispers.");
+    setChoices([{ text:"Close puzzle", onSelect:()=>{ el.puzzle.classList.add("hidden"); dayPhaseIntro(); } }]);
+  }
+
+  function initPuzzle(){
+    state.puzzle.word = "KISSING";
+    state.puzzle.letters = shuffle(state.puzzle.word.split(""));
+    renderTiles();
+  }
+  function renderTiles(){
+    el.tiles.innerHTML = "";
+    state.puzzle.letters.forEach((ch, i)=>{
+      const t = document.createElement("div");
+      t.className="tile";
+      t.textContent = ch;
+      t.addEventListener("click", ()=>{
+        // swap with next
+        if(i < state.puzzle.letters.length-1){
+          const tmp = state.puzzle.letters[i+1];
+          state.puzzle.letters[i+1] = state.puzzle.letters[i];
+          state.puzzle.letters[i] = tmp;
+          renderTiles();
+          checkPuzzle();
+        }
+      });
+      el.tiles.appendChild(t);
+    });
+  }
+  function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+  function checkPuzzle(){
+    const attempt = state.puzzle.letters.join("");
+    const tiles = [...el.tiles.children];
+    tiles.forEach(x=>x.classList.remove("correct","wrong"));
+    if(attempt===state.puzzle.word){
+      tiles.forEach(x=>x.classList.add("correct"));
+      state.puzzle.solved = true;
+      addJournal("You solved the word: KISSING.");
+      modStats({ intellect:+6, charm:+6, affection:+4 });
+      el.puzzle.classList.add("hidden");
+      state.puzzle.active=false;
+      afterAction();
+    }else{
+      tiles.forEach(x=>x.classList.add("wrong"));
+      setTimeout(()=> tiles.forEach(x=>x.classList.remove("wrong")), 180);
+    }
+  }
+  el.puzzleShuffle.addEventListener("click", ()=>{
+    state.puzzle.letters = shuffle(state.puzzle.letters);
+    renderTiles();
+  });
+  el.puzzleGiveup.addEventListener("click", ()=>{
+    addJournal("You gave up the puzzle—for now.");
+    el.puzzle.classList.add("hidden");
+    state.puzzle.active=false;
+    afterAction();
+  });
+
+  function afterAction(){
+    // narrative reflection based on focus
+    if(state.focus==="anbu"){
+      say("Anbu","Thank you for being thoughtful.");
+    }else{
+      say("Saharsh","Smart moves. But be real with me too.");
+    }
+    setChoices([{ text:"Continue", onSelect:()=>advance() }]);
+    checkWinLose();
+  }
+
+  function advance(){
+    // if scene overlay active, ignore
+    if(state.sceneQueue.length>0){ stepScene(); return; }
+    // advance phase/day
+    state.actionUsed=false;
+    state.phaseIndex++;
+    if(state.phaseIndex>=state.phases.length){
+      state.phaseIndex=0;
+      state.day++;
+      // day-end drift events
+      dayEndEvents();
+    }
+    if(state.day>state.maxDay){
+      conclude();
+      return;
+    }
+    updateBars();
+    dayPhaseIntro();
+  }
+
+  function dayEndEvents(){
+    const s = state.stats;
+    if(s.trust>=60 && s.affection>=60){
+      addJournal("Evening: a quiet walk under leaves that hum with secrets.");
+    }else if(s.intellect>=60){
+      addJournal("Evening: you traded ideas and found comfort in curiosity.");
+    }else{
+      addJournal("Evening: a gentle goodnight—tomorrow calls.");
+    }
+  }
+
+  function checkWinLose(){
+    const s = state.stats;
+    if(s.affection>=80 && s.trust>=80){
+      addEnding("Hearts Aligned — mutual confession under starlit branches.");
+    }else if(state.day>=state.maxDay-2 && s.trust<40){
+      addEnding("Walls Unspoken — time thins and doubt thickens.");
+    }
+  }
+
+  function conclude(){
+    const s = state.stats;
+    let ending = "";
+    if(s.affection>=80 && s.trust>=80){
+      ending = "TRUE END: K-I-S-S-I-N-G — Soft, sincere, and mutual.";
+    }else if(s.affection>=70 || s.trust>=70){
+      ending = "Bittersweet End — A promise to keep trying.";
+    }else{
+      ending = "Quiet End — Leaves rustle, feelings remain unspoken.";
+    }
+    addEnding(ending);
+    say("Narrator", ending + " Thanks for playing.");
+    setChoices([
+      { text:"Replay", onSelect:()=>resetGame() },
+      { text:"Load Save", onSelect:()=>loadGame() }
+    ]);
+  }
+
+  // Map (simple flavor)
+  el.btnMap.addEventListener("click", ()=>{
+    showModal("Campus Map", "Choose a spot to set the tone.");
+    const body = $("#modal-body");
+    body.innerHTML = `
+    <div class="grid2">
+      <div class="card"><b>Old Tree</b><div class="notice">Affection grows faster.</div>
+        <div class="row" style="margin-top:8px"><button class="btn ghost" id="map-tree">Go</button></div></div>
+      <div class="card"><b>Library</b><div class="notice">Intellect & Trust rise.</div>
+        <div class="row" style="margin-top:8px"><button class="btn ghost" id="map-lib">Go</button></div></div>
+      <div class="card"><b>Courtyard</b><div class="notice">Charm gets spotlight.</div>
+        <div class="row" style="margin-top:8px"><button class="btn ghost" id="map-yard">Go</button></div></div>
+      <div class="card"><b>Café</b><div class="notice">Balanced gains.</div>
+        <div class="row" style="margin-top:8px"><button class="btn ghost" id="map-cafe">Go</button></div></div>
+    </div>`;
+    bind("#map-tree", ()=>{ addJournal("You visited the Old Tree; hearts feel closer."); modStats({affection:+4}); hideModal(); });
+    bind("#map-lib", ()=>{ addJournal("You studied together in the library."); modStats({intellect:+4, trust:+3}); hideModal(); });
+    bind("#map-yard", ()=>{ addJournal("You played in the courtyard; smiles came easy."); modStats({charm:+5}); hideModal(); });
+    bind("#map-cafe", ()=>{ addJournal("A café chat balanced the mood."); modStats({trust:+2, affection:+2, charm:+2}); hideModal(); });
+  });
+
+  // Shop quick
+  el.btnShop.addEventListener("click", ()=> openShop());
+
+  // Pause
+  el.btnPause.addEventListener("click", ()=> togglePause(true));
+  el.btnStart.addEventListener("click", ()=> togglePause(false));
+  el.btnCredits.addEventListener("click", ()=>{
+    $("#modal-body").innerHTML = `
+      <div class="card">Design & Code — Secure Centrix81</div>
+      <div class="card">Music — your imagination</div>
+      <div class="notice">Thank you for playing kindly.</div>`;
+  });
+
+  // Save / Load
+  el.btnSave.addEventListener("click", ()=> saveGame());
+  el.btnLoad.addEventListener("click", ()=> loadGame());
+  function saveGame(){
+    const data = JSON.stringify(state);
+    localStorage.setItem("SC81_SAVE", data);
+    addJournal("Game saved.");
+  }
+  function loadGame(){
+    const data = localStorage.getItem("SC81_SAVE");
+    if(!data){ addJournal("No save found."); return; }
+    const s = JSON.parse(data);
+    Object.assign(state, s);
+    updateBars(); renderInventory(); renderJournal(); renderMilestones(); renderEndings();
+    say("Narrator","Save loaded.");
+    dayPhaseIntro();
+  }
+
+  // Reset
+  el.btnReset.addEventListener("click", ()=> resetGame());
+
+  // Skip phase
+  el.btnSkip.addEventListener("click", ()=>{
+    addJournal("You watched the clouds drift by.");
+    advance();
+  });
+
+  el.btnNext.addEventListener("click", ()=> advance());
+
+  // Modal helpers
+  function showModal(title, sub){
+    el.overlay.classList.remove("hidden");
+    el.modalTitle.textContent = title;
+    el.modalSub.textContent = sub || "";
+    el.btnStart.textContent = "Close";
+  }
+  function hideModal(){ el.overlay.classList.add("hidden"); }
+  function bind(q, fn){ const e = document.querySelector(q); if(e) e.addEventListener("click", fn); }
+
+  // Difficulty selection
+  document.querySelectorAll("[data-diff]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.difficulty = btn.dataset.diff;
+      el.modalSub.textContent = `Difficulty set to ${state.difficulty}.`;
+    });
+  });
+  $("#btn-start").addEventListener("click", startGame);
+
+  // Initialize UI
+  updateBars(); renderInventory(); renderJournal(); renderMilestones(); renderEndings();
+
+  // Opening overlay
+  el.overlay.classList.remove("hidden");
+
+})();
+</script>
+</body>
+</html>

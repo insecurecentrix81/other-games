@@ -172,6 +172,373 @@
             <!-- Damage Indicator -->
             <div class="damage-indicator" id="damage-indicator"></div>
         </div>
+
+        <!-- Progression & Achievements Screen -->
+<div id="progression-screen" class="screen hidden">
+    <div class="progression-container">
+        <div class="progression-header">
+            <h2><i class="fas fa-chart-line"></i> PROGRESSION</h2>
+            <button id="progression-back" class="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+        </div>
+        
+        <div class="progression-tabs">
+            <button class="tab-btn active" data-tab="player">Player</button>
+            <button class="tab-btn" data-tab="skills">Skills</button>
+            <button class="tab-btn" data-tab="achievements">Achievements</button>
+            <button class="tab-btn" data-tab="statistics">Statistics</button>
+        </div>
+        
+        <div class="progression-content">
+            <div id="player-tab" class="tab-content active">
+                <div class="player-summary">
+                    <div class="level-display">
+                        <div class="level-circle">
+                            <span id="player-level">1</span>
+                        </div>
+                        <div class="xp-bar-container">
+                            <div class="xp-bar">
+                                <div class="xp-fill" id="xp-fill"></div>
+                            </div>
+                            <div class="xp-text" id="xp-text">0/1000 XP</div>
+                        </div>
+                    </div>
+                    
+                    <div class="player-stats-grid">
+                        <div class="stat-card">
+                            <h4>Health</h4>
+                            <p id="stat-health">100</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Stamina</h4>
+                            <p id="stat-stamina">100</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Dead Eye</h4>
+                            <p id="stat-deadeye">100</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Accuracy</h4>
+                            <p id="stat-accuracy">0%</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>K/D Ratio</h4>
+                            <p id="stat-kd">0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Play Time</h4>
+                            <p id="stat-playtime">0h 0m</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="skill-points">
+                    <h3>Skill Points: <span id="skill-points-count">0</span></h3>
+                </div>
+            </div>
+            
+            <div id="skills-tab" class="tab-content">
+                <div class="skill-tree">
+                    <div class="skill-category">
+                        <h3><i class="fas fa-crosshairs"></i> Combat</h3>
+                        <div class="skills-grid" id="combat-skills"></div>
+                    </div>
+                    <div class="skill-category">
+                        <h3><i class="fas fa-heart"></i> Survival</h3>
+                        <div class="skills-grid" id="survival-skills"></div>
+                    </div>
+                    <div class="skill-category">
+                        <h3><i class="fas fa-eye"></i> Dead Eye</h3>
+                        <div class="skills-grid" id="deadeye-skills"></div>
+                    </div>
+                    <div class="skill-category">
+                        <h3><i class="fas fa-horse"></i> Horse</h3>
+                        <div class="skills-grid" id="horse-skills"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="achievements-tab" class="tab-content">
+                <div class="achievements-summary">
+                    <div class="achievement-stats">
+                        <p>Total: <span id="achievements-total">0</span></p>
+                        <p>Completed: <span id="achievements-completed">0</span></p>
+                        <p>Progress: <span id="achievements-progress">0%</span></p>
+                    </div>
+                </div>
+                
+                <div class="achievements-categories">
+                    <button class="category-btn active" data-category="all">All</button>
+                    <button class="category-btn" data-category="COMBAT">Combat</button>
+                    <button class="category-btn" data-category="EXPLORATION">Exploration</button>
+                    <button class="category-btn" data-category="PROGRESSION">Progression</button>
+                    <button class="category-btn" data-category="COLLECTION">Collection</button>
+                    <button class="category-btn" data-category="MASTERY">Mastery</button>
+                </div>
+                
+                <div class="achievements-list" id="achievements-list"></div>
+            </div>
+            
+            <div id="statistics-tab" class="tab-content">
+                <div class="statistics-grid">
+                    <div class="statistic-card">
+                        <h4>Total Play Time</h4>
+                        <p id="stat-total-playtime">0h 0m</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>Total Kills</h4>
+                        <p id="stat-total-kills">0</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>Total Money Earned</h4>
+                        <p id="stat-total-money">$0</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>Missions Completed</h4>
+                        <p id="stat-total-missions">0</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>Headshot Accuracy</h4>
+                        <p id="stat-headshot-accuracy">0%</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>Longest Combo</h4>
+                        <p id="stat-longest-combo">0</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>Daily Challenges</h4>
+                        <p id="stat-daily-challenges">0</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>Endless Waves</h4>
+                        <p id="stat-endless-waves">0</p>
+                    </div>
+                    <div class="statistic-card">
+                        <h4>NG+ Cycles</h4>
+                        <p id="stat-ngplus-cycles">0</p>
+                    </div>
+                </div>
+                
+                <div class="daily-streak">
+                    <h3>Daily Login Streak: <span id="daily-streak-count">0</span> days</h3>
+                    <div class="streak-calendar" id="streak-calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Endless Mode Screen -->
+<div id="endless-mode-screen" class="screen hidden">
+    <div class="endless-container">
+        <div class="endless-header">
+            <h2><i class="fas fa-infinity"></i> ENDLESS MODE</h2>
+            <button id="endless-back" class="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+        </div>
+        
+        <div class="endless-content">
+            <div class="endless-arenas">
+                <h3>Select Arena</h3>
+                <div class="arena-grid" id="arena-grid"></div>
+            </div>
+            
+            <div class="endless-stats">
+                <h3>High Scores</h3>
+                <div class="high-scores" id="high-scores"></div>
+                
+                <div class="personal-stats">
+                    <h3>Your Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span>Total Runs:</span>
+                            <span id="endless-total-runs">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Highest Wave:</span>
+                            <span id="endless-highest-wave">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Highest Score:</span>
+                            <span id="endless-highest-score">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Average Score:</span>
+                            <span id="endless-average-score">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="endless-rules">
+                <h3><i class="fas fa-info-circle"></i> Rules</h3>
+                <ul>
+                    <li>Survive as many waves as possible</li>
+                    <li>Difficulty increases every 10 waves</li>
+                    <li>Rewards scale with wave number</li>
+                    <li>Special rewards at wave milestones</li>
+                    <li>Compete for high scores!</li>
+                </ul>
+                
+                <button id="start-endless" class="start-btn">
+                    <i class="fas fa-play"></i> Start Endless Mode
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Challenges Screen -->
+<div id="daily-challenges-screen" class="screen hidden">
+    <div class="daily-container">
+        <div class="daily-header">
+            <h2><i class="fas fa-calendar-day"></i> DAILY CHALLENGES</h2>
+            <button id="daily-back" class="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+        </div>
+        
+        <div class="daily-info">
+            <div class="date-info">
+                <h3 id="current-date">Today's Date</h3>
+                <p>Refreshes in: <span id="refresh-timer">24:00:00</span></p>
+            </div>
+            
+            <div class="streak-info">
+                <div class="streak-display">
+                    <i class="fas fa-fire"></i>
+                    <span id="current-streak">0</span> day streak
+                </div>
+                <div class="longest-streak">
+                    Longest: <span id="longest-streak">0</span> days
+                </div>
+            </div>
+        </div>
+        
+        <div class="challenges-list" id="challenges-list"></div>
+        
+        <div class="daily-rewards">
+            <h3>Daily Completion Rewards</h3>
+            <div class="rewards-grid">
+                <div class="reward-day">
+                    <div class="day-number">Day 1</div>
+                    <div class="reward">$100</div>
+                </div>
+                <div class="reward-day">
+                    <div class="day-number">Day 3</div>
+                    <div class="reward">500 XP</div>
+                </div>
+                <div class="reward-day">
+                    <div class="day-number">Day 7</div>
+                    <div class="reward">Rare Weapon</div>
+                </div>
+                <div class="reward-day">
+                    <div class="day-number">Day 30</div>
+                    <div class="reward">Legendary Title</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Game+ Screen -->
+<div id="ngplus-screen" class="screen hidden">
+    <div class="ngplus-container">
+        <div class="ngplus-header">
+            <h2><i class="fas fa-redo"></i> NEW GAME+</h2>
+            <button id="ngplus-back" class="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+        </div>
+        
+        <div class="ngplus-content">
+            <div class="ngplus-status" id="ngplus-status">
+                <div class="locked-message" id="ngplus-locked">
+                    <h3><i class="fas fa-lock"></i> Locked</h3>
+                    <p>Complete the main story and reach level 20 to unlock New Game+</p>
+                    <div class="requirements">
+                        <div class="requirement">
+                            <span>Story Complete:</span>
+                            <span id="req-story">0/15</span>
+                        </div>
+                        <div class="requirement">
+                            <span>Player Level:</span>
+                            <span id="req-level">1/20</span>
+                        </div>
+                        <div class="requirement">
+                            <span>Achievements:</span>
+                            <span id="req-achievements">0/10</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="unlocked-content hidden" id="ngplus-unlocked">
+                    <div class="current-cycle">
+                        <h3>Current Cycle: <span id="current-cycle">1</span></h3>
+                        <div class="cycle-bonuses" id="cycle-bonuses"></div>
+                    </div>
+                    
+                    <div class="cycle-multipliers">
+                        <h3>Cycle Multipliers</h3>
+                        <div class="multiplier-grid">
+                            <div class="multiplier-item">
+                                <span>Enemy Health:</span>
+                                <span id="mult-enemy-health">+50%</span>
+                            </div>
+                            <div class="multiplier-item">
+                                <span>Enemy Damage:</span>
+                                <span id="mult-enemy-damage">+30%</span>
+                            </div>
+                            <div class="multiplier-item">
+                                <span>Enemy Accuracy:</span>
+                                <span id="mult-enemy-accuracy">+20%</span>
+                            </div>
+                            <div class="multiplier-item">
+                                <span>XP Rewards:</span>
+                                <span id="mult-xp-rewards">+50%</span>
+                            </div>
+                            <div class="multiplier-item">
+                                <span>Money Rewards:</span>
+                                <span id="mult-money-rewards">+50%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ngplus-objectives">
+                        <h3>NG+ Exclusive Objectives</h3>
+                        <ul>
+                            <li>Time Challenges</li>
+                            <li>No Damage Runs</li>
+                            <li>Headshot Requirements</li>
+                            <li>Special NG+ Rewards</li>
+                        </ul>
+                    </div>
+                    
+                    <button id="start-ngplus" class="ngplus-btn">
+                        <i class="fas fa-redo"></i> Start New Cycle
+                    </button>
+                </div>
+            </div>
+            
+            <div class="ngplus-leaderboard">
+                <h3>Cycle Leaderboard</h3>
+                <div class="leaderboard" id="ngplus-leaderboard"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Random Events Overlay -->
+<div id="random-events-overlay" class="hidden">
+    <div class="random-event" id="random-event">
+        <div class="event-header">
+            <h3 id="event-title">Random Event</h3>
+            <span class="event-type" id="event-type">Common</span>
+        </div>
+        <div class="event-content">
+            <p id="event-description">Event description goes here</p>
+            <div class="event-rewards" id="event-rewards"></div>
+        </div>
+        <div class="event-actions">
+            <button id="event-accept" class="event-btn accept">Accept</button>
+            <button id="event-decline" class="event-btn decline">Decline</button>
+        </div>
+    </div>
+</div>
         
         <!-- Pause Menu -->
         <div id="pause-menu" class="hidden">

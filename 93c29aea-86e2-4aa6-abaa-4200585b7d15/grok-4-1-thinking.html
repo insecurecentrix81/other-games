@@ -1,1 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh ♡ Anbu Dating Sim</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full m-0 overflow-hidden">
+    <!-- Start Screen -->
+    <div id="start-screen" class="flex flex-col items-center justify-center h-full bg-gradient-to-b from-pink-900 to-purple-900">
+        <h1 class="text-7xl font-bold text-pink-300 mb-8 animate-pulse">Saharsh ♡ Anbu</h1>
+        <p class="text-5xl text-pink-200 mb-12">Sitting in a tree<br>K-I-S-S-I-N-G</p>
+        <button id="start-button" class="px-16 py-8 bg-pink-600 text-white text-4xl rounded-2xl hover:bg-pink-800 transition shadow-2xl">Start Romance</button>
+    </div>
 
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden relative h-full">
+        <div id="background" class="absolute inset-0 bg-cover bg-center transition-all duration-1000"></div>
+        
+        <div class="absolute top-4 right-4 text-4xl bg-black bg-opacity-70 px-8 py-4 rounded-xl">
+            ❤️ <span id="affection">0</span>
+        </div>
+
+        <img id="saharsh" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 object-contain opacity-0 transition-opacity duration-1000" src="">
+
+        <div id="dialogue-box" class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-12 pt-32">
+            <p id="speaker" class="text-5xl font-bold text-pink-300 mb-4"></p>
+            <p id="dialogue-text" class="text-3xl leading-relaxed"></p>
+        </div>
+
+        <div id="choices" class="absolute inset-x-0 bottom-56 flex flex-col items-center gap-6 px-20"></div>
+    </div>
+
+    <script>
+        const saharshImg = "https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg";
+
+        let affection = 0;
+        let currentScene = 0;
+        let currentDialogue = 0;
+
+        const scenes = [
+            {
+                background: "https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80",
+                showSaharsh: false,
+                dialogues: [
+                    {speaker: "Narrator", text: "This is the love story you've been waiting for..."},
+                    {speaker: "Narrator", text: "You are Anbu."},
+                    {speaker: "Narrator", text: "Your mission: make Saharsh fall completely in love with you."},
+                    {speaker: "Narrator", text: "Choose wisely — every word matters."}
+                ],
+                nextScene: 1
+            },
+            {
+                background: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1929&q=80",
+                showSaharsh: true,
+                dialogues: [
+                    {speaker: "Saharsh", text: "Hey Anbu! You look kinda cute today..."},
+                    {speaker: "Saharsh", text: "Wait, did I just say that out loud?"}
+                ],
+                choices: [
+                    {text: "Yeah you did ♡ And I liked it", affection: 30},
+                    {text: "i forgor how to respond", affection: 20},
+                    {text: "Shut up dummy", affection: -20}
+                ],
+                nextScene: 2
+            },
+            {
+                background: "https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80",
+                showSaharsh: true,
+                dialogues: [
+                    {speaker: "Saharsh", text: "I love this park... especially when you're here with me."},
+                    {speaker: "Saharsh", text: "Wanna do something fun?"}
+                ],
+                choices: [
+                    {text: "Hold your hand? ♡", affection: 40},
+                    {text: "Race you to the swings!", affection: 25},
+                    {text: "i forgor what fun is", affection: 15},
+                    {text: "No, let's just sit in silence", affection: -30}
+                ],
+                nextScene: 3
+            },
+            {
+                background: "https://images.unsplash.com/photo-1501436513145-52100d5eae49?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80",
+                showSaharsh: true,
+                dialogues: [
+                    {speaker: "Saharsh", text: "Anbu... there's something I've been wanting to say."},
+                    {speaker: "Saharsh", text: "I... I think I like you. Like, really like you."}
+                ],
+                choices: [
+                    {text: "I love you too Saharsh!!! ♡♡♡", affection: 50},
+                    {text: "Wait... really??", affection: 20},
+                    {text: "i forgor how to love", affection: -50}
+                ],
+                nextScene: 4
+            },
+            {
+                background: "https://images.unsplash.com/photo-1465146633011-14f8e0781093?ixlib=rb-4.0.3&auto=format&fit=crop&w=1974&q=80",
+                showSaharsh: true,
+                dialogues: []
+            }
+        ];
+
+        function updateAffection() {
+            document.getElementById('affection').innerText = Math.max(0, affection);
+        }
+
+        function loadScene(index) {
+            const scene = scenes[index];
+            currentDialogue = 0;
+            document.getElementById('background').style.backgroundImage = `url(${scene.background})`;
+            const img = document.getElementById('saharsh');
+            if (scene.showSaharsh) {
+                img.src = saharshImg;
+                img.classList.remove('opacity-0');
+            } else {
+                img.classList.add('opacity-0');
+            }
+            document.getElementById('choices').innerHTML = '';
+
+            if (index === 4) { // Ending
+                let endingDialogues = [];
+                if (affection >= 100) {
+                    endingDialogues = [
+                        {speaker: "Saharsh", text: "Anbu... I LOVE YOU SO MUCH!!! ♡♡♡"},
+                        {speaker: "Both", text: "Let's climb that tree right now!"},
+                        {speaker: "Narrator", text: "And that's exactly what they did..."},
+                        {speaker: "Everyone", text: "SAHARSH AND ANBU SITTING IN A TREE"},
+                        {speaker: "Everyone", text: "K-I-S-S-I-N-G!!! ♡♡♡♡♡"},
+                        {speaker: "Narrator", text: "PERFECT ENDING: TRUE LOVE ACHIEVED!"}
+                    ];
+                } else if (affection >= 70) {
+                    endingDialogues = [
+                        {speaker: "Saharsh", text: "Be mine, Anbu?"},
+                        {speaker: "Anbu (you)", text: "YES!!! ♡"},
+                        {speaker: "Narrator", text: "Good Ending: Officially Dating!"}
+                    ];
+                } else if (affection >= 30) {
+                    endingDialogues = [
+                        {speaker: "Saharsh", text: "You're my favorite person ever."},
+                        {speaker: "Narrator", text: "Friendzone+ Ending"}
+                    ];
+                } else {
+                    endingDialogues = [
+                        {speaker: "Saharsh", text: "...okay then."},
+                        {speaker: "Narrator", text: "Bad Ending: You forgor his heart 💀"}
+                    ];
+                }
+                scenes[4].dialogues = endingDialogues;
+            }
+
+            displayCurrentDialogue();
+        }
+
+        function displayCurrentDialogue() {
+            const dlg = scenes[currentScene].dialogues[currentDialogue];
+            if (dlg) {
+                document.getElementById('speaker').innerText = dlg.speaker;
+                document.getElementById('dialogue-text').innerText = dlg.text;
+            }
+        }
+
+        function showChoices(choicesArr) {
+            const container = document.getElementById('choices');
+            container.innerHTML = '';
+            choicesArr.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = "px-12 py-6 bg-pink-700 text-white text-2xl rounded-xl hover:bg-pink-900 transition transform hover:scale-105 shadow-2xl w-full max-w-3xl";
+                btn.innerText = choice.text;
+                btn.onclick = () => {
+                    affection += choice.affection || 0;
+                    updateAffection();
+                    container.innerHTML = '';
+                    currentScene = scenes[currentScene].nextScene;
+                    loadScene(currentScene);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        // Controls
+        document.getElementById('start-button').onclick = () => {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            affection = 0;
+            updateAffection();
+            loadScene(0);
+        };
+
+        document.getElementById('game-screen').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            currentDialogue++;
+            if (currentDialogue >= scenes[currentScene].dialogues.length) {
+                const scene = scenes[currentScene];
+                if (scene.choices?.length > 0) {
+                    showChoices(scene.choices);
+                } else if (scene.nextScene != null) {
+                    currentScene = scene.nextScene;
+                    loadScene(currentScene);
+                }
+            } else {
+                displayCurrentDialogue();
+            }
+        });
+    </script>
+</body>
+</html>

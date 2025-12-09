@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontier's Call - Wild West Shooter</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/TextureLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/effects/OutlineEffect.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <div class="loading-container">
+            <div class="revolver-loader">
+                <div class="cylinder"></div>
+                <div class="hammer"></div>
+                <div class="barrel"></div>
+            </div>
+            <h1>Frontier's Call</h1>
+            <div class="progress-container">
+                <div class="progress-bar" id="loading-progress"></div>
+            </div>
+            <p class="loading-text" id="loading-text">Loading assets...</p>
+            <div class="loading-tips">
+                <p><i class="fas fa-lightbulb"></i> Tip: Press TAB to switch between first and third person views</p>
+                <p><i class="fas fa-lightbulb"></i> Tip: Hold RMB to aim, LMB to fire</p>
+                <p><i class="fas fa-lightbulb"></i> Tip: Press E to interact with objects and NPCs</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen hidden">
+        <div class="menu-background"></div>
+        <div class="menu-container">
+            <h1 class="game-title">FRONTIER'S CALL</h1>
+            <p class="game-subtitle">1899 • The West Awaits</p>
+            
+            <div class="menu-options">
+                <button id="new-game-btn" class="menu-btn">
+                    <i class="fas fa-play"></i> New Game
+                </button>
+                <button id="continue-btn" class="menu-btn">
+                    <i class="fas fa-undo"></i> Continue
+                </button>
+                <button id="mission-select-btn" class="menu-btn">
+                    <i class="fas fa-map"></i> Mission Select
+                </button>
+                <button id="free-roam-btn" class="menu-btn">
+                    <i class="fas fa-horse"></i> Free Roam
+                </button>
+                <button id="options-btn" class="menu-btn">
+                    <i class="fas fa-cog"></i> Options
+                </button>
+                <button id="credits-btn" class="menu-btn">
+                    <i class="fas fa-star"></i> Credits
+                </button>
+            </div>
+            
+            <div class="menu-footer">
+                <p class="version">Version 1.0.0 | WASD to move | Mouse to look | ESC to pause</p>
+                <div class="reputation-badge">
+                    <span class="lawful-badge"><i class="fas fa-star"></i> Lawful</span>
+                    <span class="outlaw-badge"><i class="fas fa-skull-crossbones"></i> Outlaw</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mission Select Screen -->
+    <div id="mission-select" class="screen hidden">
+        <div class="mission-container">
+            <div class="mission-header">
+                <h2><i class="fas fa-map-marked-alt"></i> MISSION SELECT</h2>
+                <button id="back-to-menu" class="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+            </div>
+            
+            <div class="mission-grid">
+                <!-- Missions will be populated by JavaScript -->
+            </div>
+            
+            <div class="player-stats">
+                <div class="stat">
+                    <span class="stat-label">Money:</span>
+                    <span class="stat-value" id="money-stat">$0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Reputation:</span>
+                    <div class="reputation-bar">
+                        <div class="lawful-bar"></div>
+                        <div class="outlaw-bar"></div>
+                    </div>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Missions Completed:</span>
+                    <span class="stat-value" id="missions-stat">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Canvas Container -->
+    <div id="game-container" class="hidden">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- HUD Elements -->
+        <div id="hud">
+            <!-- Health and Stamina -->
+            <div class="hud-section left">
+                <div class="health-container">
+                    <div class="health-bar">
+                        <div class="health-fill" id="health-fill"></div>
+                    </div>
+                    <span class="health-text" id="health-text">100</span>
+                </div>
+                
+                <div class="stamina-container">
+                    <div class="stamina-bar">
+                        <div class="stamina-fill" id="stamina-fill"></div>
+                    </div>
+                    <span class="stamina-text" id="stamina-text">100</span>
+                </div>
+            </div>
+            
+            <!-- Weapon Info -->
+            <div class="hud-section center">
+                <div class="weapon-info">
+                    <div class="weapon-name" id="weapon-name">Colt .45</div>
+                    <div class="ammo-counter" id="ammo-counter">6/24</div>
+                </div>
+                
+                <div class="dead-eye-container">
+                    <div class="dead-eye-bar">
+                        <div class="dead-eye-fill" id="dead-eye-fill"></div>
+                    </div>
+                    <span class="dead-eye-text">DEAD EYE</span>
+                </div>
+            </div>
+            
+            <!-- Mission Info -->
+            <div class="hud-section right">
+                <div class="mission-info">
+                    <h4 class="mission-title" id="mission-title">No Active Mission</h4>
+                    <div class="objectives-list" id="objectives-list"></div>
+                </div>
+                
+                <div class="minimap-container">
+                    <canvas id="minimap" width="150" height="150"></canvas>
+                    <div class="minimap-player"></div>
+                </div>
+            </div>
+            
+            <!-- Crosshair -->
+            <div class="crosshair" id="crosshair">
+                <div class="crosshair-dot"></div>
+                <div class="crosshair-horizontal"></div>
+                <div class="crosshair-vertical"></div>
+            </div>
+            
+            <!-- Interaction Prompt -->
+            <div class="interaction-prompt" id="interaction-prompt">
+                <i class="fas fa-hand-point-up"></i> Press E to interact
+            </div>
+            
+            <!-- Damage Indicator -->
+            <div class="damage-indicator" id="damage-indicator"></div>
+        </div>
+        
+        <!-- Pause Menu -->
+        <div id="pause-menu" class="hidden">
+            <div class="pause-overlay">
+                <h2>PAUSED</h2>
+                <div class="pause-options">
+                    <button id="resume-btn" class="pause-btn">
+                        <i class="fas fa-play"></i> Resume
+                    </button>
+                    <button id="restart-mission-btn" class="pause-btn">
+                        <i class="fas fa-redo"></i> Restart Mission
+                    </button>
+                    <button id="options-game-btn" class="pause-btn">
+                        <i class="fas fa-cog"></i> Options
+                    </button>
+                    <button id="quit-mission-btn" class="pause-btn">
+                        <i class="fas fa-sign-out-alt"></i> Quit to Menu
+                    </button>
+                </div>
+                <div class="pause-stats">
+                    <p>Mission: <span id="pause-mission-name">None</span></p>
+                    <p>Time: <span id="pause-time">00:00</span></p>
+                    <p>Enemies Remaining: <span id="pause-enemies">0</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mission Complete Screen -->
+        <div id="mission-complete" class="screen hidden">
+            <div class="complete-container">
+                <div class="complete-header">
+                    <h1>MISSION COMPLETE</h1>
+                    <h2 id="complete-mission-name">Mission Name</h2>
+                </div>
+                
+                <div class="complete-stats">
+                    <div class="stat-card">
+                        <h4>Time</h4>
+                        <p id="complete-time">00:00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Accuracy</h4>
+                        <p id="complete-accuracy">0%</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Enemies Killed</h4>
+                        <p id="complete-kills">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Rewards</h4>
+                        <p id="complete-rewards">$0</p>
+                    </div>
+                </div>
+                
+                <div class="complete-buttons">
+                    <button id="complete-continue" class="complete-btn">
+                        <i class="fas fa-forward"></i> Continue
+                    </button>
+                    <button id="complete-retry" class="complete-btn">
+                        <i class="fas fa-redo"></i> Retry Mission
+                    </button>
+                    <button id="complete-menu" class="complete-btn">
+                        <i class="fas fa-home"></i> Main Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Over Screen -->
+        <div id="game-over" class="screen hidden">
+            <div class="game-over-container">
+                <h1>YOU DIED</h1>
+                <div class="death-message" id="death-message">Shot dead in the streets of the frontier</div>
+                <div class="game-over-buttons">
+                    <button id="retry-checkpoint" class="game-over-btn">
+                        <i class="fas fa-undo"></i> Retry Checkpoint
+                    </button>
+                    <button id="load-last-save" class="game-over-btn">
+                        <i class="fas fa-download"></i> Load Last Save
+                    </button>
+                    <button id="game-over-menu" class="game-over-btn">
+                        <i class="fas fa-home"></i> Main Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Options Menu -->
+    <div id="options-menu" class="screen hidden">
+        <div class="options-container">
+            <div class="options-header">
+                <h2><i class="fas fa-cog"></i> OPTIONS</h2>
+                <button id="options-back" class="back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+            </div>
+            
+            <div class="options-tabs">
+                <button class="tab-btn active" data-tab="gameplay">Gameplay</button>
+                <button class="tab-btn" data-tab="controls">Controls</button>
+                <button class="tab-btn" data-tab="graphics">Graphics</button>
+                <button class="tab-btn" data-tab="audio">Audio</button>
+            </div>
+            
+            <div class="options-content">
+                <div id="gameplay-tab" class="tab-content active">
+                    <div class="option-group">
+                        <label for="difficulty">Difficulty</label>
+                        <select id="difficulty">
+                            <option value="easy">Greenhorn</option>
+                            <option value="medium" selected>Gunslinger</option>
+                            <option value="hard">Legend</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="auto-aim" checked> Auto-Aim Assist
+                        </label>
+                    </div>
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="subtitles" checked> Show Subtitles
+                        </label>
+                    </div>
+                    <div class="option-group">
+                        <label for="gore-level">Gore Level</label>
+                        <select id="gore-level">
+                            <option value="minimal">Minimal</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="controls-tab" class="tab-content">
+                    <div class="key-bindings">
+                        <div class="binding">
+                            <span>Move Forward</span>
+                            <kbd>W</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Move Backward</span>
+                            <kbd>S</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Strafe Left</span>
+                            <kbd>A</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Strafe Right</span>
+                            <kbd>D</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Aim</span>
+                            <kbd>Right Mouse</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Fire</span>
+                            <kbd>Left Mouse</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Switch Perspective</span>
+                            <kbd>TAB</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Interact</span>
+                            <kbd>E</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Sprint</span>
+                            <kbd>Shift</kbd>
+                        </div>
+                        <div class="binding">
+                            <span>Dead Eye</span>
+                            <kbd>Q</kbd>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="graphics-tab" class="tab-content">
+                    <div class="option-group">
+                        <label for="resolution">Resolution</label>
+                        <select id="resolution">
+                            <option value="low">Low (720p)</option>
+                            <option value="medium" selected>Medium (1080p)</option>
+                            <option value="high">High (1440p)</option>
+                            <option value="ultra">Ultra (Native)</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label for="texture-quality">Texture Quality</label>
+                        <select id="texture-quality">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="shadows" checked> Shadows
+                        </label>
+                    </div>
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="particles" checked> Particles
+                        </label>
+                    </div>
+                    <div class="option-group">
+                        <label for="fps-limit">FPS Limit</label>
+                        <select id="fps-limit">
+                            <option value="30">30 FPS</option>
+                            <option value="60" selected>60 FPS</option>
+                            <option value="120">120 FPS</option>
+                            <option value="unlimited">Unlimited</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="audio-tab" class="tab-content">
+                    <div class="option-group">
+                        <label for="master-volume">Master Volume</label>
+                        <input type="range" id="master-volume" min="0" max="100" value="80">
+                    </div>
+                    <div class="option-group">
+                        <label for="sfx-volume">SFX Volume</label>
+                        <input type="range" id="sfx-volume" min="0" max="100" value="90">
+                    </div>
+                    <div class="option-group">
+                        <label for="music-volume">Music Volume</label>
+                        <input type="range" id="music-volume" min="0" max="100" value="70">
+                    </div>
+                    <div class="option-group">
+                        <label for="dialogue-volume">Dialogue Volume</label>
+                        <input type="range" id="dialogue-volume" min="0" max="100" value="85">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="options-footer">
+                <button id="save-options" class="save-btn">Save Changes</button>
+                <button id="reset-options" class="reset-btn">Reset to Defaults</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Credits Screen -->
+    <div id="credits-screen" class="screen hidden">
+        <div class="credits-container">
+            <h1>CREDITS</h1>
+            <div class="credits-content">
+                <div class="credit-category">
+                    <h3>Development</h3>
+                    <p>Frontier's Call Development Team</p>
+                </div>
+                <div class="credit-category">
+                    <h3>Art & Assets</h3>
+                    <p>3D Models: Mixamo, Kenney</p>
+                    <p>Textures: CC0 Textures</p>
+                    <p>Sound Effects: Freesound.org</p>
+                    <p>Music: OpenGameArt.org</p>
+                </div>
+                <div class="credit-category">
+                    <h3>Technology</h3>
+                    <p>three.js - 3D Graphics Library</p>
+                    <p>Howler.js - Audio Engine</p>
+                    <p>Tween.js - Animation Library</p>
+                </div>
+                <div class="credit-category">
+                    <h3>Special Thanks</h3>
+                    <p>To all beta testers and the open source community</p>
+                </div>
+            </div>
+            <button id="credits-back" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Menu</button>
+        </div>
+    </div>
+
+    <!-- Dialogue Interface -->
+    <div id="dialogue-ui" class="hidden">
+        <div class="dialogue-container">
+            <div class="speaker-info">
+                <div class="speaker-portrait" id="speaker-portrait"></div>
+                <div class="speaker-name" id="speaker-name">Character Name</div>
+            </div>
+            <div class="dialogue-text" id="dialogue-text">
+                This is the dialogue text that will appear here.
+            </div>
+            <div class="dialogue-options" id="dialogue-options">
+                <!-- Options will be added dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Overlay (Can be toggled with F3) -->
+    <div id="debug-overlay" class="hidden">
+        <div class="debug-info">
+            <p>FPS: <span id="debug-fps">0</span></p>
+            <p>Position: <span id="debug-position">0, 0, 0</span></p>
+            <p>Entities: <span id="debug-entities">0</span></p>
+            <p>Memory: <span id="debug-memory">0 MB</span></p>
+        </div>
+    </div>
+
+    <!-- Scripts (Loaded as modules) -->
+    <script type="module" src="constants.js"></script>
+    <script type="module" src="engine.js"></script>
+    <script type="module" src="gameState.js"></script>
+    <script type="module" src="input.js"></script>
+    <script type="module" src="physics.js"></script>
+    <script type="module" src="audioManager.js"></script>
+    <script type="module" src="missionSystem.js"></script>
+    <script type="module" src="economySystem.js"></script>
+    <script type="module" src="timeWeather.js"></script>
+    <script type="module" src="aiManager.js"></script>
+    <script type="module" src="player.js"></script>
+    <script type="module" src="horse.js"></script>
+    <script type="module" src="weaponSystem.js"></script>
+    <script type="module" src="enemyTypes.js"></script>
+    <script type="module" src="npcSystem.js"></script>
+    <script type="module" src="terrainGenerator.js"></script>
+    <script type="module" src="buildingSystem.js"></script>
+    <script type="module" src="environmentEffects.js"></script>
+    <script type="module" src="hud.js"></script>
+    <script type="module" src="menuSystem.js"></script>
+    <script type="module" src="dialogueUI.js"></script>
+    <script type="module" src="missionUI.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>

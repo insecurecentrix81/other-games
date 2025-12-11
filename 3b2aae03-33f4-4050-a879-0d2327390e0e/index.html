@@ -1,0 +1,682 @@
+<!--
+import pygame
+import sys
+import json
+from pathlib import Path
+
+# ---- Config ----
+SCREEN_W, SCREEN_H = 960, 640
+TILE = 32
+GRID_W = SCREEN_W // TILE
+GRID_H = SCREEN_H // TILE
+FPS = 60
+GRAVITY = 0.5
+JUMP_V = -10
+SAVE_FILE = Path("world_save.json")
+
+# Colors
+SKY = (135, 206, 235)
+DIRT = (120, 72, 36)
+GRASS = (90, 160, 60)
+STONE = (110, 110, 110)
+WOOD = (150, 100, 50)
+SELECT = (255, 255, 0)
+TEXT = (20, 20, 20)
+
+BLOCK_TYPES = {
+    0: ("air", None),
+    1: ("dirt", DIRT),
+    2: ("grass", GRASS),
+    3: ("stone", STONE),
+    4: ("wood", WOOD),
+}
+
+# ---- Utilities ----
+def clamp(n, a, b):
+    return max(a, min(b, n))
+
+# ---- World ----
+class World:
+    def __init__(self, w, h):
+        self.w = w
+        self.h = h
+        # 2D grid: [x][y] with origin (0,0) top-left
+        self.grid = [[0 for _ in range(h)] for _ in range(w)]
+        self.generate_basic_terrain()
+
+    def generate_basic_terrain(self):
+        # Simple layered terrain
+        for x in range(self.w):
+            ground_y = self.h // 2 + (1 if x % 7 == 0 else 0)
+            for y in range(ground_y, self.h):
+                if y == ground_y:
+                    self.grid[x][y] = 2  # grass on top
+                elif y < ground_y + 3:
+                    self.grid[x][y] = 1  # dirt
+                else:
+                    self.grid[x][y] = 3  # stone
+
+    def in_bounds(self, gx, gy):
+        return 0 <= gx < self.w and 0 <= gy < self.h
+
+    def get(self, gx, gy):
+        if not self.in_bounds(gx, gy):
+            return None
+        return self.grid[gx][gy]
+
+    def set(self, gx, gy, block):
+        if self.in_bounds(gx, gy):
+            self.grid[gx][gy] = block
+
+    def save(self, fn=SAVE_FILE):
+        data = {"w": self.w, "h": self.h, "grid": self.grid}
+        with open(fn, "w") as f:
+            json.dump(data, f)
+        print("World saved to", fn)
+
+    @classmethod
+    def load(cls, fn=SAVE_FILE):
+        if not fn.exists():
+            return None
+        with open(fn, "r") as f:
+            data = json.load(f)
+        w, h = data["w"], data["h"]
+        world = cls(w, h)
+        world.grid = data["grid"]
+        return world
+
+# ---- Player ----
+class Player:
+    def __init__(self, x, y):
+        self.x = x  # float pixels
+        self.y = y
+        self.vx = 0
+        self.vy = 0
+        self.w = TILE - 4
+        self.h = TILE * 1.8
+        self.on_ground = False
+
+    def rect(self):
+        return pygame.Rect(int(self.x), int(self.y), int(self.w), int(self.h))
+
+# ---- Game ----
+def run():
+    pygame.init()
+    screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
+    clock = pygame.time.Clock()
+    font = pygame.font.SysFont(None, 20)
+
+    # Load or create world
+    world = World.load() or World(GRID_W, GRID_H)
+
+    # Player spawn
+    spawn_x = GRID_W // 2 * TILE
+    spawn_y = (GRID_H // 2 - 5) * TILE
+    player = Player(spawn_x + 2, spawn_y)
+
+    # Inventory: simple dict block_type -> count (infinite for now)
+    hotbar = [1, 2, 3, 4]  # block ids available
+    hotbar_idx = 0
+
+    show_grid = False
+
+    def world_to_screen(gx, gy):
+        return gx * TILE, gy * TILE
+
+    def screen_to_world(px, py):
+        return px // TILE, py // TILE
+
+    def collide_with_world(rect):
+        # Return whether rect collides with any solid block
+        # Check blocks overlapping rect
+        x1 = rect.left // TILE
+        y1 = rect.top // TILE
+        x2 = rect.right // TILE
+        y2 = rect.bottom // TILE
+        for gx in range(x1 - 1, x2 + 1):
+            for gy in range(y1 - 1, y2 + 1):
+                if not world.in_bounds(gx, gy):
+                    continue
+                if world.get(gx, gy) != 0:
+                    block_rect = pygame.Rect(gx * TILE, gy * TILE, TILE, TILE)
+                    if rect.colliderect(block_rect):
+                        return True, block_rect
+        return False, None
+
+    running = True
+    while running:
+        dt = clock.tick(FPS) / 1000.0
+
+        # ---- Input ----
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                if event.key == pygame.K_g:
+                    show_grid = not show_grid
+                if event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                    world.save()
+                if event.key == pygame.K_l and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                    loaded = World.load()
+                    if loaded:
+                        world = loaded
+                        print("World loaded.")
+                if pygame.K_1 <= event.key <= pygame.K_9:
+                    idx = event.key - pygame.K_1
+                    if idx < len(hotbar):
+                        hotbar_idx = idx
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = pygame.mouse.get_pos()
+                gx, gy = screen_to_world(mx, my)
+                if event.button == 1:  # left click -> place block
+                    # Place block adjacent to clicked face (simple: place on clicked tile if empty)
+                    if world.in_bounds(gx, gy) and world.get(gx, gy) == 0:
+                        world.set(gx, gy, hotbar[hotbar_idx])
+                elif event.button == 3:  # right click -> remove block
+                    if world.in_bounds(gx, gy) and world.get(gx, gy) != 0:
+                        world.set(gx, gy, 0)
+                elif event.button == 4:  # scroll up
+                    hotbar_idx = (hotbar_idx - 1) % len(hotbar)
+                elif event.button == 5:  # scroll down
+                    hotbar_idx = (hotbar_idx + 1) % len(hotbar)
+
+        keys = pygame.key.get_pressed()
+        # horizontal movement
+        walk_speed = 180
+        player.vx = 0
+        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+            player.vx = -walk_speed
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+            player.vx = walk_speed
+        # jump
+        if (keys[pygame.K_w] or keys[pygame.K_UP] or keys[pygame.K_SPACE]) and player.on_ground:
+            player.vy = JUMP_V
+            player.on_ground = False
+
+        # ---- Physics ----
+        # Apply gravity
+        player.vy += GRAVITY
+        # Integrate
+        new_x = player.x + player.vx * dt
+        # Horizontal collision
+        player_rect_h = pygame.Rect(int(new_x), int(player.y), int(player.w), int(player.h))
+        collided, block_rect = collide_with_world(player_rect_h)
+        if collided:
+            # simple resolution: don't move horizontally
+            new_x = player.x
+            player.vx = 0
+        player.x = new_x
+
+        new_y = player.y + player.vy
+        player_rect_v = pygame.Rect(int(player.x), int(new_y), int(player.w), int(player.h))
+        collided, block_rect = collide_with_world(player_rect_v)
+        if collided:
+            # Resolve vertical collision
+            if player.vy > 0:
+                # landed on top
+                player.y = block_rect.top - player.h
+                player.vy = 0
+                player.on_ground = True
+            elif player.vy < 0:
+                # hit ceiling
+                player.y = block_rect.bottom
+                player.vy = 0
+        else:
+            player.y = new_y
+            player.on_ground = False
+
+        # Keep player in screen bounds (wrap horizontally)
+        player.x = clamp(player.x, 0, SCREEN_W - player.w)
+        player.y = clamp(player.y, -1000, SCREEN_H - player.h)
+
+        # ---- Render ----
+        screen.fill(SKY)
+
+        # Draw blocks
+        for gx in range(world.w):
+            for gy in range(world.h):
+                b = world.get(gx, gy)
+                if b == 0:
+                    continue
+                name, color = BLOCK_TYPES.get(b, ("unknown", (200, 200, 200)))
+                rect = pygame.Rect(gx * TILE, gy * TILE, TILE, TILE)
+                pygame.draw.rect(screen, color, rect)
+                # top highlight for grass
+                if b == 2:
+                    pygame.draw.line(screen, (255, 255, 255), rect.topleft, rect.topright, 1)
+
+        # Optional grid
+        if show_grid:
+            for x in range(0, SCREEN_W, TILE):
+                pygame.draw.line(screen, (200, 200, 200), (x, 0), (x, SCREEN_H), 1)
+            for y in range(0, SCREEN_H, TILE):
+                pygame.draw.line(screen, (200, 200, 200), (0, y), (SCREEN_W, y), 1)
+
+        # Draw player
+        pygame.draw.rect(screen, (50, 50, 220), player.rect())
+
+        # Draw UI - hotbar
+        hotbar_y = SCREEN_H - TILE - 8
+        for i, bid in enumerate(hotbar):
+            box = pygame.Rect(8 + i * (TILE + 6), hotbar_y, TILE, TILE)
+            pygame.draw.rect(screen, (240, 240, 240), box)
+            name, color = BLOCK_TYPES[bid]
+            if color:
+                inner = box.inflate(-6, -6)
+                pygame.draw.rect(screen, color, inner)
+            if i == hotbar_idx:
+                pygame.draw.rect(screen, SELECT, box, 3)
+
+        # Draw selected block name
+        sname = BLOCK_TYPES[hotbar[hotbar_idx]][0]
+        txt = font.render(f"Selected: {hotbar_idx + 1} - {sname}   (LMB place, RMB remove, Scroll switch, G grid)", True, TEXT)
+        screen.blit(txt, (8, 8))
+
+        # Mouse hover outline
+        mx, my = pygame.mouse.get_pos()
+        gx, gy = screen_to_world(mx, my)
+        if world.in_bounds(gx, gy):
+            outline = pygame.Rect(gx * TILE, gy * TILE, TILE, TILE)
+            pygame.draw.rect(screen, (0, 0, 0), outline, 2)
+
+        pygame.display.flip()
+
+    pygame.quit()
+    sys.exit()
+
+if __name__ == "__main__":
+    run()
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #555;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="960" height="640"></canvas>
+    <script>
+        // ---- Config ----
+        const SCREEN_W = 960, SCREEN_H = 640;
+        const TILE = 32;
+        const GRID_W = SCREEN_W / TILE;
+        const GRID_H = SCREEN_H / TILE;
+        const FPS = 60;
+        const GRAVITY = 0.5;
+        const JUMP_V = -10;
+        const SAVE_KEY = "world_save";
+
+        // Colors
+        const SKY = 'rgb(135, 206, 235)';
+        const DIRT = 'rgb(120, 72, 36)';
+        const GRASS = 'rgb(90, 160, 60)';
+        const STONE = 'rgb(110, 110, 110)';
+        const WOOD = 'rgb(150, 100, 50)';
+        const SELECT = 'rgb(255, 255, 0)';
+        const TEXT = 'rgb(20, 20, 20)';
+
+        const BLOCK_TYPES = {
+            0: ["air", null],
+            1: ["dirt", DIRT],
+            2: ["grass", GRASS],
+            3: ["stone", STONE],
+            4: ["wood", WOOD],
+        };
+
+        // ---- Utilities ----
+        function clamp(n, a, b) {
+            return Math.max(a, Math.min(b, n));
+        }
+
+        function rectsIntersect(a, b) {
+            return a.x < b.x + b.width && a.x + a.width > b.x &&
+                   a.y < b.y + b.height && a.y + a.height > b.y;
+        }
+
+        // ---- World ----
+        class World {
+            constructor(w, h) {
+                this.w = w;
+                this.h = h;
+                this.grid = Array.from({length: w}, () => Array(h).fill(0));
+                this.generateBasicTerrain();
+            }
+
+            generateBasicTerrain() {
+                for (let x = 0; x < this.w; x++) {
+                    const ground_y = this.h / 2 + (x % 7 === 0 ? 1 : 0);
+                    for (let y = ground_y; y < this.h; y++) {
+                        if (y === ground_y) {
+                            this.grid[x][y] = 2; // grass on top
+                        } else if (y < ground_y + 3) {
+                            this.grid[x][y] = 1; // dirt
+                        } else {
+                            this.grid[x][y] = 3; // stone
+                        }
+                    }
+                }
+            }
+
+            inBounds(gx, gy) {
+                return 0 <= gx && gx < this.w && 0 <= gy && gy < this.h;
+            }
+
+            get(gx, gy) {
+                if (!this.inBounds(gx, gy)) return null;
+                return this.grid[gx][gy];
+            }
+
+            set(gx, gy, block) {
+                if (this.inBounds(gx, gy)) {
+                    this.grid[gx][gy] = block;
+                }
+            }
+
+            save() {
+                const data = {w: this.w, h: this.h, grid: this.grid};
+                localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+                console.log("World saved to localStorage");
+            }
+
+            static load() {
+                const dataStr = localStorage.getItem(SAVE_KEY);
+                if (!dataStr) return null;
+                const data = JSON.parse(dataStr);
+                const world = new World(data.w, data.h);
+                world.grid = data.grid;
+                return world;
+            }
+        }
+
+        // ---- Player ----
+        class Player {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.w = TILE - 4;
+                this.h = TILE * 1.8;
+                this.onGround = false;
+            }
+
+            rect() {
+                return {x: Math.floor(this.x), y: Math.floor(this.y), 
+                        width: this.w, height: this.h};
+            }
+        }
+
+        // ---- Game ----
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const keys = {};
+        const mouseButtons = {};
+
+        // Load or create world
+        let world = World.load() || new World(GRID_W, GRID_H);
+
+        // Player spawn
+        const spawn_x = GRID_W / 2 * TILE;
+        const spawn_y = (GRID_H / 2 - 5) * TILE;
+        const player = new Player(spawn_x + 2, spawn_y);
+
+        // Inventory
+        const hotbar = [1, 2, 3, 4];
+        let hotbarIdx = 0;
+        let showGrid = false;
+
+        function worldToScreen(gx, gy) {
+            return {x: gx * TILE, y: gy * TILE};
+        }
+
+        function screenToWorld(px, py) {
+            return {x: Math.floor(px / TILE), y: Math.floor(py / TILE)};
+        }
+
+        function collideWithWorld(rect) {
+            const x1 = Math.floor(rect.x / TILE);
+            const y1 = Math.floor(rect.y / TILE);
+            const x2 = Math.floor((rect.x + rect.width) / TILE);
+            const y2 = Math.floor((rect.y + rect.height) / TILE);
+            for (let gx = x1 - 1; gx <= x2 + 1; gx++) {
+                for (let gy = y1 - 1; gy <= y2 + 1; gy++) {
+                    if (!world.inBounds(gx, gy)) continue;
+                    if (world.get(gx, gy) !== 0) {
+                        const blockRect = {x: gx * TILE, y: gy * TILE, 
+                                          width: TILE, height: TILE};
+                        if (rectsIntersect(rect, blockRect)) {
+                            return {collided: true, blockRect};
+                        }
+                    }
+                }
+            }
+            return {collided: false, blockRect: null};
+        }
+
+        // Event listeners
+        window.addEventListener('keydown', e => {
+            keys[e.key] = true;
+            if (e.key === 'Escape') {
+                running = false;
+                document.body.innerHTML += '<div style="text-align:center;color:white;">Game Stopped</div>';
+            }
+            if (e.key === 'g') showGrid = !showGrid;
+            if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                world.save();
+            }
+            if (e.key === 'l' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                const loaded = World.load();
+                if (loaded) {
+                    world = loaded;
+                    console.log("World loaded.");
+                }
+            }
+            if (e.key >= '1' && e.key <= '9') {
+                const idx = parseInt(e.key) - 1;
+                if (idx < hotbar.length) hotbarIdx = idx;
+            }
+        });
+
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        canvas.addEventListener('mousedown', e => {
+            mouseButtons[e.button] = true;
+            const mx = e.offsetX, my = e.offsetY;
+            const {x: gx, y: gy} = screenToWorld(mx, my);
+            if (e.button === 0) { // left click
+                if (world.inBounds(gx, gy) && world.get(gx, gy) === 0) {
+                    world.set(gx, gy, hotbar[hotbarIdx]);
+                }
+            } else if (e.button === 2) { // right click
+                e.preventDefault();
+                if (world.inBounds(gx, gy) && world.get(gx, gy) !== 0) {
+                    world.set(gx, gy, 0);
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', e => mouseButtons[e.button] = false);
+
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            if (e.deltaY > 0) {
+                hotbarIdx = (hotbarIdx + 1) % hotbar.length;
+            } else {
+                hotbarIdx = (hotbarIdx - 1 + hotbar.length) % hotbar.length;
+            }
+        });
+
+        // Game loop
+        let running = true;
+        let lastTime = 0;
+
+        function gameLoop(currentTime) {
+            if (!running) return;
+            
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1); // cap dt
+            lastTime = currentTime;
+
+            // ---- Input ----
+            const walkSpeed = 180;
+            player.vx = 0;
+            if (keys['a'] || keys['ArrowLeft']) player.vx = -walkSpeed;
+            if (keys['d'] || keys['ArrowRight']) player.vx = walkSpeed;
+            if ((keys['w'] || keys['ArrowUp'] || keys[' ']) && player.onGround) {
+                player.vy = JUMP_V;
+                player.onGround = false;
+            }
+
+            // ---- Physics ----
+            player.vy += GRAVITY;
+            
+            // Horizontal
+            let newX = player.x + player.vx * dt;
+            const playerRectH = {x: newX, y: player.y, width: player.w, height: player.h};
+            let collision = collideWithWorld(playerRectH);
+            if (collision.collided) {
+                newX = player.x;
+                player.vx = 0;
+            }
+            player.x = newX;
+
+            // Vertical
+            let newY = player.y + player.vy;
+            const playerRectV = {x: player.x, y: newY, width: player.w, height: player.h};
+            collision = collideWithWorld(playerRectV);
+            if (collision.collided) {
+                if (player.vy > 0) {
+                    player.y = collision.blockRect.y - player.h;
+                    player.vy = 0;
+                    player.onGround = true;
+                } else if (player.vy < 0) {
+                    player.y = collision.blockRect.y + collision.blockRect.height;
+                    player.vy = 0;
+                }
+            } else {
+                player.y = newY;
+                player.onGround = false;
+            }
+
+            // Bounds
+            player.x = clamp(player.x, 0, SCREEN_W - player.w);
+            player.y = clamp(player.y, -1000, SCREEN_H - player.h);
+
+            // ---- Render ----
+            ctx.fillStyle = SKY;
+            ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+            // Draw blocks
+            for (let gx = 0; gx < world.w; gx++) {
+                for (let gy = 0; gy < world.h; gy++) {
+                    const b = world.get(gx, gy);
+                    if (b === 0) continue;
+                    const [name, color] = BLOCK_TYPES[b] || ["unknown", 'rgb(200,200,200)'];
+                    const rect = {x: gx * TILE, y: gy * TILE, width: TILE, height: TILE};
+                    ctx.fillStyle = color;
+                    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+                    if (b === 2) {
+                        ctx.strokeStyle = 'rgb(255,255,255)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(rect.x, rect.y);
+                        ctx.lineTo(rect.x + rect.width, rect.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Optional grid
+            if (showGrid) {
+                ctx.strokeStyle = 'rgb(200,200,200)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x < SCREEN_W; x += TILE) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, SCREEN_H);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < SCREEN_H; y += TILE) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(SCREEN_W, y);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw player
+            const pRect = player.rect();
+            ctx.fillStyle = 'rgb(50, 50, 220)';
+            ctx.fillRect(pRect.x, pRect.y, pRect.width, pRect.height);
+
+            // Draw UI - hotbar
+            const hotbarY = SCREEN_H - TILE - 8;
+            for (let i = 0; i < hotbar.length; i++) {
+                const box = {x: 8 + i * (TILE + 6), y: hotbarY, width: TILE, height: TILE};
+                ctx.fillStyle = 'rgb(240,240,240)';
+                ctx.fillRect(box.x, box.y, box.width, box.height);
+                const [name, color] = BLOCK_TYPES[hotbar[i]];
+                if (color) {
+                    const inner = {x: box.x + 3, y: box.y + 3, width: box.width - 6, height: box.height - 6};
+                    ctx.fillStyle = color;
+                    ctx.fillRect(inner.x, inner.y, inner.width, inner.height);
+                }
+                if (i === hotbarIdx) {
+                    ctx.strokeStyle = SELECT;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+                }
+            }
+
+            // Draw selected block name
+            const sname = BLOCK_TYPES[hotbar[hotbarIdx]][0];
+            ctx.fillStyle = TEXT;
+            ctx.font = '16px monospace';
+            ctx.fillText(`Selected: ${hotbarIdx + 1} - ${sname}   (LMB place, RMB remove, Scroll switch, G grid)`, 8, 24);
+
+            // Mouse hover outline
+            const mx = mousePos.x, my = mousePos.y;
+            const {x: gx, y: gy} = screenToWorld(mx, my);
+            if (world.inBounds(gx, gy)) {
+                ctx.strokeStyle = 'rgb(0,0,0)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(gx * TILE, gy * TILE, TILE, TILE);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Track mouse position
+        const mousePos = {x: 0, y: 0};
+        canvas.addEventListener('mousemove', e => {
+            mousePos.x = e.offsetX;
+            mousePos.y = e.offsetY;
+        });
+
+        // Start game
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

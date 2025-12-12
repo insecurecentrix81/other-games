@@ -1,0 +1,3490 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>miscellaneouscraft</title>
+  <style>
+    :root{
+      --bg0:#070a10;
+      --bg1:#0b1220;
+      --panel:rgba(10,18,34,.82);
+      --panel2:rgba(10,18,34,.62);
+      --text:#eaf2ff;
+      --muted:#9fb4d8;
+      --accent:#66e0ff;
+      --good:#64ff9b;
+      --bad:#ff4d6d;
+      --warn:#ffd166;
+      --shadow: 0 16px 60px rgba(0,0,0,.45);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --ui: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      background: radial-gradient(1200px 900px at 50% 35%, #0f1c35 0%, var(--bg0) 70%);
+      color:var(--text);
+      font-family:var(--ui);
+      overflow:hidden;
+      user-select:none;
+      -webkit-user-select:none;
+      touch-action:none;
+    }
+
+    #app{
+      position:fixed;
+      inset:0;
+      display:block;
+    }
+
+    #gameCanvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+      background: linear-gradient(#87b6ff 0%, #d7f0ff 55%, #efe7d0 100%);
+    }
+
+    /* Crosshair */
+    #crosshair{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:18px;
+      height:18px;
+      transform:translate(-50%,-50%);
+      pointer-events:none;
+      opacity:.9;
+      display:none;
+    }
+    #crosshair:before, #crosshair:after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:18px;
+      height:2px;
+      background:rgba(255,255,255,.9);
+      transform:translate(-50%,-50%);
+      box-shadow:0 0 12px rgba(102,224,255,.25);
+      border-radius:2px;
+    }
+    #crosshair:after{ transform:translate(-50%,-50%) rotate(90deg); }
+
+    /* HUD */
+    #hud{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      display:none;
+    }
+    #hudTop{
+      position:absolute;
+      left:14px;
+      top:14px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:flex-start;
+      max-width:min(980px, calc(100vw - 28px));
+    }
+
+    .chip{
+      pointer-events:none;
+      background:var(--panel2);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow: var(--shadow);
+      border-radius: 999px;
+      padding:8px 12px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .chip b{
+      font-family:var(--mono);
+      font-size:12px;
+      letter-spacing:.02em;
+      font-weight:700;
+      color:var(--accent);
+    }
+    .chip span{
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--text);
+      opacity:.95;
+    }
+
+    #objective{
+      max-width:min(520px, calc(100vw - 28px));
+      border-radius: var(--radius);
+      padding:10px 12px;
+      background:linear-gradient(180deg, rgba(16,26,52,.76), rgba(10,18,34,.62));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow);
+      pointer-events:none;
+    }
+    #objective .title{
+      font-weight:800;
+      font-size:13px;
+      letter-spacing:.02em;
+      color:#cfe8ff;
+      margin-bottom:4px;
+    }
+    #objective .body{
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+
+    #hudBottom{
+      position:absolute;
+      left:50%;
+      bottom:14px;
+      transform:translateX(-50%);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:center;
+      width:min(860px, calc(100vw - 20px));
+    }
+
+    #hotbarWrap{
+      pointer-events:none;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:center;
+      width:100%;
+    }
+
+    #hotbar{
+      width:100%;
+      display:grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap:8px;
+      padding:10px;
+      border-radius: 16px;
+      background: rgba(10,18,34,.55);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .slot{
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      height:56px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      padding:8px;
+      gap:3px;
+      position:relative;
+      overflow:hidden;
+    }
+    .slot.selected{
+      outline:2px solid rgba(102,224,255,.85);
+      box-shadow:0 0 0 6px rgba(102,224,255,.12), var(--shadow);
+    }
+    .slot .k{
+      position:absolute;
+      top:6px;
+      left:8px;
+      font-family:var(--mono);
+      font-size:11px;
+      color:rgba(255,255,255,.55);
+    }
+    .slot .name{
+      font-weight:800;
+      font-size:12px;
+      color:#eaf2ff;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      padding-top:6px;
+    }
+    .slot .meta{
+      font-family:var(--mono);
+      font-size:11px;
+      color:rgba(159,180,216,.95);
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      width:100%;
+    }
+    .slot .badge{
+      font-family:var(--mono);
+      font-size:11px;
+      color:#0a1020;
+      background:rgba(102,224,255,.95);
+      padding:2px 6px;
+      border-radius:999px;
+      font-weight:900;
+    }
+
+    #quickTips{
+      pointer-events:none;
+      width:100%;
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(225,236,255,.78);
+      text-align:center;
+      line-height:1.3;
+      padding:0 8px;
+    }
+
+    /* Menus */
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:18px;
+      background: radial-gradient(1200px 900px at 50% 35%, rgba(15,28,53,.75) 0%, rgba(7,10,16,.92) 70%);
+      z-index:10;
+    }
+    .panel{
+      width:min(980px, 100%);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(12,22,44,.92), rgba(10,18,34,.75));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow);
+      padding:18px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .panelHeader{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .brand h1{
+      margin:0;
+      font-size:22px;
+      letter-spacing:.02em;
+      font-weight:900;
+    }
+    .brand .sub{
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(159,180,216,.92);
+      line-height:1.35;
+      max-width:65ch;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap:14px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns:1fr; }
+    }
+
+    .card{
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10);
+      padding:14px;
+    }
+    .card h2{
+      margin:0 0 8px 0;
+      font-size:14px;
+      letter-spacing:.02em;
+      font-weight:900;
+      color:#cfe8ff;
+    }
+    .card p, .card li{
+      margin:0;
+      font-size:13px;
+      color:rgba(159,180,216,.95);
+      line-height:1.45;
+    }
+    .card ul{
+      margin:10px 0 0 18px;
+      padding:0;
+    }
+
+    .btnRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:12px;
+    }
+    button{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      font-weight:900;
+      letter-spacing:.02em;
+      border-radius: 12px;
+      padding:10px 12px;
+      color:#0a1020;
+      background:rgba(102,224,255,.95);
+      box-shadow: 0 14px 40px rgba(0,0,0,.25);
+    }
+    button.secondary{
+      background:rgba(255,255,255,.10);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:none;
+    }
+    button.danger{
+      background:rgba(255,77,109,.92);
+      color:#180510;
+    }
+    button:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .kv{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      width: min(340px, 100%);
+    }
+    label{
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(159,180,216,.95);
+    }
+    input[type="range"]{
+      width:100%;
+    }
+    .small{
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(159,180,216,.95);
+    }
+    .hr{
+      height:1px;
+      background:rgba(255,255,255,.10);
+      margin:12px 0;
+    }
+
+    /* Toast */
+    #toast{
+      position:absolute;
+      left:50%;
+      top:14px;
+      transform:translateX(-50%);
+      background:rgba(10,18,34,.78);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      padding:10px 12px;
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(234,242,255,.95);
+      box-shadow: var(--shadow);
+      z-index:20;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .18s ease, transform .18s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    #toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
+
+    /* Touch controls */
+    #touchUI{
+      position:absolute;
+      inset:0;
+      display:none;
+      z-index:5;
+      pointer-events:none;
+    }
+    .touchPad{
+      position:absolute;
+      bottom:18px;
+      width:44vw;
+      max-width:320px;
+      height:44vw;
+      max-height:320px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(10,18,34,.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      pointer-events:auto;
+    }
+    #movePad{ left:18px; }
+    #lookPad{ right:18px; opacity:.14; }
+    .touchStick{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:84px;
+      height:84px;
+      transform:translate(-50%,-50%);
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(102,224,255,.16);
+      box-shadow:0 14px 40px rgba(0,0,0,.25);
+      display:none;
+      pointer-events:none;
+    }
+    #moveStick{ display:block; opacity:.75; }
+    #lookStick{ opacity:.15; }
+
+    #touchButtons{
+      position:absolute;
+      right:18px;
+      bottom:18px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      pointer-events:auto;
+    }
+    .tbtn{
+      width:62px;
+      height:62px;
+      border-radius:16px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.14);
+      color:rgba(234,242,255,.95);
+      font-family:var(--mono);
+      font-weight:900;
+      font-size:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .tbtn.primary{
+      background:rgba(102,224,255,.22);
+      border-color:rgba(102,224,255,.35);
+    }
+
+    /* Accessibility */
+    .sr{
+      position:absolute;
+      left:-9999px;
+      top:auto;
+      width:1px;
+      height:1px;
+      overflow:hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="toast" aria-live="polite"></div>
+
+    <div id="crosshair"></div>
+
+    <div id="hud">
+      <div id="hudTop">
+        <div class="chip"><b>LVL</b><span id="hudLevel">1</span></div>
+        <div class="chip"><b>TIME</b><span id="hudTime">0:00.0</span></div>
+        <div class="chip"><b>HP</b><span id="hudHP">100</span></div>
+        <div class="chip"><b>XP</b><span id="hudXP">0</span></div>
+        <div class="chip"><b>PAGE</b><span id="hudPage">1</span></div>
+        <div id="objective">
+          <div class="title">Objective</div>
+          <div class="body" id="hudObjective">Power the ancient lamps to unlock the exit.</div>
+        </div>
+      </div>
+
+      <div id="hudBottom">
+        <div id="hotbarWrap">
+          <div id="hotbar" aria-label="Hotbar"></div>
+          <div id="quickTips">
+            <span id="tipsText">WASD move · Space jump · Shift sprint · LMB mine · RMB place/use · R switch page · Esc pause</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="touchUI">
+      <div class="touchPad" id="movePad">
+        <div class="touchStick" id="moveStick"></div>
+      </div>
+      <div class="touchPad" id="lookPad">
+        <div class="touchStick" id="lookStick"></div>
+      </div>
+      <div id="touchButtons">
+        <div class="tbtn primary" id="btnJump">JUMP</div>
+        <div class="tbtn" id="btnMine">MINE</div>
+        <div class="tbtn" id="btnPlace">PLACE</div>
+        <div class="tbtn" id="btnPage">PAGE</div>
+        <div class="tbtn" id="btnPause">PAUSE</div>
+      </div>
+    </div>
+
+    <!-- Main / Pause / Win overlays (reused) -->
+    <div class="overlay" id="menuOverlay">
+      <div class="panel">
+        <div class="panelHeader">
+          <div class="brand">
+            <h1>miscellaneouscraft</h1>
+            <div class="sub">
+              A single‑player voxel adventure with functional redstone (dust attenuation, levers, torches, plates, lamps, doors) and puzzle objectives.
+              <br/>Build circuits to unlock exits—then reach the portal.
+            </div>
+          </div>
+          <div class="row">
+            <div class="chip"><b>SAVE</b><span id="saveStatus">No save loaded</span></div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h2>Play</h2>
+            <p>
+              Each level contains an “Ancient Gate” that unlocks only when you power all required lamps using redstone.
+              You can mine/place blocks freely and build your own solutions.
+            </p>
+            <div class="btnRow">
+              <button id="btnContinue">Continue</button>
+              <button id="btnNew" class="secondary">New Game</button>
+              <button id="btnLevelSelect" class="secondary">Level Select</button>
+            </div>
+
+            <div class="hr"></div>
+
+            <h2>Controls</h2>
+            <ul>
+              <li><b>Mouse</b> look (pointer lock) · <b>WASD</b> move · <b>Space</b> jump · <b>Shift</b> sprint</li>
+              <li><b>LMB</b> mine (hold) · <b>RMB</b> place / toggle lever</li>
+              <li><b>1–9</b> select item · <b>R</b> switch hotbar page · <b>Esc</b> pause</li>
+              <li><b>F</b> quick help tip cycle (shows redstone hints)</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h2>Settings</h2>
+            <div class="kv">
+              <label for="sens">Mouse / Touch Look Sensitivity</label>
+              <input id="sens" type="range" min="0.2" max="2.2" step="0.05" value="1.0" />
+              <div class="small">Higher = faster camera look.</div>
+            </div>
+            <div class="hr"></div>
+            <div class="kv">
+              <label for="fov">FOV</label>
+              <input id="fov" type="range" min="60" max="100" step="1" value="80" />
+              <div class="small">Field of view (camera zoom).</div>
+            </div>
+
+            <div class="hr"></div>
+
+            <h2>Data</h2>
+            <p>Saving is local to this page (namespaced). You can reset without affecting other games.</p>
+            <div class="btnRow">
+              <button id="btnReset" class="danger">Reset Save Data</button>
+              <button id="btnHow" class="secondary">Redstone Quick Guide</button>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="small" id="levelInfo"></div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div class="small">Tip: Place <b>Redstone Torch</b> next to dust to create an inverter (NOT). Use <b>Pressure Plates</b> for player-activated circuits.</div>
+          <div class="row">
+            <button id="btnStart" style="min-width:160px;">Start / Resume</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="levelOverlay" style="display:none;">
+      <div class="panel">
+        <div class="panelHeader">
+          <div class="brand">
+            <h1>Level Select</h1>
+            <div class="sub">Unlocked levels are playable. Completing a level unlocks the next one.</div>
+          </div>
+          <div class="row">
+            <button id="btnLevelBack" class="secondary">Back</button>
+          </div>
+        </div>
+        <div class="card" id="levelList"></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="pauseOverlay" style="display:none;">
+      <div class="panel">
+        <div class="panelHeader">
+          <div class="brand">
+            <h1>Paused</h1>
+            <div class="sub">Game is paused. Resume to re-lock the mouse.</div>
+          </div>
+          <div class="row">
+            <button id="btnResume">Resume</button>
+            <button id="btnToMenu" class="secondary">Main Menu</button>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h2>Run Stats</h2>
+            <ul>
+              <li><span class="small">Level:</span> <span id="pLevel" class="small"></span></li>
+              <li><span class="small">Time:</span> <span id="pTime" class="small"></span></li>
+              <li><span class="small">HP:</span> <span id="pHP" class="small"></span></li>
+              <li><span class="small">XP:</span> <span id="pXP" class="small"></span></li>
+              <li><span class="small">Blocks placed:</span> <span id="pPlaced" class="small"></span></li>
+              <li><span class="small">Blocks mined:</span> <span id="pMined" class="small"></span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2>Redstone Quick Guide</h2>
+            <ul>
+              <li><b>Dust</b> carries power (15 → 0) and decays by 1 per block.</li>
+              <li><b>Lever</b> is a constant power source when ON.</li>
+              <li><b>Torch</b> is an inverter: it outputs power when it is <i>not</i> being powered.</li>
+              <li><b>Plate</b> outputs power while you stand on it.</li>
+              <li><b>Lamps</b> light up when powered. Doors open when powered.</li>
+            </ul>
+            <div class="btnRow">
+              <button id="btnSaveNow" class="secondary">Save Now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="winOverlay" style="display:none;">
+      <div class="panel">
+        <div class="panelHeader">
+          <div class="brand">
+            <h1 id="winTitle">Victory</h1>
+            <div class="sub" id="winSub">You unlocked the gate and reached the portal.</div>
+          </div>
+          <div class="row">
+            <button id="btnNextLevel">Next Level</button>
+            <button id="btnWinMenu" class="secondary">Main Menu</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Summary</h2>
+          <ul>
+            <li><span class="small">Time:</span> <span id="wTime" class="small"></span></li>
+            <li><span class="small">Best:</span> <span id="wBest" class="small"></span></li>
+            <li><span class="small">XP gained:</span> <span id="wXP" class="small"></span></li>
+            <li><span class="small">Blocks placed:</span> <span id="wPlaced" class="small"></span></li>
+            <li><span class="small">Blocks mined:</span> <span id="wMined" class="small"></span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sr" id="srStatus" aria-live="polite"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+  <script>
+  (() => {
+    'use strict';
+
+    /*********************
+     * Storage (namespaced)
+     *********************/
+    const STORAGE_PREFIX = location.pathname + '::miscellaneouscraft::';
+    const KEY_SAVE = STORAGE_PREFIX + 'save_v1';
+    const KEY_HISCORES = STORAGE_PREFIX + 'hiscores_v1';
+    const KEY_SETTINGS = STORAGE_PREFIX + 'settings_v1';
+
+    function safeJSONParse(s, fallback){
+      try { return JSON.parse(s); } catch { return fallback; }
+    }
+
+    /*********************
+     * DOM
+     *********************/
+    const canvas = document.getElementById('gameCanvas');
+    const crosshair = document.getElementById('crosshair');
+    const hud = document.getElementById('hud');
+    const hudLevel = document.getElementById('hudLevel');
+    const hudTime = document.getElementById('hudTime');
+    const hudHP = document.getElementById('hudHP');
+    const hudXP = document.getElementById('hudXP');
+    const hudPage = document.getElementById('hudPage');
+    const hudObjective = document.getElementById('hudObjective');
+    const tipsText = document.getElementById('tipsText');
+
+    const menuOverlay = document.getElementById('menuOverlay');
+    const pauseOverlay = document.getElementById('pauseOverlay');
+    const winOverlay = document.getElementById('winOverlay');
+    const levelOverlay = document.getElementById('levelOverlay');
+
+    const btnContinue = document.getElementById('btnContinue');
+    const btnNew = document.getElementById('btnNew');
+    const btnStart = document.getElementById('btnStart');
+    const btnReset = document.getElementById('btnReset');
+    const btnHow = document.getElementById('btnHow');
+
+    const btnResume = document.getElementById('btnResume');
+    const btnToMenu = document.getElementById('btnToMenu');
+    const btnSaveNow = document.getElementById('btnSaveNow');
+
+    const btnWinMenu = document.getElementById('btnWinMenu');
+    const btnNextLevel = document.getElementById('btnNextLevel');
+
+    const btnLevelSelect = document.getElementById('btnLevelSelect');
+    const btnLevelBack = document.getElementById('btnLevelBack');
+    const levelList = document.getElementById('levelList');
+
+    const saveStatus = document.getElementById('saveStatus');
+    const levelInfo = document.getElementById('levelInfo');
+
+    const pLevel = document.getElementById('pLevel');
+    const pTime = document.getElementById('pTime');
+    const pHP = document.getElementById('pHP');
+    const pXP = document.getElementById('pXP');
+    const pPlaced = document.getElementById('pPlaced');
+    const pMined = document.getElementById('pMined');
+
+    const winTitle = document.getElementById('winTitle');
+    const winSub = document.getElementById('winSub');
+    const wTime = document.getElementById('wTime');
+    const wBest = document.getElementById('wBest');
+    const wXP = document.getElementById('wXP');
+    const wPlaced = document.getElementById('wPlaced');
+    const wMined = document.getElementById('wMined');
+
+    const sensSlider = document.getElementById('sens');
+    const fovSlider = document.getElementById('fov');
+
+    const toast = document.getElementById('toast');
+    const srStatus = document.getElementById('srStatus');
+
+    // Touch UI
+    const isTouch = ('maxTouchPoints' in navigator && navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+    const touchUI = document.getElementById('touchUI');
+    const movePad = document.getElementById('movePad');
+    const lookPad = document.getElementById('lookPad');
+    const moveStick = document.getElementById('moveStick');
+    const lookStick = document.getElementById('lookStick');
+    const btnJump = document.getElementById('btnJump');
+    const btnMine = document.getElementById('btnMine');
+    const btnPlace = document.getElementById('btnPlace');
+    const btnPage = document.getElementById('btnPage');
+    const btnPause = document.getElementById('btnPause');
+
+    /*********************
+     * Utils
+     *********************/
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    function formatTime(ms){
+      const s = ms / 1000;
+      const m = Math.floor(s / 60);
+      const rs = s - m * 60;
+      return `${m}:${rs.toFixed(1).padStart(4,'0')}`;
+    }
+
+    function showToast(msg, ms=1600){
+      toast.textContent = msg;
+      toast.classList.add('show');
+      srStatus.textContent = msg;
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toast.classList.remove('show'), ms);
+    }
+
+    function nowMs(){ return performance.now(); }
+
+    function preventScrollKeys(e){
+      const keys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Spacebar'];
+      if (keys.includes(e.key)) e.preventDefault();
+    }
+    window.addEventListener('keydown', preventScrollKeys, { passive:false });
+
+    // Disable context menu (RMB is place)
+    window.addEventListener('contextmenu', e => e.preventDefault());
+
+    /*********************
+     * RNG / Noise
+     *********************/
+    function mulberry32(seed){
+      let t = seed >>> 0;
+      return function(){
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function hash2i(x, z, seed){
+      // 32-bit mix
+      let h = (x * 374761393 + z * 668265263 + seed * 1442695041) | 0;
+      h = (h ^ (h >>> 13)) | 0;
+      h = Math.imul(h, 1274126177);
+      h = (h ^ (h >>> 16)) | 0;
+      return (h >>> 0) / 4294967296;
+    }
+
+    function valueNoise2D(x, z, seed){
+      const xi = Math.floor(x), zi = Math.floor(z);
+      const xf = x - xi, zf = z - zi;
+      const u = xf * xf * (3 - 2 * xf);
+      const v = zf * zf * (3 - 2 * zf);
+      const a = hash2i(xi, zi, seed);
+      const b = hash2i(xi + 1, zi, seed);
+      const c = hash2i(xi, zi + 1, seed);
+      const d = hash2i(xi + 1, zi + 1, seed);
+      return lerp(lerp(a, b, u), lerp(c, d, u), v);
+    }
+
+    /*********************
+     * Game constants
+     *********************/
+    const WORLD_W = 64;
+    const WORLD_H = 32;
+    const WORLD_D = 64;
+
+    const BLOCK = {
+      AIR: 0,
+      GRASS: 1,
+      DIRT: 2,
+      STONE: 3,
+      WOOD: 4,
+      PLANKS: 5,
+      GLASS: 6,
+      LAMP: 7,
+      REDSTONE_DUST: 9,
+      LEVER: 10,
+      DOOR: 11,
+      PORTAL: 12,
+      TORCH: 13,
+      PLATE: 14,
+      SAND: 15,
+    };
+
+    const BLOCK_NAME = {
+      [BLOCK.AIR]:'Air',
+      [BLOCK.GRASS]:'Grass',
+      [BLOCK.DIRT]:'Dirt',
+      [BLOCK.STONE]:'Stone',
+      [BLOCK.WOOD]:'Log',
+      [BLOCK.PLANKS]:'Planks',
+      [BLOCK.GLASS]:'Glass',
+      [BLOCK.LAMP]:'Redstone Lamp',
+      [BLOCK.REDSTONE_DUST]:'Redstone Dust',
+      [BLOCK.LEVER]:'Lever',
+      [BLOCK.DOOR]:'Door',
+      [BLOCK.PORTAL]:'Portal',
+      [BLOCK.TORCH]:'Redstone Torch',
+      [BLOCK.PLATE]:'Pressure Plate',
+      [BLOCK.SAND]:'Sand',
+    };
+
+    function isSolidId(id){
+      return (
+        id === BLOCK.GRASS ||
+        id === BLOCK.DIRT ||
+        id === BLOCK.STONE ||
+        id === BLOCK.WOOD ||
+        id === BLOCK.PLANKS ||
+        id === BLOCK.GLASS ||
+        id === BLOCK.SAND ||
+        id === BLOCK.LAMP
+      );
+    }
+
+    function inBounds(x,y,z){
+      return x>=0 && x<WORLD_W && y>=0 && y<WORLD_H && z>=0 && z<WORLD_D;
+    }
+
+    function packKey(x,y,z){
+      // x: 0..63 (6 bits), y: 0..31 (5 bits), z: 0..63 (6 bits)
+      return (x & 63) | ((y & 31) << 6) | ((z & 63) << 11);
+    }
+    function unpackKey(key){
+      const x = key & 63;
+      const y = (key >>> 6) & 31;
+      const z = (key >>> 11) & 63;
+      return {x,y,z};
+    }
+
+    function idx(x,y,z){
+      return x + WORLD_W * (z + WORLD_D * y);
+    }
+
+    const NEI6 = [
+      [ 1, 0, 0], [-1, 0, 0],
+      [ 0, 1, 0], [ 0,-1, 0],
+      [ 0, 0, 1], [ 0, 0,-1],
+    ];
+    const NEI4 = [
+      [ 1, 0, 0], [-1, 0, 0],
+      [ 0, 0, 1], [ 0, 0,-1],
+    ];
+
+    /*********************
+     * Levels
+     *********************/
+    const LEVELS = [
+      {
+        name: 'Boot Sector Plains',
+        seed: 81001,
+        spawn: {x: 10.5, y: 18.0, z: 10.5},
+        temple: {x: 32, y: 14, z: 32},
+        requiredLamps: 1,
+        hints: [
+          'Hint: Place redstone dust in a line from the lever to the lamp.',
+          'Hint: Dust power decays (15 → 0). Keep it short, or add a new source.',
+          'Hint: Doors open when powered. Lamps light when powered.',
+        ]
+      },
+      {
+        name: 'Relay Ridge',
+        seed: 81002,
+        spawn: {x: 12.5, y: 18.0, z: 52.5},
+        temple: {x: 44, y: 14, z: 22},
+        requiredLamps: 2,
+        hints: [
+          'Hint: Use a redstone torch as an inverter (NOT) to build logic.',
+          'Hint: Use blocks to bridge gaps, then place dust on top.',
+          'Hint: Two independent dust lines can power separate lamps.',
+        ]
+      },
+      {
+        name: 'Logic Vault',
+        seed: 81003,
+        spawn: {x: 52.5, y: 18.0, z: 12.5},
+        temple: {x: 20, y: 14, z: 44},
+        requiredLamps: 3,
+        hints: [
+          'Hint: Use pressure plates to make player-triggered circuits.',
+          'Hint: Torches invert. Combine sources to create puzzles.',
+          'Hint: All required lamps must be powered at the same time.',
+        ]
+      },
+    ];
+
+    /*********************
+     * Renderer / Scene
+     *********************/
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x9cc9ff, 0.016);
+
+    const camera = new THREE.PerspectiveCamera(80, innerWidth/innerHeight, 0.05, 220);
+    camera.position.set(10, 18, 10);
+
+    const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x1a2235, 0.85);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xffffff, 0.95);
+    sun.position.set(40, 75, 30);
+    sun.castShadow = false;
+    scene.add(sun);
+
+    const ambientPulse = new THREE.PointLight(0x66e0ff, 0.15, 22, 2);
+    ambientPulse.position.set(0, 8, 0);
+    scene.add(ambientPulse);
+
+    window.addEventListener('resize', () => {
+      renderer.setSize(innerWidth, innerHeight);
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    /*********************
+     * Pointer lock + camera yaw/pitch (custom)
+     *********************/
+    let pointerLocked = false;
+    let yaw = 0;
+    let pitch = 0;
+    let lookSensitivity = 1.0;
+
+    function setCameraFromYawPitch(){
+      pitch = clamp(pitch, -1.52, 1.52);
+      camera.rotation.set(pitch, yaw, 0, 'YXZ');
+    }
+
+    function requestPointerLock(){
+      if (isTouch) return; // touch mode uses drag look
+      canvas.requestPointerLock?.();
+    }
+
+    document.addEventListener('pointerlockchange', () => {
+      pointerLocked = (document.pointerLockElement === canvas);
+      crosshair.style.display = pointerLocked ? 'block' : 'none';
+      if (pointerLocked) {
+        hideMenuOverlays();
+        if (game.state === 'MENU') game.state = 'PLAYING';
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!pointerLocked) return;
+      const sens = lookSensitivity * 0.0022;
+      yaw -= e.movementX * sens;
+      pitch -= e.movementY * sens;
+      setCameraFromYawPitch();
+    });
+
+    /*********************
+     * Input
+     *********************/
+    const keys = new Set();
+    const pressed = new Set();
+
+    window.addEventListener('keydown', (e) => {
+      keys.add(e.code);
+      pressed.add(e.code);
+
+      if (e.code === 'Escape') {
+        if (game.state === 'PLAYING') setPaused(true);
+        else if (game.state === 'PAUSED') setPaused(false);
+      }
+
+      if (game.state === 'PLAYING') {
+        // Hotbar slots 1-9
+        const k = e.key;
+        if (k >= '1' && k <= '9') {
+          const slot = (k.charCodeAt(0) - '1'.charCodeAt(0));
+          selectSlot(slot);
+        }
+        if (e.code === 'KeyR') switchPage();
+        if (e.code === 'KeyF') cycleTip();
+      }
+    }, { passive:false });
+
+    window.addEventListener('keyup', (e) => {
+      keys.delete(e.code);
+    });
+
+    let mouseDownL = false;
+    let mouseDownR = false;
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 0) mouseDownL = true;
+      if (e.button === 2) mouseDownR = true;
+      if (game.state === 'PLAYING' && !pointerLocked && !isTouch) requestPointerLock();
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) mouseDownL = false;
+      if (e.button === 2) mouseDownR = false;
+    });
+
+    /*********************
+     * Touch controls
+     *********************/
+    let touchMove = {x:0,y:0};
+    let touchLook = {x:0,y:0};
+    let touchMining = false;
+    let touchPlacing = false;
+
+    function setupTouch(){
+      if (!isTouch) return;
+      touchUI.style.display = 'block';
+      crosshair.style.display = 'block';
+      lookStick.style.display = 'block';
+      lookPad.style.opacity = '0.20';
+      tipsText.textContent = 'Touch: left pad move · right pad look · MINE/PLACE · PAGE switches hotbar page · PAUSE pauses';
+      const padState = {
+        move: { active:false, id:null, sx:0, sy:0, x:0, y:0, el: moveStick, pad: movePad, out: touchMove, max: 62 },
+        look: { active:false, id:null, sx:0, sy:0, x:0, y:0, el: lookStick, pad: lookPad, out: touchLook, max: 74 },
+      };
+
+      function onTouchStart(which, e){
+        const s = padState[which];
+        if (s.active) return;
+        const t = e.changedTouches[0];
+        const rect = s.pad.getBoundingClientRect();
+        s.active = true;
+        s.id = t.identifier;
+        s.sx = t.clientX;
+        s.sy = t.clientY;
+        s.x = rect.left + rect.width/2;
+        s.y = rect.top + rect.height/2;
+        s.el.style.display = 'block';
+        s.el.style.left = '50%';
+        s.el.style.top = '50%';
+        e.preventDefault();
+      }
+      function onTouchMove(which, e){
+        const s = padState[which];
+        if (!s.active) return;
+        const touch = [...e.touches].find(t => t.identifier === s.id);
+        if (!touch) return;
+        const dx = touch.clientX - s.sx;
+        const dy = touch.clientY - s.sy;
+        const mag = Math.hypot(dx, dy);
+        const max = s.max;
+        const ndx = mag > max ? dx * (max/mag) : dx;
+        const ndy = mag > max ? dy * (max/mag) : dy;
+        s.out.x = clamp(ndx / max, -1, 1);
+        s.out.y = clamp(ndy / max, -1, 1);
+        s.el.style.transform = `translate(calc(-50% + ${ndx}px), calc(-50% + ${ndy}px))`;
+        e.preventDefault();
+      }
+      function onTouchEnd(which, e){
+        const s = padState[which];
+        const ended = [...e.changedTouches].some(t => t.identifier === s.id);
+        if (!ended) return;
+        s.active = false;
+        s.id = null;
+        s.out.x = 0; s.out.y = 0;
+        s.el.style.transform = 'translate(-50%,-50%)';
+        e.preventDefault();
+      }
+
+      ['touchstart','touchmove','touchend','touchcancel'].forEach(evt => {
+        movePad.addEventListener(evt, (e) => {
+          if (evt === 'touchstart') onTouchStart('move', e);
+          if (evt === 'touchmove') onTouchMove('move', e);
+          if (evt === 'touchend' || evt === 'touchcancel') onTouchEnd('move', e);
+        }, { passive:false });
+
+        lookPad.addEventListener(evt, (e) => {
+          if (evt === 'touchstart') onTouchStart('look', e);
+          if (evt === 'touchmove') onTouchMove('look', e);
+          if (evt === 'touchend' || evt === 'touchcancel') onTouchEnd('look', e);
+        }, { passive:false });
+      });
+
+      btnJump.addEventListener('touchstart', (e) => { keys.add('Space'); e.preventDefault(); }, { passive:false });
+      btnJump.addEventListener('touchend',   (e) => { keys.delete('Space'); e.preventDefault(); }, { passive:false });
+
+      btnMine.addEventListener('touchstart', (e) => { touchMining = true; e.preventDefault(); }, { passive:false });
+      btnMine.addEventListener('touchend',   (e) => { touchMining = false; e.preventDefault(); }, { passive:false });
+
+      btnPlace.addEventListener('touchstart', (e) => { touchPlacing = true; e.preventDefault(); }, { passive:false });
+      btnPlace.addEventListener('touchend',   (e) => { touchPlacing = false; e.preventDefault(); }, { passive:false });
+
+      btnPage.addEventListener('touchstart', (e) => { switchPage(); e.preventDefault(); }, { passive:false });
+      btnPause.addEventListener('touchstart', (e) => { setPaused(true); e.preventDefault(); }, { passive:false });
+
+      // Also allow tapping canvas to start/resume
+      canvas.addEventListener('touchstart', () => {
+        if (game.state === 'MENU') startOrResumeFromMenu();
+      }, { passive:true });
+    }
+
+    /*********************
+     * Materials
+     *********************/
+    const mats = {
+      grass: new THREE.MeshStandardMaterial({ color: 0x4caf50, roughness:0.95, metalness:0.0 }),
+      dirt: new THREE.MeshStandardMaterial({ color: 0x7a4a22, roughness:0.98, metalness:0.0 }),
+      stone: new THREE.MeshStandardMaterial({ color: 0x8b8f99, roughness:0.92, metalness:0.0 }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x8a5a2c, roughness:0.92, metalness:0.0 }),
+      planks: new THREE.MeshStandardMaterial({ color: 0xb07a42, roughness:0.90, metalness:0.0 }),
+      glass: new THREE.MeshPhysicalMaterial({ color: 0x9bd7ff, roughness:0.0, metalness:0.0, transmission:0.75, thickness:0.35, transparent:true, opacity:0.95 }),
+      sand: new THREE.MeshStandardMaterial({ color: 0xd9c48c, roughness:0.96, metalness:0.0 }),
+      lampOff: new THREE.MeshStandardMaterial({ color: 0x4a3a22, roughness:0.65, metalness:0.0, emissive: 0x000000, emissiveIntensity:0.0 }),
+      lampOn: new THREE.MeshStandardMaterial({ color: 0xffd166, roughness:0.35, metalness:0.0, emissive: 0xffb300, emissiveIntensity:1.2 }),
+      dust: new THREE.MeshBasicMaterial({ color: 0x7a0d1a, transparent:true, opacity:0.95 }),
+      leverBase: new THREE.MeshStandardMaterial({ color: 0x3a3f48, roughness:0.85, metalness:0.0 }),
+      leverHandle: new THREE.MeshStandardMaterial({ color: 0xd9d9d9, roughness:0.45, metalness:0.15 }),
+      torchStick: new THREE.MeshStandardMaterial({ color: 0x5c3b1a, roughness:0.9, metalness:0.0 }),
+      torchHeadOff: new THREE.MeshStandardMaterial({ color: 0x3b141b, roughness:0.7, metalness:0.0, emissive:0x000000, emissiveIntensity:0 }),
+      torchHeadOn: new THREE.MeshStandardMaterial({ color: 0xff4d6d, roughness:0.45, metalness:0.0, emissive:0xff1d3d, emissiveIntensity:1.1 }),
+      door: new THREE.MeshStandardMaterial({ color: 0x4a2f1b, roughness:0.9, metalness:0.0 }),
+      portal: new THREE.MeshStandardMaterial({ color: 0x66e0ff, roughness:0.05, metalness:0.0, emissive:0x0669ff, emissiveIntensity:0.9, transparent:true, opacity:0.92 }),
+      plate: new THREE.MeshStandardMaterial({ color: 0x2f3642, roughness:0.85, metalness:0.0 }),
+      highlight: new THREE.LineBasicMaterial({ color: 0x66e0ff, transparent:true, opacity:0.9 }),
+    };
+
+    const geomCube = new THREE.BoxGeometry(1,1,1);
+    const geomDust = new THREE.PlaneGeometry(0.92, 0.92);
+    const geomLeverBase = new THREE.BoxGeometry(0.5, 0.10, 0.5);
+    const geomLeverHandle = new THREE.CylinderGeometry(0.04, 0.04, 0.55, 10);
+    const geomDoor = new THREE.BoxGeometry(0.12, 0.95, 0.85);
+    const geomPortal = new THREE.BoxGeometry(0.18, 1.65, 1.1);
+    const geomTorchStick = new THREE.CylinderGeometry(0.05, 0.06, 0.55, 10);
+    const geomTorchHead = new THREE.SphereGeometry(0.11, 10, 10);
+    const geomPlate = new THREE.BoxGeometry(0.92, 0.08, 0.92);
+
+    /*********************
+     * Instance manager
+     *********************/
+    class InstancePool {
+      constructor(geometry, material, capacity=50000){
+        this.mesh = new THREE.InstancedMesh(geometry, material, capacity);
+        this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.capacity = capacity;
+        this.count = 0;
+        this.keyToIndex = new Map();
+        this.indexToKey = [];
+        this.tmpMat = new THREE.Matrix4();
+        this.tmpPos = new THREE.Vector3();
+        this.tmpQuat = new THREE.Quaternion();
+        this.tmpScale = new THREE.Vector3(1,1,1);
+        this.mesh.count = 0;
+      }
+      ensureCapacity(n){
+        if (n <= this.capacity) return;
+        // Expand by recreating the mesh (rare in our target sizes)
+        const newCap = Math.max(n, Math.floor(this.capacity * 1.4) + 1024);
+        const old = this;
+        const newMesh = new THREE.InstancedMesh(old.mesh.geometry, old.mesh.material, newCap);
+        newMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        // copy
+        for (let i=0; i<old.count; i++){
+          old.mesh.getMatrixAt(i, this.tmpMat);
+          newMesh.setMatrixAt(i, this.tmpMat);
+        }
+        newMesh.count = old.count;
+        // swap
+        this.mesh.parent?.add(newMesh);
+        this.mesh.parent?.remove(this.mesh);
+        this.mesh.dispose?.();
+        this.mesh = newMesh;
+        this.capacity = newCap;
+      }
+      has(key){ return this.keyToIndex.has(key); }
+      addAtKey(key, x,y,z){
+        if (this.keyToIndex.has(key)) return;
+        this.ensureCapacity(this.count + 1);
+        const i = this.count++;
+        this.keyToIndex.set(key, i);
+        this.indexToKey[i] = key;
+        this.tmpPos.set(x + 0.5, y + 0.5, z + 0.5);
+        this.tmpQuat.identity();
+        this.tmpScale.set(1,1,1);
+        this.tmpMat.compose(this.tmpPos, this.tmpQuat, this.tmpScale);
+        this.mesh.setMatrixAt(i, this.tmpMat);
+        this.mesh.count = this.count;
+        this.mesh.instanceMatrix.needsUpdate = true;
+      }
+      removeKey(key){
+        const i = this.keyToIndex.get(key);
+        if (i === undefined) return;
+        const last = this.count - 1;
+        if (i !== last){
+          // swap last into i
+          this.mesh.getMatrixAt(last, this.tmpMat);
+          this.mesh.setMatrixAt(i, this.tmpMat);
+          const lastKey = this.indexToKey[last];
+          this.indexToKey[i] = lastKey;
+          this.keyToIndex.set(lastKey, i);
+        }
+        this.keyToIndex.delete(key);
+        this.indexToKey.pop();
+        this.count--;
+        this.mesh.count = this.count;
+        this.mesh.instanceMatrix.needsUpdate = true;
+      }
+      keyFromInstanceId(instanceId){
+        return this.indexToKey[instanceId] ?? null;
+      }
+    }
+
+    /*********************
+     * World
+     *********************/
+    class World {
+      constructor(levelIndex){
+        this.levelIndex = levelIndex;
+        this.levelDef = LEVELS[levelIndex];
+
+        this.blocks = new Uint8Array(WORLD_W * WORLD_H * WORLD_D);
+
+        // instance pools for cube-like blocks
+        this.inst = {
+          grass: new InstancePool(geomCube, mats.grass, 26000),
+          dirt: new InstancePool(geomCube, mats.dirt, 26000),
+          stone: new InstancePool(geomCube, mats.stone, 26000),
+          wood: new InstancePool(geomCube, mats.wood, 6000),
+          planks: new InstancePool(geomCube, mats.planks, 8000),
+          glass: new InstancePool(geomCube, mats.glass, 5000),
+          sand: new InstancePool(geomCube, mats.sand, 6000),
+          lampOff: new InstancePool(geomCube, mats.lampOff, 2048),
+          lampOn: new InstancePool(geomCube, mats.lampOn, 2048),
+        };
+
+        this.special = {
+          dust: new Map(),   // key -> { mesh, power }
+          lever: new Map(),  // key -> { group, on }
+          torch: new Map(),  // key -> { group, lit }
+          plate: new Map(),  // key -> { mesh, pressed }
+          door: new Map(),   // key -> { group, openT, facing, solidWhenClosed }
+          portal: new Map(), // key -> { mesh }
+        };
+
+        this.lamps = new Set();       // keys
+        this.requiredLampKeys = [];   // keys required for objective
+        this.gateDoorKey = null;
+        this.portalKey = null;
+
+        this.redstoneDirty = true;
+        this._redstoneDirtyTimer = 0;
+
+        this.changes = new Map(); // key -> { id, state? } for saving diffs from base
+        this.baseBlocks = null;   // Uint8Array copy for diffs
+        this.baseSpecial = null;  // baseline states for special blocks (lever/torch/door)
+
+        // Precompute solid lookup fast?
+      }
+
+      getId(x,y,z){
+        if (!inBounds(x,y,z)) return BLOCK.STONE; // treat out-of-bounds as solid wall
+        return this.blocks[idx(x,y,z)];
+      }
+      setId(x,y,z,id){
+        if (!inBounds(x,y,z)) return;
+        this.blocks[idx(x,y,z)] = id;
+      }
+
+      generateBase(){
+        const seed = this.levelDef.seed;
+        const rng = mulberry32(seed);
+
+        // Fill with air
+        this.blocks.fill(BLOCK.AIR);
+
+        // Terrain
+        const baseH = 12;
+        for (let x=0; x<WORLD_W; x++){
+          for (let z=0; z<WORLD_D; z++){
+            const n1 = valueNoise2D(x*0.08, z*0.08, seed);
+            const n2 = valueNoise2D(x*0.16 + 100, z*0.16 - 50, seed ^ 0x9e3779b9);
+            let h = Math.floor(baseH + n1*8 + n2*4);
+            h = clamp(h, 6, WORLD_H-4);
+
+            // sand patches
+            const sandPatch = valueNoise2D(x*0.14 + 33.3, z*0.14 - 71.1, seed+999) > 0.73;
+
+            for (let y=0; y<=h; y++){
+              let id = BLOCK.STONE;
+              if (y === h) id = sandPatch ? BLOCK.SAND : BLOCK.GRASS;
+              else if (y >= h-2) id = BLOCK.DIRT;
+              else id = BLOCK.STONE;
+              this.setId(x,y,z,id);
+            }
+
+            // Some trees
+            if (!sandPatch && h > baseH+2 && rng() < 0.028){
+              const th = 4 + Math.floor(rng()*3);
+              for (let t=1; t<=th; t++) this.setId(x, h+t, z, BLOCK.WOOD);
+              // canopy
+              for (let dx=-2; dx<=2; dx++){
+                for (let dz=-2; dz<=2; dz++){
+                  for (let dy=th-1; dy<=th+1; dy++){
+                    if (Math.abs(dx)+Math.abs(dz)+Math.abs(dy-(th)) > 4) continue;
+                    const ax = x+dx, ay = h+dy, az = z+dz;
+                    if (!inBounds(ax,ay,az)) continue;
+                    if (this.getId(ax,ay,az) === BLOCK.AIR) this.setId(ax,ay,az, BLOCK.PLANKS);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Temple / puzzle structure
+        this.buildTemple();
+
+        // Save base snapshot for diff
+        this.baseBlocks = this.blocks.slice();
+        this.baseSpecial = this.exportSpecialState();
+      }
+
+      exportSpecialState(){
+        const out = {
+          lever: {},
+          torch: {},
+          door: {},
+          plate: {},
+        };
+        for (const [k, v] of this.special.lever) out.lever[k] = { on: !!v.on };
+        for (const [k, v] of this.special.torch) out.torch[k] = { lit: !!v.lit };
+        for (const [k, v] of this.special.door) out.door[k] = { facing: v.facing ?? 0 };
+        for (const [k, v] of this.special.plate) out.plate[k] = { pressed: !!v.pressed };
+        return out;
+      }
+
+      buildTemple(){
+        const {x:tx, y:ty, z:tz} = this.levelDef.temple;
+
+        // Flatten area
+        for (let x=tx-10; x<=tx+10; x++){
+          for (let z=tz-10; z<=tz+10; z++){
+            if (!inBounds(x,ty,z)) continue;
+            // ensure ground at ty
+            this.setId(x,ty,z,BLOCK.STONE);
+            this.setId(x,ty+1,z,BLOCK.AIR);
+            this.setId(x,ty+2,z,BLOCK.AIR);
+          }
+        }
+
+        // Platform and walls
+        const floorY = ty+1;
+        for (let x=tx-6; x<=tx+6; x++){
+          for (let z=tz-6; z<=tz+6; z++){
+            this.setId(x,floorY-1,z,BLOCK.STONE);
+            this.setId(x,floorY,z,BLOCK.AIR);
+          }
+        }
+        for (let y=floorY; y<=floorY+4; y++){
+          for (let x=tx-6; x<=tx+6; x++){
+            for (let z=tz-6; z<=tz+6; z++){
+              const edge = (x===tx-6 || x===tx+6 || z===tz-6 || z===tz+6);
+              if (!edge) continue;
+              // doorway opening front (negative z)
+              const isDoorGap = (z===tz-6 && x>=tx-1 && x<=tx+1 && y<=floorY+2);
+              if (isDoorGap) continue;
+              this.setId(x,y,z,BLOCK.STONE);
+            }
+          }
+        }
+        // ceiling ring
+        for (let x=tx-6; x<=tx+6; x++){
+          for (let z=tz-6; z<=tz+6; z++){
+            const edge = (x===tx-6 || x===tx+6 || z===tz-6 || z===tz+6);
+            if (edge) this.setId(x,floorY+5,z,BLOCK.STONE);
+          }
+        }
+
+        // Gate door (redstone-controlled)
+        const doorPos = {x:tx, y:floorY+1, z:tz-6};
+        this.setId(doorPos.x, doorPos.y, doorPos.z, BLOCK.DOOR);
+        this.gateDoorKey = packKey(doorPos.x, doorPos.y, doorPos.z);
+
+        // Portal inside
+        const portalPos = {x:tx, y:floorY+1, z:tz+5};
+        this.setId(portalPos.x, portalPos.y, portalPos.z, BLOCK.PORTAL);
+        this.portalKey = packKey(portalPos.x, portalPos.y, portalPos.z);
+
+        // Required lamps positions
+        this.requiredLampKeys = [];
+        const req = this.levelDef.requiredLamps;
+
+        const lampSpots = [
+          {x:tx-3, y:floorY+2, z:tz-1},
+          {x:tx+3, y:floorY+2, z:tz-1},
+          {x:tx,   y:floorY+2, z:tz+1},
+        ];
+
+        for (let i=0; i<req; i++){
+          const p = lampSpots[i];
+          this.setId(p.x,p.y,p.z,BLOCK.LAMP);
+          this.requiredLampKeys.push(packKey(p.x,p.y,p.z));
+        }
+
+        // A lever spot + small starter wiring gap
+        const leverPos = {x:tx-4, y:floorY+1, z:tz+3};
+        this.setId(leverPos.x, leverPos.y, leverPos.z, BLOCK.LEVER);
+
+        // Some dust placed as a hint (not fully connected)
+        const dustLine = [
+          {x:tx-3, y:floorY+1, z:tz+3},
+          {x:tx-2, y:floorY+1, z:tz+3},
+          // gap to encourage building
+          {x:tx,   y:floorY+1, z:tz+2},
+        ];
+        for (const p of dustLine) this.setId(p.x,p.y,p.z,BLOCK.REDSTONE_DUST);
+
+        // Additional toys depending on level
+        if (this.levelIndex >= 1){
+          // torch puzzle pedestal
+          this.setId(tx+4, floorY, tz+3, BLOCK.STONE);
+          this.setId(tx+4, floorY+1, tz+3, BLOCK.TORCH);
+          // extra dust bits
+          this.setId(tx+2, floorY+1, tz+3, BLOCK.REDSTONE_DUST);
+          this.setId(tx+1, floorY+1, tz+3, BLOCK.REDSTONE_DUST);
+        }
+        if (this.levelIndex >= 2){
+          // pressure plate near portal
+          this.setId(tx-1, floorY, tz+4, BLOCK.STONE);
+          this.setId(tx-1, floorY+1, tz+4, BLOCK.PLATE);
+        }
+
+        // Decorative glass windows
+        for (let y=floorY+2; y<=floorY+3; y++){
+          this.setId(tx-6,y,tz, BLOCK.GLASS);
+          this.setId(tx+6,y,tz, BLOCK.GLASS);
+          this.setId(tx,y,tz+6, BLOCK.GLASS);
+        }
+      }
+
+      buildRenderMeshes(){
+        // Clear old objects
+        for (const k of Object.keys(this.inst)){
+          const m = this.inst[k].mesh;
+          if (m.parent) m.parent.remove(m);
+          this.inst[k].count = 0;
+          this.inst[k].mesh.count = 0;
+          this.inst[k].keyToIndex.clear();
+          this.inst[k].indexToKey.length = 0;
+        }
+        for (const group of [this.special.dust, this.special.lever, this.special.torch, this.special.plate, this.special.door, this.special.portal]){
+          for (const [,v] of group){
+            const obj = v.mesh ?? v.group;
+            if (obj?.parent) obj.parent.remove(obj);
+          }
+          group.clear();
+        }
+        this.lamps.clear();
+
+        // Add instanced meshes to scene
+        scene.add(this.inst.grass.mesh);
+        scene.add(this.inst.dirt.mesh);
+        scene.add(this.inst.stone.mesh);
+        scene.add(this.inst.wood.mesh);
+        scene.add(this.inst.planks.mesh);
+        scene.add(this.inst.glass.mesh);
+        scene.add(this.inst.sand.mesh);
+        scene.add(this.inst.lampOff.mesh);
+        scene.add(this.inst.lampOn.mesh);
+
+        // Populate from blocks array
+        for (let y=0; y<WORLD_H; y++){
+          for (let z=0; z<WORLD_D; z++){
+            for (let x=0; x<WORLD_W; x++){
+              const id = this.getId(x,y,z);
+              if (id === BLOCK.AIR) continue;
+              const key = packKey(x,y,z);
+              if (id === BLOCK.GRASS) this.inst.grass.addAtKey(key,x,y,z);
+              else if (id === BLOCK.DIRT) this.inst.dirt.addAtKey(key,x,y,z);
+              else if (id === BLOCK.STONE) this.inst.stone.addAtKey(key,x,y,z);
+              else if (id === BLOCK.WOOD) this.inst.wood.addAtKey(key,x,y,z);
+              else if (id === BLOCK.PLANKS) this.inst.planks.addAtKey(key,x,y,z);
+              else if (id === BLOCK.GLASS) this.inst.glass.addAtKey(key,x,y,z);
+              else if (id === BLOCK.SAND) this.inst.sand.addAtKey(key,x,y,z);
+              else if (id === BLOCK.LAMP) {
+                this.lamps.add(key);
+                this.inst.lampOff.addAtKey(key,x,y,z); // default, redstone will swap
+              }
+              else if (id === BLOCK.REDSTONE_DUST) this.addDust(x,y,z);
+              else if (id === BLOCK.LEVER) this.addLever(x,y,z,false);
+              else if (id === BLOCK.TORCH) this.addTorch(x,y,z,true);
+              else if (id === BLOCK.PLATE) this.addPlate(x,y,z,false);
+              else if (id === BLOCK.DOOR) this.addDoor(x,y,z, 0);
+              else if (id === BLOCK.PORTAL) this.addPortal(x,y,z);
+            }
+          }
+        }
+
+        this.markRedstoneDirty(true);
+      }
+
+      addDust(x,y,z){
+        const key = packKey(x,y,z);
+        if (this.special.dust.has(key)) return;
+
+        // must have solid below
+        const below = this.getId(x,y-1,z);
+        if (!isSolidId(below) && below !== BLOCK.DOOR) return;
+
+        const m = new THREE.Mesh(geomDust, mats.dust.clone());
+        m.rotation.x = -Math.PI/2;
+        m.position.set(x+0.5, y+0.01, z+0.5);
+        m.userData = { kind:'dust', key };
+        scene.add(m);
+
+        this.special.dust.set(key, { mesh: m, power: 0 });
+      }
+
+      addLever(x,y,z,on){
+        const key = packKey(x,y,z);
+        if (this.special.lever.has(key)) return;
+
+        // must have solid below
+        const below = this.getId(x,y-1,z);
+        if (!isSolidId(below) && below !== BLOCK.DOOR) return;
+
+        const group = new THREE.Group();
+        const base = new THREE.Mesh(geomLeverBase, mats.leverBase);
+        base.position.set(0, -0.20, 0);
+        const handle = new THREE.Mesh(geomLeverHandle, mats.leverHandle);
+        handle.position.set(0, 0.08, 0);
+        handle.rotation.z = on ? -0.85 : 0.85;
+        group.add(base, handle);
+
+        group.position.set(x+0.5, y+0.58, z+0.5);
+        group.userData = { kind:'lever', key };
+        group.traverse(o => o.userData = group.userData);
+
+        scene.add(group);
+        this.special.lever.set(key, { group, on, handle });
+      }
+
+      addTorch(x,y,z,lit){
+        const key = packKey(x,y,z);
+        if (this.special.torch.has(key)) return;
+
+        // must have solid below
+        const below = this.getId(x,y-1,z);
+        if (!isSolidId(below) && below !== BLOCK.DOOR) return;
+
+        const group = new THREE.Group();
+        const stick = new THREE.Mesh(geomTorchStick, mats.torchStick);
+        stick.position.set(0, -0.05, 0);
+        const head = new THREE.Mesh(geomTorchHead, lit ? mats.torchHeadOn : mats.torchHeadOff);
+        head.position.set(0, 0.25, 0);
+        group.add(stick, head);
+        group.position.set(x+0.5, y+0.60, z+0.5);
+        group.userData = { kind:'torch', key };
+        group.traverse(o => o.userData = group.userData);
+        scene.add(group);
+
+        this.special.torch.set(key, { group, lit, head });
+      }
+
+      addPlate(x,y,z,pressed){
+        const key = packKey(x,y,z);
+        if (this.special.plate.has(key)) return;
+
+        const below = this.getId(x,y-1,z);
+        if (!isSolidId(below) && below !== BLOCK.DOOR) return;
+
+        const m = new THREE.Mesh(geomPlate, mats.plate);
+        m.position.set(x+0.5, y+0.07, z+0.5);
+        m.userData = { kind:'plate', key };
+        scene.add(m);
+        this.special.plate.set(key, { mesh:m, pressed: !!pressed });
+      }
+
+      addDoor(x,y,z,facing){
+        const key = packKey(x,y,z);
+        if (this.special.door.has(key)) return;
+
+        // must have solid below
+        const below = this.getId(x,y-1,z);
+        if (!isSolidId(below) && below !== BLOCK.DOOR) return;
+
+        const group = new THREE.Group();
+
+        // Pivot at cell center; child offset to make hinge effect
+        const door = new THREE.Mesh(geomDoor, mats.door);
+        door.position.set(0.0, 0.0, 0.0);
+        group.add(door);
+
+        group.position.set(x+0.5, y+0.5, z+0.5);
+        group.userData = { kind:'door', key };
+        group.traverse(o => o.userData = group.userData);
+
+        // Facing: 0 = +Z, 1 = +X, 2 = -Z, 3 = -X
+        group.rotation.y = (facing * Math.PI/2);
+
+        scene.add(group);
+        this.special.door.set(key, { group, openT: 0, facing, solidWhenClosed:true });
+      }
+
+      addPortal(x,y,z){
+        const key = packKey(x,y,z);
+        if (this.special.portal.has(key)) return;
+
+        const m = new THREE.Mesh(geomPortal, mats.portal);
+        m.position.set(x+0.5, y+0.85, z+0.5);
+        m.userData = { kind:'portal', key };
+        scene.add(m);
+        this.special.portal.set(key, { mesh:m });
+      }
+
+      removeBlockAtKey(key){
+        const {x,y,z} = unpackKey(key);
+        const id = this.getId(x,y,z);
+        if (id === BLOCK.AIR) return;
+
+        // remove from visuals
+        if (id === BLOCK.GRASS) this.inst.grass.removeKey(key);
+        else if (id === BLOCK.DIRT) this.inst.dirt.removeKey(key);
+        else if (id === BLOCK.STONE) this.inst.stone.removeKey(key);
+        else if (id === BLOCK.WOOD) this.inst.wood.removeKey(key);
+        else if (id === BLOCK.PLANKS) this.inst.planks.removeKey(key);
+        else if (id === BLOCK.GLASS) this.inst.glass.removeKey(key);
+        else if (id === BLOCK.SAND) this.inst.sand.removeKey(key);
+        else if (id === BLOCK.LAMP) {
+          this.lamps.delete(key);
+          this.inst.lampOff.removeKey(key);
+          this.inst.lampOn.removeKey(key);
+        }
+        else if (id === BLOCK.REDSTONE_DUST) {
+          const d = this.special.dust.get(key);
+          if (d){ scene.remove(d.mesh); this.special.dust.delete(key); }
+        }
+        else if (id === BLOCK.LEVER) {
+          const v = this.special.lever.get(key);
+          if (v){ scene.remove(v.group); this.special.lever.delete(key); }
+        }
+        else if (id === BLOCK.TORCH) {
+          const v = this.special.torch.get(key);
+          if (v){ scene.remove(v.group); this.special.torch.delete(key); }
+        }
+        else if (id === BLOCK.PLATE) {
+          const v = this.special.plate.get(key);
+          if (v){ scene.remove(v.mesh); this.special.plate.delete(key); }
+        }
+        else if (id === BLOCK.DOOR) {
+          const v = this.special.door.get(key);
+          if (v){ scene.remove(v.group); this.special.door.delete(key); }
+        }
+        else if (id === BLOCK.PORTAL) {
+          const v = this.special.portal.get(key);
+          if (v){ scene.remove(v.mesh); this.special.portal.delete(key); }
+        }
+
+        // set to air
+        this.setId(x,y,z,BLOCK.AIR);
+
+        // If removed a support block, remove dust/lever/torch/plate above if now unsupported
+        const aboveKey = packKey(x,y+1,z);
+        const aboveId = this.getId(x,y+1,z);
+        if (aboveId === BLOCK.REDSTONE_DUST || aboveId === BLOCK.LEVER || aboveId === BLOCK.TORCH || aboveId === BLOCK.PLATE) {
+          const belowNow = this.getId(x,y,z);
+          if (!isSolidId(belowNow) && belowNow !== BLOCK.DOOR) {
+            this.removeBlockAtKey(aboveKey);
+          }
+        }
+
+        this.markRedstoneDirty(true);
+      }
+
+      placeBlock(x,y,z,id,extraState=null){
+        if (!inBounds(x,y,z)) return false;
+        if (this.getId(x,y,z) !== BLOCK.AIR) return false;
+
+        // Placement rules
+        if (id === BLOCK.REDSTONE_DUST || id === BLOCK.LEVER || id === BLOCK.TORCH || id === BLOCK.PLATE || id === BLOCK.DOOR) {
+          const below = this.getId(x,y-1,z);
+          if (!isSolidId(below) && below !== BLOCK.DOOR) return false;
+        }
+
+        this.setId(x,y,z,id);
+        const key = packKey(x,y,z);
+
+        if (id === BLOCK.GRASS) this.inst.grass.addAtKey(key,x,y,z);
+        else if (id === BLOCK.DIRT) this.inst.dirt.addAtKey(key,x,y,z);
+        else if (id === BLOCK.STONE) this.inst.stone.addAtKey(key,x,y,z);
+        else if (id === BLOCK.WOOD) this.inst.wood.addAtKey(key,x,y,z);
+        else if (id === BLOCK.PLANKS) this.inst.planks.addAtKey(key,x,y,z);
+        else if (id === BLOCK.GLASS) this.inst.glass.addAtKey(key,x,y,z);
+        else if (id === BLOCK.SAND) this.inst.sand.addAtKey(key,x,y,z);
+        else if (id === BLOCK.LAMP) {
+          this.lamps.add(key);
+          this.inst.lampOff.addAtKey(key,x,y,z);
+        }
+        else if (id === BLOCK.REDSTONE_DUST) this.addDust(x,y,z);
+        else if (id === BLOCK.LEVER) this.addLever(x,y,z,false);
+        else if (id === BLOCK.TORCH) this.addTorch(x,y,z,true);
+        else if (id === BLOCK.PLATE) this.addPlate(x,y,z,false);
+        else if (id === BLOCK.DOOR) {
+          const facing = extraState?.facing ?? 0;
+          this.addDoor(x,y,z,facing);
+        }
+        else if (id === BLOCK.PORTAL) this.addPortal(x,y,z);
+
+        this.markRedstoneDirty(true);
+        return true;
+      }
+
+      markRedstoneDirty(immediate=false){
+        this.redstoneDirty = true;
+        if (immediate) this._redstoneDirtyTimer = 0.01;
+      }
+
+      tickRedstone(dt){
+        if (!this.redstoneDirty) return;
+        this._redstoneDirtyTimer -= dt;
+        if (this._redstoneDirtyTimer > 0) return;
+
+        this.redstoneDirty = false;
+        this._redstoneDirtyTimer = 0.04; // debounce
+        this.recomputeRedstone();
+      }
+
+      isPoweredAtCell(x,y,z){
+        // A cell is "powered" if any adjacent dust has power > 0, or adjacent lever is on,
+        // or adjacent torch outputs power, or adjacent plate is pressed.
+        for (const [dx,dy,dz] of NEI6){
+          const ax = x+dx, ay = y+dy, az = z+dz;
+          if (!inBounds(ax,ay,az)) continue;
+          const aid = this.getId(ax,ay,az);
+          const akey = packKey(ax,ay,az);
+          if (aid === BLOCK.REDSTONE_DUST){
+            const d = this.special.dust.get(akey);
+            if (d && d.power > 0) return true;
+          } else if (aid === BLOCK.LEVER){
+            const v = this.special.lever.get(akey);
+            if (v?.on) return true;
+          } else if (aid === BLOCK.TORCH){
+            const t = this.special.torch.get(akey);
+            if (t?.lit) return true;
+          } else if (aid === BLOCK.PLATE){
+            const p = this.special.plate.get(akey);
+            if (p?.pressed) return true;
+          }
+        }
+        return false;
+      }
+
+      recomputeRedstone(){
+        // Reset dust power
+        for (const [,d] of this.special.dust){
+          d.power = 0;
+        }
+
+        // Determine plate pressed states based on player AABB later; here only uses current pressed
+        // Compute torch lit states as inverter: lit when NOT powered by adjacent sources/dust
+        // (this gives the NOT-gate behavior)
+        for (const [k, t] of this.special.torch){
+          const {x,y,z} = unpackKey(k);
+          const powered = this.isPoweredAtCell(x,y,z);
+          const lit = !powered;
+          if (t.lit !== lit){
+            t.lit = lit;
+            // swap head material
+            t.head.material = lit ? mats.torchHeadOn : mats.torchHeadOff;
+          }
+        }
+
+        // BFS from power sources into dust
+        const q = [];
+        const pushDust = (x,y,z,pow) => {
+          if (pow <= 0) return;
+          if (!inBounds(x,y,z)) return;
+          const id = this.getId(x,y,z);
+          if (id !== BLOCK.REDSTONE_DUST) return;
+          const key = packKey(x,y,z);
+          const d = this.special.dust.get(key);
+          if (!d) return;
+          if (pow <= d.power) return;
+          d.power = pow;
+          q.push({x,y,z,pow});
+        };
+
+        // Sources: lever on, torch lit, plate pressed
+        for (const [k, v] of this.special.lever){
+          if (!v.on) continue;
+          const {x,y,z} = unpackKey(k);
+          for (const [dx,dy,dz] of NEI6){
+            pushDust(x+dx,y+dy,z+dz,15);
+          }
+        }
+        for (const [k, t] of this.special.torch){
+          if (!t.lit) continue;
+          const {x,y,z} = unpackKey(k);
+          for (const [dx,dy,dz] of NEI6){
+            pushDust(x+dx,y+dy,z+dz,15);
+          }
+        }
+        for (const [k, p] of this.special.plate){
+          if (!p.pressed) continue;
+          const {x,y,z} = unpackKey(k);
+          for (const [dx,dy,dz] of NEI6){
+            pushDust(x+dx,y+dy,z+dz,15);
+          }
+        }
+
+        // Propagate through dust (horizontal)
+        while (q.length){
+          const cur = q.shift();
+          const np = cur.pow - 1;
+          if (np <= 0) continue;
+          for (const [dx,dy,dz] of NEI4){
+            pushDust(cur.x+dx, cur.y+dy, cur.z+dz, np);
+          }
+        }
+
+        // Update dust colors
+        for (const [,d] of this.special.dust){
+          const p = d.power;
+          // dark -> bright
+          const c = new THREE.Color();
+          if (p <= 0) c.setHex(0x5b0b14);
+          else {
+            const t = p / 15;
+            c.setRGB(lerp(0.35, 1.0, t), lerp(0.05, 0.18, t), lerp(0.10, 0.25, t));
+          }
+          d.mesh.material.color.copy(c);
+        }
+
+        // Update lamps (swap between off/on instanced pools)
+        for (const key of this.lamps){
+          const {x,y,z} = unpackKey(key);
+          const powered = this.isPoweredAtCell(x,y,z);
+          const hasOn = this.inst.lampOn.has(key);
+          if (powered && !hasOn){
+            this.inst.lampOff.removeKey(key);
+            this.inst.lampOn.addAtKey(key,x,y,z);
+          } else if (!powered && hasOn){
+            this.inst.lampOn.removeKey(key);
+            this.inst.lampOff.addAtKey(key,x,y,z);
+          }
+        }
+
+        // Update doors (open when powered)
+        for (const [k, d] of this.special.door){
+          const {x,y,z} = unpackKey(k);
+          const powered = this.isPoweredAtCell(x,y,z);
+          const target = powered ? 1 : 0;
+          d.openT = clamp(d.openT + (target - d.openT) * 0.35, 0, 1);
+        }
+
+        // Objective state (lamp count powered)
+        this.updateObjectiveStatus();
+      }
+
+      updateObjectiveStatus(){
+        const req = this.requiredLampKeys;
+        let lit = 0;
+        for (const k of req){
+          const {x,y,z} = unpackKey(k);
+          if (this.isPoweredAtCell(x,y,z)) lit++;
+        }
+        game.objectiveLit = lit;
+        game.objectiveReq = req.length;
+
+        // Gate opens when all required lamps are lit (in addition to being a redstone door)
+        // We implement this by powering the gate door via an invisible "logic" (no extra wiring needed),
+        // BUT you can still wire it yourself too; either works.
+        if (this.gateDoorKey != null && this.special.door.has(this.gateDoorKey)){
+          const {x,y,z} = unpackKey(this.gateDoorKey);
+          const poweredByPuzzle = (lit >= req.length && req.length > 0);
+          const poweredByAdj = this.isPoweredAtCell(x,y,z);
+          const door = this.special.door.get(this.gateDoorKey);
+          const target = (poweredByPuzzle || poweredByAdj) ? 1 : 0;
+          door.openT = clamp(door.openT + (target - door.openT) * 0.45, 0, 1);
+        }
+      }
+
+      applySpecialAnimations(dt){
+        // Doors: rotate open with hinge feel (we do a rotation offset inside group)
+        for (const [, d] of this.special.door){
+          const t = d.openT;
+          // Smooth
+          const openAngle = lerp(0, Math.PI/2, t);
+          // hinge-like effect: rotate child mesh around y with small offset
+          d.group.children[0].rotation.y = openAngle;
+          d.group.children[0].position.x = lerp(0.0, 0.34, t);
+          d.group.children[0].position.z = lerp(0.0, 0.08, t);
+        }
+
+        // Portal pulse
+        for (const [, p] of this.special.portal){
+          const m = p.mesh;
+          const t = (performance.now() * 0.001);
+          m.material.opacity = 0.80 + 0.12*Math.sin(t*2.2);
+          m.material.emissiveIntensity = 0.7 + 0.35*(0.5+0.5*Math.sin(t*3.0));
+        }
+
+        // Ambient pulse near player
+        ambientPulse.position.set(player.pos.x, player.pos.y + 2.0, player.pos.z);
+        ambientPulse.intensity = 0.08 + 0.10*(0.5+0.5*Math.sin(performance.now()*0.002));
+      }
+
+      setPlatePressedByPlayer(){
+        // Called each frame: set pressed if player's feet overlap plate cell
+        const px = player.pos.x, py = player.pos.y, pz = player.pos.z;
+        const minX = Math.floor(px - player.radius);
+        const maxX = Math.floor(px + player.radius);
+        const minZ = Math.floor(pz - player.radius);
+        const maxZ = Math.floor(pz + player.radius);
+        const footY = Math.floor(py + 0.02);
+
+        let changed = false;
+        for (const [k, p] of this.special.plate){
+          const {x,y,z} = unpackKey(k);
+          const overlap = (x>=minX && x<=maxX && z>=minZ && z<=maxZ && y === footY);
+          const pressed = overlap;
+          if (p.pressed !== pressed){
+            p.pressed = pressed;
+            // visual
+            p.mesh.position.y = (y + 0.07) - (pressed ? 0.02 : 0);
+            changed = true;
+          }
+        }
+        if (changed) this.markRedstoneDirty(true);
+      }
+
+      isDoorSolidAt(x,y,z){
+        const key = packKey(x,y,z);
+        const d = this.special.door.get(key);
+        if (!d) return true;
+        return d.openT < 0.55; // mostly closed = solid
+      }
+
+      applySaveData(saveForLevel){
+        if (!saveForLevel) return;
+
+        // Apply block diffs
+        const diffs = saveForLevel.diffs || {};
+        for (const kStr of Object.keys(diffs)){
+          const k = Number(kStr);
+          const {x,y,z} = unpackKey(k);
+          const id = diffs[kStr] | 0;
+          // Overwrite base
+          this.setId(x,y,z,id);
+        }
+
+        // Apply special states
+        const spec = saveForLevel.special || {};
+        if (spec.lever){
+          for (const kStr of Object.keys(spec.lever)){
+            const k = Number(kStr);
+            const on = !!spec.lever[kStr].on;
+            // ensure block exists
+            const {x,y,z} = unpackKey(k);
+            if (this.getId(x,y,z) === BLOCK.LEVER) {
+              // We'll reapply after meshes are created
+            }
+          }
+        }
+        if (spec.door){
+          for (const kStr of Object.keys(spec.door)){
+            const k = Number(kStr);
+            const facing = (spec.door[kStr].facing|0) & 3;
+            const {x,y,z} = unpackKey(k);
+            if (this.getId(x,y,z) === BLOCK.DOOR){
+              // stored on create
+            }
+          }
+        }
+      }
+
+      finalizeSpecialStateFromSave(saveForLevel){
+        if (!saveForLevel) return;
+        const spec = saveForLevel.special || {};
+
+        // levers
+        if (spec.lever){
+          for (const [kStr, st] of Object.entries(spec.lever)){
+            const k = Number(kStr);
+            const v = this.special.lever.get(k);
+            if (!v) continue;
+            v.on = !!st.on;
+            v.handle.rotation.z = v.on ? -0.85 : 0.85;
+          }
+        }
+        // doors
+        if (spec.door){
+          for (const [kStr, st] of Object.entries(spec.door)){
+            const k = Number(kStr);
+            const v = this.special.door.get(k);
+            if (!v) continue;
+            const facing = (st.facing|0) & 3;
+            v.facing = facing;
+            v.group.rotation.y = facing * (Math.PI/2);
+          }
+        }
+      }
+
+      computeDiffsForSave(){
+        const diffs = {};
+        for (let y=0; y<WORLD_H; y++){
+          for (let z=0; z<WORLD_D; z++){
+            for (let x=0; x<WORLD_W; x++){
+              const i = idx(x,y,z);
+              const id = this.blocks[i];
+              const base = this.baseBlocks ? this.baseBlocks[i] : id;
+              if (id !== base){
+                diffs[packKey(x,y,z)] = id;
+              }
+            }
+          }
+        }
+
+        const special = { lever:{}, torch:{}, door:{}, plate:{} };
+        for (const [k, v] of this.special.lever){
+          special.lever[k] = { on: !!v.on };
+        }
+        for (const [k, v] of this.special.torch){
+          special.torch[k] = { lit: !!v.lit };
+        }
+        for (const [k, v] of this.special.door){
+          special.door[k] = { facing: v.facing ?? 0 };
+        }
+        for (const [k, v] of this.special.plate){
+          special.plate[k] = { pressed: !!v.pressed };
+        }
+
+        return { diffs, special };
+      }
+    }
+
+    /*********************
+     * Player
+     *********************/
+    const player = {
+      pos: new THREE.Vector3(10.5, 18.0, 10.5),
+      vel: new THREE.Vector3(0,0,0),
+      radius: 0.32,
+      height: 1.78,
+      onGround: false,
+      hp: 100,
+      xp: 0,
+      mined: 0,
+      placed: 0,
+    };
+
+    function setSpawnForLevel(levelIndex){
+      const s = LEVELS[levelIndex].spawn;
+      player.pos.set(s.x, s.y, s.z);
+      player.vel.set(0,0,0);
+      player.onGround = false;
+      // set yaw toward center
+      yaw = 0; pitch = 0;
+      setCameraFromYawPitch();
+    }
+
+    function hurt(amount, reason=''){
+      if (game.state !== 'PLAYING') return;
+      player.hp = clamp(player.hp - amount, 0, 100 + game.maxHPBonus);
+      if (player.hp <= 0){
+        showToast('You were defeated. Respawning...');
+        respawn();
+      } else if (amount >= 8) {
+        showToast(`-${amount} HP ${reason}`.trim(), 900);
+      }
+    }
+
+    function respawn(){
+      player.hp = 100 + game.maxHPBonus;
+      setSpawnForLevel(game.levelIndex);
+      // small penalty
+      player.xp = Math.max(0, player.xp - 10);
+    }
+
+    /*********************
+     * Mobs (simple slimes)
+     *********************/
+    class Slime {
+      constructor(x,y,z,seed){
+        this.pos = new THREE.Vector3(x,y,z);
+        this.vel = new THREE.Vector3(0,0,0);
+        this.hp = 20;
+        this.cool = 0;
+        this.seed = seed;
+        this.mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.55, 14, 14),
+          new THREE.MeshStandardMaterial({ color: 0x64ff9b, roughness:0.6, metalness:0.0, emissive:0x0a3b1c, emissiveIntensity:0.25, transparent:true, opacity:0.92 })
+        );
+        this.mesh.position.copy(this.pos);
+        scene.add(this.mesh);
+      }
+      dispose(){
+        scene.remove(this.mesh);
+      }
+      tick(dt, world){
+        const toP = new THREE.Vector3().subVectors(player.pos, this.pos);
+        const dist = toP.length();
+        this.cool = Math.max(0, this.cool - dt);
+
+        // simple hopping AI
+        if (dist < 18){
+          toP.y = 0;
+          toP.normalize();
+          const speed = 2.0;
+          this.vel.x += toP.x * speed * dt;
+          this.vel.z += toP.z * speed * dt;
+          // hop
+          if (this.cool <= 0 && this.onGround){
+            this.vel.y = 5.0;
+            this.cool = 0.9 + (this.seed % 7) * 0.03;
+          }
+        } else {
+          // wander
+          const a = (performance.now()*0.001) + this.seed;
+          this.vel.x += Math.sin(a*0.7) * 0.25 * dt;
+          this.vel.z += Math.cos(a*0.6) * 0.25 * dt;
+        }
+
+        // gravity
+        this.vel.y -= 12.0 * dt;
+
+        // friction
+        this.vel.x *= (1 - 2.2*dt);
+        this.vel.z *= (1 - 2.2*dt);
+
+        // collide with world (sphere approx)
+        const r = 0.55;
+        let onGround = false;
+        const tryMove = (axis) => {
+          const np = this.pos.clone();
+          np[axis] += this.vel[axis] * dt;
+          // sphere collision vs blocks by checking overlapped cells
+          const minX = Math.floor(np.x - r);
+          const maxX = Math.floor(np.x + r);
+          const minY = Math.floor(np.y - r);
+          const maxY = Math.floor(np.y + r);
+          const minZ = Math.floor(np.z - r);
+          const maxZ = Math.floor(np.z + r);
+
+          for (let y=minY; y<=maxY; y++){
+            for (let z=minZ; z<=maxZ; z++){
+              for (let x=minX; x<=maxX; x++){
+                const id = world.getId(x,y,z);
+                let solid = isSolidId(id);
+                if (id === BLOCK.DOOR) solid = world.isDoorSolidAt(x,y,z);
+                if (!solid) continue;
+
+                // AABB of block [x,x+1] etc
+                const cx = clamp(np.x, x, x+1);
+                const cy = clamp(np.y, y, y+1);
+                const cz = clamp(np.z, z, z+1);
+                const dx = np.x - cx, dy = np.y - cy, dz = np.z - cz;
+                if (dx*dx + dy*dy + dz*dz < r*r){
+                  // resolve by pushing out along axis
+                  if (axis === 'x'){
+                    np.x = (this.vel.x > 0) ? (x - r) : (x + 1 + r);
+                    this.vel.x = 0;
+                  } else if (axis === 'y'){
+                    np.y = (this.vel.y > 0) ? (y - r) : (y + 1 + r);
+                    if (this.vel.y < 0) onGround = true;
+                    this.vel.y = 0;
+                  } else if (axis === 'z'){
+                    np.z = (this.vel.z > 0) ? (z - r) : (z + 1 + r);
+                    this.vel.z = 0;
+                  }
+                }
+              }
+            }
+          }
+
+          this.pos.copy(np);
+        };
+
+        tryMove('x');
+        tryMove('y');
+        tryMove('z');
+        this.onGround = onGround;
+
+        // damage if close contact
+        const d2 = player.pos.clone().sub(this.pos); d2.y = 0;
+        if (d2.length() < 0.85){
+          hurt(6, '(slime)');
+          // knockback player a bit
+          const kb = d2.normalize().multiplyScalar(3.0);
+          player.vel.x += kb.x;
+          player.vel.z += kb.z;
+        }
+
+        // animate
+        this.mesh.position.copy(this.pos);
+        const t = performance.now()*0.001;
+        const squish = 1.0 + 0.18*Math.sin(t*3.0 + this.seed);
+        this.mesh.scale.set(1.0, 0.85 + 0.2/squish, 1.0);
+      }
+    }
+
+    const mobs = [];
+
+    function spawnMobsForLevel(levelIndex){
+      // clear
+      while (mobs.length){ mobs.pop().dispose(); }
+      if (levelIndex === 0) return; // first level is chill
+      const def = LEVELS[levelIndex];
+      const r = mulberry32(def.seed ^ 0xBADC0DE);
+      const count = 5 + levelIndex*2;
+      for (let i=0; i<count; i++){
+        const x = 6 + Math.floor(r()*52);
+        const z = 6 + Math.floor(r()*52);
+        const y = findSurfaceY(x,z) + 1.2;
+        mobs.push(new Slime(x+0.5, y, z+0.5, i*33 + def.seed));
+      }
+    }
+
+    /*********************
+     * Game state
+     *********************/
+    const game = {
+      state: 'MENU', // MENU, PLAYING, PAUSED, WON
+      levelIndex: 0,
+      unlocked: 1,
+      startedAt: 0,
+      elapsedMs: 0,
+      objectiveLit: 0,
+      objectiveReq: 1,
+      bestTimes: {}, // per level index
+      settings: { sens: 1.0, fov: 80 },
+      maxHPBonus: 0,
+      tipIndex: 0,
+      hotbarPage: 0,
+      selectedSlot: 0,
+      mining: {
+        active:false,
+        key:null,
+        progress:0,
+        need:0.6,
+        lastHitKey:null,
+      },
+      pendingRMB: false,
+    };
+
+    // Hotbar items (two pages, 9 slots each)
+    const ITEM_PAGES = [
+      [
+        { id: BLOCK.STONE, label:'Stone', count: Infinity },
+        { id: BLOCK.DIRT, label:'Dirt', count: Infinity },
+        { id: BLOCK.GRASS, label:'Grass', count: Infinity },
+        { id: BLOCK.SAND, label:'Sand', count: Infinity },
+        { id: BLOCK.WOOD, label:'Log', count: 32 },
+        { id: BLOCK.PLANKS, label:'Planks', count: 64 },
+        { id: BLOCK.GLASS, label:'Glass', count: 32 },
+        { id: BLOCK.DOOR, label:'Door', count: 6 },
+        { id: BLOCK.LAMP, label:'Lamp', count: 10 },
+      ],
+      [
+        { id: BLOCK.REDSTONE_DUST, label:'Redstone Dust', count: 64 },
+        { id: BLOCK.LEVER, label:'Lever', count: 10 },
+        { id: BLOCK.TORCH, label:'Redstone Torch', count: 16 },
+        { id: BLOCK.PLATE, label:'Pressure Plate', count: 8 },
+        { id: BLOCK.PLANKS, label:'Planks', count: 64 },
+        { id: BLOCK.STONE, label:'Stone', count: Infinity },
+        { id: BLOCK.GLASS, label:'Glass', count: 32 },
+        { id: BLOCK.DOOR, label:'Door', count: 6 },
+        { id: BLOCK.LAMP, label:'Lamp', count: 10 },
+      ],
+    ];
+
+    function getSlotItem(page, slot){
+      return ITEM_PAGES[page][slot];
+    }
+
+    function selectSlot(slot){
+      game.selectedSlot = clamp(slot|0, 0, 8);
+      renderHotbar();
+    }
+
+    function switchPage(){
+      game.hotbarPage = (game.hotbarPage + 1) % ITEM_PAGES.length;
+      hudPage.textContent = String(game.hotbarPage + 1);
+      renderHotbar();
+      showToast(`Hotbar page ${game.hotbarPage + 1}`);
+    }
+
+    function cycleTip(){
+      const hints = LEVELS[game.levelIndex].hints || [];
+      if (!hints.length) return;
+      game.tipIndex = (game.tipIndex + 1) % hints.length;
+      tipsText.textContent = hints[game.tipIndex];
+    }
+
+    function renderHotbar(){
+      const bar = document.getElementById('hotbar');
+      bar.innerHTML = '';
+      const page = game.hotbarPage;
+      for (let i=0; i<9; i++){
+        const it = getSlotItem(page, i);
+        const div = document.createElement('div');
+        div.className = 'slot' + (i === game.selectedSlot ? ' selected' : '');
+        const k = document.createElement('div');
+        k.className = 'k';
+        k.textContent = String(i+1);
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = it.label;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+
+        const idName = document.createElement('span');
+        idName.textContent = BLOCK_NAME[it.id] ?? it.label;
+
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        const c = it.count;
+        badge.textContent = (c === Infinity) ? '∞' : String(c);
+
+        meta.appendChild(idName);
+        meta.appendChild(badge);
+
+        div.appendChild(k);
+        div.appendChild(name);
+        div.appendChild(meta);
+        bar.appendChild(div);
+      }
+    }
+
+    function canSpendItem(id){
+      for (const page of ITEM_PAGES){
+        for (const it of page){
+          if (it.id === id){
+            return it.count === Infinity || it.count > 0;
+          }
+        }
+      }
+      return true;
+    }
+    function spendItem(id, amt=1){
+      for (const page of ITEM_PAGES){
+        for (const it of page){
+          if (it.id === id){
+            if (it.count === Infinity) return true;
+            if (it.count < amt) return false;
+            it.count -= amt;
+            return true;
+          }
+        }
+      }
+      return true;
+    }
+    function gainItem(id, amt=1){
+      for (const page of ITEM_PAGES){
+        for (const it of page){
+          if (it.id === id){
+            if (it.count !== Infinity) it.count += amt;
+            return;
+          }
+        }
+      }
+    }
+
+    /*********************
+     * Selection / Raycast
+     *********************/
+    const raycaster = new THREE.Raycaster();
+    raycaster.far = 6.0;
+    const clickable = []; // updated when world loads
+
+    // highlight box
+    const highlight = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.02, 1.02, 1.02)),
+      mats.highlight
+    );
+    highlight.visible = false;
+    scene.add(highlight);
+
+    function updateClickableObjects(){
+      clickable.length = 0;
+      // instanced meshes
+      clickable.push(
+        world.inst.grass.mesh, world.inst.dirt.mesh, world.inst.stone.mesh,
+        world.inst.wood.mesh, world.inst.planks.mesh, world.inst.glass.mesh, world.inst.sand.mesh,
+        world.inst.lampOff.mesh, world.inst.lampOn.mesh
+      );
+      // specials
+      for (const [,d] of world.special.dust) clickable.push(d.mesh);
+      for (const [,v] of world.special.lever) clickable.push(v.group);
+      for (const [,t] of world.special.torch) clickable.push(t.group);
+      for (const [,p] of world.special.plate) clickable.push(p.mesh);
+      for (const [,d] of world.special.door) clickable.push(d.group);
+      for (const [,p] of world.special.portal) clickable.push(p.mesh);
+    }
+
+    function intersectWorld(){
+      raycaster.setFromCamera({x:0,y:0}, camera);
+      const hits = raycaster.intersectObjects(clickable, true);
+      if (!hits.length) return null;
+      // Find first hit with known key
+      for (const h of hits){
+        const obj = h.object;
+        // instanced?
+        if (obj.isInstancedMesh){
+          // determine which pool
+          const instanceId = h.instanceId;
+          if (instanceId == null) continue;
+          let key = null;
+
+          // Map to key by checking each pool; cheap enough (few pools)
+          const pools = [
+            world.inst.grass, world.inst.dirt, world.inst.stone, world.inst.wood, world.inst.planks, world.inst.glass,
+            world.inst.sand, world.inst.lampOff, world.inst.lampOn
+          ];
+          for (const p of pools){
+            if (p.mesh === obj){
+              key = p.keyFromInstanceId(instanceId);
+              break;
+            }
+          }
+          if (key == null) continue;
+          return { ...h, key, kind:'block' };
+        }
+        // specials store key in userData (group traversal copied)
+        const ud = obj.userData || {};
+        if (ud && ud.key != null){
+          return { ...h, key: ud.key, kind: ud.kind || 'special' };
+        }
+      }
+      return null;
+    }
+
+    function faceNormalAxis(faceNormal, object){
+      // Convert normal to world direction
+      const n = faceNormal.clone();
+      n.transformDirection(object.matrixWorld);
+      const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+      if (ax >= ay && ax >= az) return { axis:'x', dir: Math.sign(n.x) || 1 };
+      if (ay >= ax && ay >= az) return { axis:'y', dir: Math.sign(n.y) || 1 };
+      return { axis:'z', dir: Math.sign(n.z) || 1 };
+    }
+
+    function placementCellFromHit(hit){
+      if (!hit) return null;
+      const key = hit.key;
+      const {x,y,z} = unpackKey(key);
+
+      const face = hit.face;
+      if (!face) return null;
+
+      const {axis, dir} = faceNormalAxis(face.normal, hit.object);
+      let px=x, py=y, pz=z;
+      if (axis === 'x') px += dir;
+      if (axis === 'y') py += dir;
+      if (axis === 'z') pz += dir;
+
+      return {x:px,y:py,z:pz};
+    }
+
+    /*********************
+     * Mining / placing
+     *********************/
+    function breakTimeForId(id){
+      switch (id){
+        case BLOCK.STONE: return 0.9;
+        case BLOCK.SAND: return 0.35;
+        case BLOCK.DIRT: return 0.38;
+        case BLOCK.GRASS: return 0.45;
+        case BLOCK.WOOD: return 0.60;
+        case BLOCK.PLANKS: return 0.50;
+        case BLOCK.GLASS: return 0.25;
+        case BLOCK.LAMP: return 0.65;
+        case BLOCK.REDSTONE_DUST: return 0.10;
+        case BLOCK.LEVER: return 0.20;
+        case BLOCK.TORCH: return 0.18;
+        case BLOCK.PLATE: return 0.20;
+        case BLOCK.DOOR: return 0.70;
+        case BLOCK.PORTAL: return 9999; // unbreakable
+        default: return 0.55;
+      }
+    }
+
+    function mineTick(dt){
+      const wantMine = mouseDownL || touchMining;
+      if (!wantMine || game.state !== 'PLAYING'){
+        game.mining.active = false;
+        game.mining.key = null;
+        game.mining.progress = 0;
+        highlight.material.opacity = 0.9;
+        return;
+      }
+
+      const hit = intersectWorld();
+      if (!hit){
+        game.mining.active = false;
+        game.mining.key = null;
+        game.mining.progress = 0;
+        highlight.visible = false;
+        return;
+      }
+
+      const key = hit.key;
+      const {x,y,z} = unpackKey(key);
+      const id = world.getId(x,y,z);
+      if (id === BLOCK.AIR || id === BLOCK.PORTAL) {
+        highlight.visible = false;
+        return;
+      }
+
+      // highlight
+      highlight.visible = true;
+      highlight.position.set(x+0.5, y+0.5, z+0.5);
+
+      // if target changed, reset
+      if (game.mining.key !== key){
+        game.mining.key = key;
+        game.mining.progress = 0;
+        const base = breakTimeForId(id);
+        const speedBonus = 1.0 + Math.min(0.35, player.xp / 700); // small RPG scaling
+        game.mining.need = base / speedBonus;
+      }
+
+      game.mining.active = true;
+      game.mining.progress += dt;
+
+      // breaking feedback: pulse highlight opacity
+      const t = clamp(game.mining.progress / game.mining.need, 0, 1);
+      highlight.material.opacity = 0.25 + 0.65*(1 - t);
+
+      if (game.mining.progress >= game.mining.need){
+        // break!
+        world.removeBlockAtKey(key);
+        player.mined++;
+        player.xp += 2;
+        if (id !== BLOCK.AIR && id !== BLOCK.PORTAL) gainItem(id, 1);
+        showToast(`Mined ${BLOCK_NAME[id] ?? 'block'}`, 600);
+        game.mining.progress = 0;
+        game.mining.key = null;
+        world.markRedstoneDirty(true);
+        updateClickableObjects();
+        renderHotbar();
+      }
+    }
+
+    function tryToggleLeverAtKey(key){
+      const v = world.special.lever.get(key);
+      if (!v) return false;
+      v.on = !v.on;
+      v.handle.rotation.z = v.on ? -0.85 : 0.85;
+      world.markRedstoneDirty(true);
+      // XP for redstone
+      player.xp += 3;
+      showToast(v.on ? 'Lever: ON' : 'Lever: OFF', 650);
+      return true;
+    }
+
+    function tryPlaceFromSelection(hit){
+      const item = getSlotItem(game.hotbarPage, game.selectedSlot);
+      const id = item.id;
+
+      // If clicking a lever, toggle instead of placing
+      if (hit && world.getId(...Object.values(unpackKey(hit.key))) === BLOCK.LEVER){
+        if (hit.kind === 'special' || hit.kind === 'block'){
+          return tryToggleLeverAtKey(hit.key);
+        }
+      }
+      if (hit && (hit.object?.userData?.kind === 'lever' || hit.kind === 'special')){
+        if (hit.object?.userData?.kind === 'lever' && hit.key != null){
+          return tryToggleLeverAtKey(hit.key);
+        }
+      }
+
+      const cell = placementCellFromHit(hit);
+      if (!cell) return false;
+
+      const {x,y,z} = cell;
+      if (!inBounds(x,y,z)) return false;
+
+      // prevent placing inside player's body
+      const px = player.pos.x, py = player.pos.y, pz = player.pos.z;
+      const minX = px - player.radius, maxX = px + player.radius;
+      const minY = py, maxY = py + player.height;
+      const minZ = pz - player.radius, maxZ = pz + player.radius;
+      const bx0 = x, bx1 = x+1, by0 = y, by1 = y+1, bz0 = z, bz1 = z+1;
+      const overlap =
+        (minX < bx1 && maxX > bx0) &&
+        (minY < by1 && maxY > by0) &&
+        (minZ < bz1 && maxZ > bz0);
+      if (overlap) return false;
+
+      if (!canSpendItem(id)){
+        showToast('Out of that item.', 800);
+        return false;
+      }
+
+      let extraState = null;
+      if (id === BLOCK.DOOR){
+        // face door based on camera yaw
+        let facing = Math.floor(((yaw % (Math.PI*2)) + Math.PI*2) / (Math.PI/2)) & 3;
+        // make "front" roughly camera forward
+        facing = (facing + 2) & 3;
+        extraState = { facing };
+      }
+
+      const ok = world.placeBlock(x,y,z,id,extraState);
+      if (!ok) return false;
+
+      spendItem(id, 1);
+      player.placed++;
+      if (id === BLOCK.REDSTONE_DUST || id === BLOCK.LEVER || id === BLOCK.TORCH || id === BLOCK.PLATE || id === BLOCK.LAMP || id === BLOCK.DOOR){
+        player.xp += 4;
+      } else {
+        player.xp += 1;
+      }
+
+      updateClickableObjects();
+      renderHotbar();
+      world.markRedstoneDirty(true);
+      return true;
+    }
+
+    let rmbCooldown = 0;
+    function placeTick(dt){
+      rmbCooldown = Math.max(0, rmbCooldown - dt);
+
+      const wantPlace = mouseDownR || touchPlacing;
+      if (!wantPlace || game.state !== 'PLAYING') return;
+      if (rmbCooldown > 0) return;
+
+      const hit = intersectWorld();
+      if (!hit) return;
+
+      const did = tryPlaceFromSelection(hit);
+      if (did){
+        rmbCooldown = 0.13;
+      }
+    }
+
+    /*********************
+     * Physics / Collision
+     *********************/
+    function movePlayer(dt){
+      // sync camera to player
+      camera.position.set(player.pos.x, player.pos.y + 1.56, player.pos.z);
+
+      // Movement input
+      const forward = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
+      const strafe  = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
+
+      // Touch movement (left pad) if present
+      const tForward = -touchMove.y;
+      const tStrafe = touchMove.x;
+
+      const f = forward + tForward;
+      const s = strafe + tStrafe;
+
+      // Camera look (touch look)
+      if (isTouch && game.state === 'PLAYING'){
+        const sens = lookSensitivity * 0.040;
+        yaw -= touchLook.x * sens * dt * 8;
+        pitch -= touchLook.y * sens * dt * 8;
+        setCameraFromYawPitch();
+      }
+
+      // Compute movement direction in XZ
+      const dir = new THREE.Vector3();
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      // camera forward on XZ
+      const fx = -sy, fz = -cy;
+      const rx = cy, rz = -sy;
+
+      dir.x = fx * f + rx * s;
+      dir.z = fz * f + rz * s;
+
+      const mag = Math.hypot(dir.x, dir.z);
+      if (mag > 1e-6) { dir.x /= mag; dir.z /= mag; }
+
+      const sprint = keys.has('ShiftLeft') || keys.has('ShiftRight');
+      const baseSpeed = 4.35 + Math.min(0.8, player.xp/1200);
+      const speed = sprint ? baseSpeed * 1.35 : baseSpeed;
+
+      // acceleration
+      player.vel.x += dir.x * speed * 10.5 * dt;
+      player.vel.z += dir.z * speed * 10.5 * dt;
+
+      // friction
+      const friction = player.onGround ? 9.0 : 2.4;
+      player.vel.x *= (1 - clamp(friction*dt, 0, 0.82));
+      player.vel.z *= (1 - clamp(friction*dt, 0, 0.82));
+
+      // gravity
+      player.vel.y -= 18.0 * dt;
+
+      // jump
+      const wantJump = keys.has('Space');
+      if (wantJump && player.onGround){
+        player.vel.y = 7.1;
+        player.onGround = false;
+      }
+
+      // Collision per-axis
+      const r = player.radius;
+      const h = player.height;
+
+      const tryMoveAxis = (axis) => {
+        const np = player.pos.clone();
+        np[axis] += player.vel[axis] * dt;
+
+        const minX = Math.floor(np.x - r);
+        const maxX = Math.floor(np.x + r);
+        const minY = Math.floor(np.y);
+        const maxY = Math.floor(np.y + h);
+        const minZ = Math.floor(np.z - r);
+        const maxZ = Math.floor(np.z + r);
+
+        let onGround = player.onGround;
+
+        for (let y=minY; y<=maxY; y++){
+          for (let z=minZ; z<=maxZ; z++){
+            for (let x=minX; x<=maxX; x++){
+              const id = world.getId(x,y,z);
+              let solid = isSolidId(id);
+              if (id === BLOCK.DOOR) solid = world.isDoorSolidAt(x,y,z);
+              if (!solid) continue;
+
+              const bx0=x, bx1=x+1;
+              const by0=y, by1=y+1;
+              const bz0=z, bz1=z+1;
+
+              const px0 = np.x - r, px1 = np.x + r;
+              const py0 = np.y,     py1 = np.y + h;
+              const pz0 = np.z - r, pz1 = np.z + r;
+
+              const overlap = (px0 < bx1 && px1 > bx0 && py0 < by1 && py1 > by0 && pz0 < bz1 && pz1 > bz0);
+              if (!overlap) continue;
+
+              if (axis === 'x'){
+                if (player.vel.x > 0) np.x = bx0 - r;
+                else if (player.vel.x < 0) np.x = bx1 + r;
+                player.vel.x = 0;
+              } else if (axis === 'y'){
+                if (player.vel.y > 0) np.y = by0 - h;
+                else if (player.vel.y < 0){
+                  np.y = by1;
+                  onGround = true;
+                }
+                player.vel.y = 0;
+              } else if (axis === 'z'){
+                if (player.vel.z > 0) np.z = bz0 - r;
+                else if (player.vel.z < 0) np.z = bz1 + r;
+                player.vel.z = 0;
+              }
+            }
+          }
+        }
+
+        player.pos.copy(np);
+        player.onGround = onGround;
+      };
+
+      const prevVy = player.vel.y;
+      tryMoveAxis('x');
+      tryMoveAxis('y');
+      tryMoveAxis('z');
+
+      // Fall damage
+      if (player.onGround && prevVy < -12.5){
+        const dmg = Math.floor(clamp((-prevVy - 12.5) * 2.0, 0, 28));
+        if (dmg > 0) hurt(dmg, '(fall)');
+      }
+
+      // Keep inside world bounds softly
+      player.pos.x = clamp(player.pos.x, 1.2, WORLD_W - 1.2);
+      player.pos.z = clamp(player.pos.z, 1.2, WORLD_D - 1.2);
+      player.pos.y = clamp(player.pos.y, 1.0, WORLD_H - 3.0);
+
+      // update camera position
+      camera.position.set(player.pos.x, player.pos.y + 1.56, player.pos.z);
+    }
+
+    function findSurfaceY(x,z){
+      for (let y=WORLD_H-2; y>=1; y--){
+        const id = world.getId(x,y,z);
+        if (isSolidId(id) || id === BLOCK.DOOR){
+          return y;
+        }
+      }
+      return 1;
+    }
+
+    /*********************
+     * Objective / Win
+     *********************/
+    function checkPortalWin(){
+      // If player touches portal cell, win
+      for (const [k, p] of world.special.portal){
+        const {x,y,z} = unpackKey(k);
+        // portal occupies that cell; check player's AABB overlap
+        const px = player.pos.x, py = player.pos.y, pz = player.pos.z;
+        const r = player.radius, h = player.height;
+        const overlap =
+          (px + r > x && px - r < x+1) &&
+          (py + h > y && py < y+2) &&
+          (pz + r > z && pz - r < z+1);
+        if (overlap){
+          // require gate objective complete
+          if (game.objectiveLit >= game.objectiveReq){
+            winLevel();
+          } else {
+            showToast('The portal is locked. Power the required lamps!', 1200);
+          }
+          return;
+        }
+      }
+    }
+
+    function applyRPGScaling(){
+      // XP-based bonus: every 200 xp increase max hp by 5 up to +30
+      const bonus = Math.min(30, Math.floor(player.xp / 200) * 5);
+      game.maxHPBonus = bonus;
+      const maxHP = 100 + bonus;
+      player.hp = clamp(player.hp, 0, maxHP);
+    }
+
+    function winLevel(){
+      if (game.state !== 'PLAYING') return;
+      game.state = 'WON';
+
+      // unlock next
+      const next = Math.min(LEVELS.length, game.levelIndex + 2);
+      game.unlocked = Math.max(game.unlocked, next);
+
+      // time
+      const t = game.elapsedMs;
+      const best = game.bestTimes[game.levelIndex] ?? null;
+      if (best == null || t < best){
+        game.bestTimes[game.levelIndex] = t;
+      }
+
+      // save
+      saveGame();
+
+      // UI
+      winOverlay.style.display = 'flex';
+      winTitle.textContent = 'Victory';
+      winSub.textContent = `You powered the gate and reached the portal in ${formatTime(t)}.`;
+      wTime.textContent = formatTime(t);
+      wBest.textContent = formatTime(game.bestTimes[game.levelIndex]);
+      wXP.textContent = String(player.xp);
+      wPlaced.textContent = String(player.placed);
+      wMined.textContent = String(player.mined);
+
+      hud.style.display = 'none';
+      crosshair.style.display = 'none';
+      if (document.pointerLockElement === canvas) document.exitPointerLock?.();
+      showToast('Level complete! Next level unlocked.', 1800);
+    }
+
+    /*********************
+     * Save / Load
+     *********************/
+    function loadSettings(){
+      const st = safeJSONParse(localStorage.getItem(KEY_SETTINGS), null);
+      if (st && typeof st === 'object'){
+        game.settings.sens = clamp(Number(st.sens ?? 1.0), 0.2, 2.2);
+        game.settings.fov = clamp(Number(st.fov ?? 80), 60, 100);
+      }
+      sensSlider.value = String(game.settings.sens);
+      fovSlider.value = String(game.settings.fov);
+      lookSensitivity = game.settings.sens;
+      camera.fov = game.settings.fov;
+      camera.updateProjectionMatrix();
+    }
+
+    function saveSettings(){
+      game.settings.sens = clamp(Number(sensSlider.value), 0.2, 2.2);
+      game.settings.fov = clamp(Number(fovSlider.value), 60, 100);
+      localStorage.setItem(KEY_SETTINGS, JSON.stringify(game.settings));
+      lookSensitivity = game.settings.sens;
+      camera.fov = game.settings.fov;
+      camera.updateProjectionMatrix();
+    }
+
+    sensSlider.addEventListener('input', saveSettings);
+    fovSlider.addEventListener('input', saveSettings);
+
+    function loadGame(){
+      const save = safeJSONParse(localStorage.getItem(KEY_SAVE), null);
+      const his = safeJSONParse(localStorage.getItem(KEY_HISCORES), null);
+
+      if (his && typeof his === 'object'){
+        game.bestTimes = his.bestTimes || {};
+      }
+
+      if (!save || typeof save !== 'object'){
+        saveStatus.textContent = 'No save found';
+        btnContinue.disabled = true;
+        return null;
+      }
+
+      game.levelIndex = clamp(save.levelIndex|0, 0, LEVELS.length-1);
+      game.unlocked = clamp(save.unlocked|0, 1, LEVELS.length);
+      player.hp = clamp(save.player?.hp ?? 100, 0, 130);
+      player.xp = clamp(save.player?.xp ?? 0, 0, 999999);
+      player.mined = save.player?.mined ?? 0;
+      player.placed = save.player?.placed ?? 0;
+
+      // load hotbar counts
+      if (save.items && Array.isArray(save.items)){
+        for (let p=0; p<ITEM_PAGES.length; p++){
+          for (let i=0; i<9; i++){
+            const it = ITEM_PAGES[p][i];
+            const found = save.items.find(e => e.page===p && e.slot===i);
+            if (found && it.count !== Infinity){
+              it.count = clamp(found.count|0, 0, 9999);
+            }
+          }
+        }
+      }
+
+      saveStatus.textContent = `Loaded (Level ${game.levelIndex+1})`;
+      btnContinue.disabled = false;
+      return save;
+    }
+
+    function saveGame(){
+      if (!world) return;
+
+      const perLevel = [];
+      // store diffs for current world
+      const current = world.computeDiffsForSave();
+
+      // Load existing save to preserve other levels' diffs
+      const existing = safeJSONParse(localStorage.getItem(KEY_SAVE), null);
+      const existingLevels = (existing && existing.levels) ? existing.levels : [];
+
+      for (let i=0; i<LEVELS.length; i++){
+        if (i === game.levelIndex){
+          perLevel[i] = current;
+        } else {
+          perLevel[i] = existingLevels[i] || null;
+        }
+      }
+
+      // hotbar counts
+      const items = [];
+      for (let p=0; p<ITEM_PAGES.length; p++){
+        for (let i=0; i<9; i++){
+          const it = ITEM_PAGES[p][i];
+          if (it.count !== Infinity){
+            items.push({ page:p, slot:i, id:it.id, count: it.count|0 });
+          }
+        }
+      }
+
+      const save = {
+        version: 1,
+        levelIndex: game.levelIndex|0,
+        unlocked: game.unlocked|0,
+        player: {
+          hp: player.hp,
+          xp: player.xp,
+          mined: player.mined,
+          placed: player.placed,
+        },
+        items,
+        levels: perLevel,
+        savedAt: Date.now(),
+      };
+
+      localStorage.setItem(KEY_SAVE, JSON.stringify(save));
+      localStorage.setItem(KEY_HISCORES, JSON.stringify({ bestTimes: game.bestTimes }));
+      saveStatus.textContent = `Saved (Level ${game.levelIndex+1})`;
+    }
+
+    function resetSaveData(){
+      const keysToRemove = [];
+      for (let i=0; i<localStorage.length; i++){
+        const k = localStorage.key(i);
+        if (k && k.startsWith(STORAGE_PREFIX)) keysToRemove.push(k);
+      }
+      for (const k of keysToRemove) localStorage.removeItem(k);
+      showToast('Save data reset for this game.', 1400);
+      saveStatus.textContent = 'No save found';
+      btnContinue.disabled = true;
+    }
+
+    /*********************
+     * Build / Load world
+     *********************/
+    let world = null;
+
+    function buildWorld(levelIndex, saveData=null){
+      // remove any non-world objects (mobs cleared separately)
+      highlight.visible = false;
+
+      world = new World(levelIndex);
+      world.generateBase();
+
+      // apply saved diffs for this level before building meshes
+      const levelSave = saveData?.levels?.[levelIndex] ?? null;
+      if (levelSave && levelSave.diffs){
+        // apply diffs onto blocks array
+        for (const [kStr, id] of Object.entries(levelSave.diffs)){
+          const k = Number(kStr);
+          const {x,y,z} = unpackKey(k);
+          world.setId(x,y,z, id|0);
+        }
+      }
+
+      // build visuals
+      world.buildRenderMeshes();
+
+      // apply saved special state after visuals
+      world.finalizeSpecialStateFromSave(levelSave);
+
+      // for saved door facing, ensure it exists
+      if (levelSave?.special?.door){
+        for (const [kStr, st] of Object.entries(levelSave.special.door)){
+          const k = Number(kStr);
+          const d = world.special.door.get(k);
+          if (d){
+            const facing = (st.facing|0) & 3;
+            d.facing = facing;
+            d.group.rotation.y = facing * (Math.PI/2);
+          }
+        }
+      }
+
+      // clickable objects
+      updateClickableObjects();
+
+      // mobs
+      spawnMobsForLevel(levelIndex);
+
+      // objective
+      world.markRedstoneDirty(true);
+      world.updateObjectiveStatus();
+
+      // update UI
+      const def = LEVELS[levelIndex];
+      hudLevel.textContent = String(levelIndex + 1);
+      hudObjective.textContent = `Power ${def.requiredLamps} required lamp(s) to unlock the gate, then reach the portal.`;
+      levelInfo.textContent = `Current: Level ${levelIndex+1} — ${def.name} · Required lamps: ${def.requiredLamps}`;
+      cycleTip();
+
+      // spawn
+      setSpawnForLevel(levelIndex);
+      applyRPGScaling();
+    }
+
+    /*********************
+     * UI / State transitions
+     *********************/
+    function hideMenuOverlays(){
+      menuOverlay.style.display = 'none';
+      pauseOverlay.style.display = 'none';
+      winOverlay.style.display = 'none';
+      levelOverlay.style.display = 'none';
+    }
+
+    function setPaused(paused){
+      if (paused){
+        if (game.state !== 'PLAYING') return;
+        game.state = 'PAUSED';
+        pauseOverlay.style.display = 'flex';
+        hud.style.display = 'none';
+        crosshair.style.display = 'none';
+        if (document.pointerLockElement === canvas) document.exitPointerLock?.();
+
+        pLevel.textContent = `${game.levelIndex+1} — ${LEVELS[game.levelIndex].name}`;
+        pTime.textContent = formatTime(game.elapsedMs);
+        pHP.textContent = String(player.hp);
+        pXP.textContent = String(player.xp);
+        pPlaced.textContent = String(player.placed);
+        pMined.textContent = String(player.mined);
+
+        saveGame();
+      } else {
+        if (game.state !== 'PAUSED') return;
+        pauseOverlay.style.display = 'none';
+        hud.style.display = 'block';
+        crosshair.style.display = isTouch ? 'block' : 'none';
+        game.state = 'PLAYING';
+        if (!isTouch) requestPointerLock();
+      }
+    }
+
+    function startOrResumeFromMenu(){
+      hideMenuOverlays();
+      hud.style.display = 'block';
+      game.state = 'PLAYING';
+      game.startedAt = nowMs() - game.elapsedMs;
+      crosshair.style.display = isTouch ? 'block' : 'none';
+      if (!isTouch) requestPointerLock();
+    }
+
+    function showMenu(){
+      game.state = 'MENU';
+      hud.style.display = 'none';
+      crosshair.style.display = 'none';
+      menuOverlay.style.display = 'flex';
+      pauseOverlay.style.display = 'none';
+      winOverlay.style.display = 'none';
+      levelOverlay.style.display = 'none';
+      if (document.pointerLockElement === canvas) document.exitPointerLock?.();
+    }
+
+    function showLevelSelect(){
+      levelOverlay.style.display = 'flex';
+      menuOverlay.style.display = 'none';
+      // build list
+      levelList.innerHTML = '';
+      for (let i=0; i<LEVELS.length; i++){
+        const def = LEVELS[i];
+        const unlocked = (i < game.unlocked);
+        const best = game.bestTimes[i] != null ? formatTime(game.bestTimes[i]) : '—';
+        const row = document.createElement('div');
+        row.className = 'card';
+        row.style.marginBottom = '10px';
+        row.innerHTML = `
+          <h2>Level ${i+1}: ${def.name} ${unlocked ? '' : '(Locked)'}</h2>
+          <p>Required lamps: <b>${def.requiredLamps}</b> · Best time: <b>${best}</b></p>
+          <div class="btnRow">
+            <button ${unlocked ? '' : 'disabled'} data-level="${i}">Play Level</button>
+          </div>
+        `;
+        levelList.appendChild(row);
+      }
+      [...levelList.querySelectorAll('button[data-level]')].forEach(b => {
+        b.addEventListener('click', () => {
+          const li = Number(b.getAttribute('data-level'));
+          if (!(li < game.unlocked)) return;
+          game.levelIndex = li;
+          const save = safeJSONParse(localStorage.getItem(KEY_SAVE), null);
+          buildWorld(li, save);
+          game.elapsedMs = 0;
+          startOrResumeFromMenu();
+        });
+      });
+    }
+
+    btnLevelSelect.addEventListener('click', () => showLevelSelect());
+    btnLevelBack.addEventListener('click', () => { levelOverlay.style.display = 'none'; menuOverlay.style.display = 'flex'; });
+
+    btnContinue.addEventListener('click', () => {
+      const save = safeJSONParse(localStorage.getItem(KEY_SAVE), null);
+      if (!save) return;
+      buildWorld(game.levelIndex, save);
+      startOrResumeFromMenu();
+    });
+
+    btnNew.addEventListener('click', () => {
+      // reset run stats & item counts but keep best times
+      player.hp = 100;
+      player.xp = 0;
+      player.mined = 0;
+      player.placed = 0;
+      game.elapsedMs = 0;
+      game.levelIndex = 0;
+      game.unlocked = 1;
+      game.hotbarPage = 0;
+      game.selectedSlot = 0;
+      game.tipIndex = 0;
+
+      // reset item counts
+      // (keep Infinity as is)
+      const resetCounts = [
+        [Infinity,Infinity,Infinity,Infinity,32,64,32,6,10],
+        [64,10,16,8,64,Infinity,32,6,10]
+      ];
+      for (let p=0; p<ITEM_PAGES.length; p++){
+        for (let i=0; i<9; i++){
+          if (ITEM_PAGES[p][i].count !== Infinity) ITEM_PAGES[p][i].count = resetCounts[p][i];
+        }
+      }
+
+      // Create a fresh save state by rebuilding world without applying saved diffs
+      buildWorld(0, null);
+      saveGame();
+      renderHotbar();
+      showToast('New game started.', 1200);
+      startOrResumeFromMenu();
+    });
+
+    btnStart.addEventListener('click', () => {
+      if (game.state === 'MENU'){
+        // if save exists, continue; otherwise new
+        const save = safeJSONParse(localStorage.getItem(KEY_SAVE), null);
+        if (save){
+          buildWorld(game.levelIndex, save);
+        } else {
+          buildWorld(0, null);
+          saveGame();
+        }
+      }
+      startOrResumeFromMenu();
+    });
+
+    btnReset.addEventListener('click', () => {
+      if (!confirm('Reset miscellaneouscraft save data for this page?')) return;
+      resetSaveData();
+    });
+
+    btnHow.addEventListener('click', () => {
+      showToast('Redstone: lever/plate/torch power dust (15→0). Lamps & doors react to power. Torches invert.', 2500);
+    });
+
+    btnResume.addEventListener('click', () => setPaused(false));
+    btnToMenu.addEventListener('click', () => { saveGame(); showMenu(); menuOverlay.style.display = 'flex'; });
+    btnSaveNow.addEventListener('click', () => { saveGame(); showToast('Saved.', 900); });
+
+    btnWinMenu.addEventListener('click', () => { showMenu(); menuOverlay.style.display = 'flex'; });
+    btnNextLevel.addEventListener('click', () => {
+      winOverlay.style.display = 'none';
+      const next = clamp(game.levelIndex + 1, 0, LEVELS.length-1);
+      if (next === game.levelIndex) {
+        showToast('No more levels. You beat them all!', 1600);
+        showMenu();
+        return;
+      }
+      game.levelIndex = next;
+      // reset timer but keep xp/hp
+      game.elapsedMs = 0;
+      buildWorld(game.levelIndex, safeJSONParse(localStorage.getItem(KEY_SAVE), null));
+      startOrResumeFromMenu();
+    });
+
+    /*********************
+     * Click highlight update
+     *********************/
+    function updateHighlight(){
+      if (game.state !== 'PLAYING') { highlight.visible = false; return; }
+      const hit = intersectWorld();
+      if (!hit){ highlight.visible = false; return; }
+      const {x,y,z} = unpackKey(hit.key);
+      const id = world.getId(x,y,z);
+      // Show highlight only for non-air
+      if (id === BLOCK.AIR){ highlight.visible = false; return; }
+      highlight.visible = true;
+      highlight.position.set(x+0.5, y+0.5, z+0.5);
+      highlight.material.opacity = 0.9;
+    }
+
+    /*********************
+     * Day/night cycle visual
+     *********************/
+    function updateSkyAndLight(dt){
+      const t = (performance.now() * 0.00006) + game.levelIndex * 0.13;
+      const s = 0.5 + 0.5*Math.sin(t * Math.PI * 2);
+      // sky
+      const sky = new THREE.Color().setHSL(0.58, 0.55, lerp(0.12, 0.62, s));
+      scene.background = sky;
+      scene.fog.color.copy(sky);
+
+      // sun
+      sun.intensity = lerp(0.20, 1.05, s);
+      hemi.intensity = lerp(0.55, 0.95, s);
+      sun.position.set(40*Math.cos(t*2), 55 + 25*s, 40*Math.sin(t*2));
+    }
+
+    /*********************
+     * Objective text updates
+     *********************/
+    function updateHUD(){
+      hudHP.textContent = String(Math.floor(player.hp));
+      hudXP.textContent = String(player.xp|0);
+      hudLevel.textContent = String(game.levelIndex + 1);
+      hudPage.textContent = String(game.hotbarPage + 1);
+      hudTime.textContent = formatTime(game.elapsedMs);
+
+      const lit = game.objectiveLit;
+      const req = game.objectiveReq;
+      const def = LEVELS[game.levelIndex];
+      hudObjective.textContent = `Power ${req} required lamp(s): ${lit}/${req}. Then reach the portal. (${def.name})`;
+    }
+
+    /*********************
+     * Main loop
+     *********************/
+    let last = nowMs();
+    let autosaveTimer = 0;
+
+    function tick(){
+      requestAnimationFrame(tick);
+      const t = nowMs();
+      let dt = (t - last) / 1000;
+      last = t;
+      dt = clamp(dt, 0, 0.05);
+
+      if (!world){
+        renderer.render(scene, camera);
+        return;
+      }
+
+      if (game.state === 'PLAYING'){
+        game.elapsedMs = t - game.startedAt;
+
+        applyRPGScaling();
+
+        updateSkyAndLight(dt);
+
+        // plates depend on player position
+        world.setPlatePressedByPlayer();
+
+        // Redstone simulation
+        world.tickRedstone(dt);
+
+        // Move & animate
+        movePlayer(dt);
+        world.applySpecialAnimations(dt);
+
+        // Mobs
+        for (const m of mobs) m.tick(dt, world);
+
+        // Mining / placing
+        mineTick(dt);
+        placeTick(dt);
+
+        // highlight when not mining
+        if (!game.mining.active) updateHighlight();
+
+        // win condition
+        checkPortalWin();
+
+        // Autosave
+        autosaveTimer += dt;
+        if (autosaveTimer > 10){
+          autosaveTimer = 0;
+          saveGame();
+        }
+
+        // Update HUD
+        updateHUD();
+      } else if (game.state === 'PAUSED'){
+        // idle animations
+        updateSkyAndLight(dt);
+        world.applySpecialAnimations(dt);
+      } else if (game.state === 'WON'){
+        // idle
+        updateSkyAndLight(dt);
+        world.applySpecialAnimations(dt);
+      } else if (game.state === 'MENU'){
+        updateSkyAndLight(dt);
+        world.applySpecialAnimations(dt);
+      }
+
+      renderer.render(scene, camera);
+      pressed.clear();
+    }
+
+    /*********************
+     * Build initial session
+     *********************/
+    function init(){
+      loadSettings();
+      renderHotbar();
+      setupTouch();
+
+      const save = loadGame();
+      if (save){
+        // don't build world until start/continue; but show level info
+        levelInfo.textContent = `Loaded save: Level ${game.levelIndex+1} — ${LEVELS[game.levelIndex].name} · Unlocked: ${game.unlocked}/${LEVELS.length}`;
+      } else {
+        levelInfo.textContent = `No save found. Start a new game.`;
+      }
+
+      // Prebuild world anyway for a living background (no controls)
+      buildWorld(game.levelIndex, save);
+
+      // Stay in menu until start
+      game.state = 'MENU';
+      hud.style.display = 'none';
+      menuOverlay.style.display = 'flex';
+
+      // Update UI for continue availability
+      btnContinue.disabled = !save;
+
+      // Start timer baseline
+      game.startedAt = nowMs();
+
+      // Save on unload
+      window.addEventListener('beforeunload', () => {
+        try { saveGame(); } catch {}
+      });
+
+      tick();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>

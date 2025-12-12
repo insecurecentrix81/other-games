@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yussef & Saharsh - A Romance Story</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            width: 900px;
+            height: 650px;
+            background: linear-gradient(180deg, #2d1b4e 0%, #1a1a2e 100%);
+            border-radius: 20px;
+            box-shadow: 0 0 60px rgba(255, 100, 150, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+        
+        .screen.active {
+            display: flex;
+        }
+        
+        /* Title Screen */
+        #title-screen {
+            background: linear-gradient(180deg, #4a1942 0%, #1a1a2e 100%);
+        }
+        
+        #title-screen h1 {
+            font-size: 3em;
+            color: #ff6b9d;
+            text-shadow: 0 0 30px rgba(255, 107, 157, 0.8);
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        #title-screen p {
+            color: #e0a0b0;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+        
+        .btn {
+            padding: 15px 50px;
+            font-size: 1.3em;
+            background: linear-gradient(135deg, #ff6b9d 0%, #c44569 100%);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(255, 107, 157, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(255, 107, 157, 0.6);
+        }
+        
+        /* Story Screen */
+        #story-screen {
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .story-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.4);
+        }
+        
+        .characters {
+            position: absolute;
+            bottom: 200px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 50px;
+        }
+        
+        .character {
+            width: 180px;
+            height: 220px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s;
+        }
+        
+        .character.speaking {
+            transform: scale(1.1);
+            filter: brightness(1.2);
+        }
+        
+        .character-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid #ff6b9d;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+        }
+        
+        .character-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .character-name {
+            color: white;
+            margin-top: 10px;
+            font-size: 1.2em;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+        
+        .dialogue-box {
+            position: absolute;
+            bottom: 20px;
+            width: 90%;
+            background: rgba(20, 10, 30, 0.95);
+            border: 3px solid #ff6b9d;
+            border-radius: 15px;
+            padding: 25px;
+            z-index: 10;
+        }
+        
+        .speaker-name {
+            color: #ff6b9d;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+        
+        .dialogue-text {
+            color: #fff;
+            font-size: 1.1em;
+            line-height: 1.6;
+            min-height: 60px;
+        }
+        
+        .continue-hint {
+            color: #888;
+            font-size: 0.9em;
+            text-align: right;
+            margin-top: 10px;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        /* Love Meter */
+        .love-meter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px 20px;
+            border-radius: 15px;
+            border: 2px solid #ff6b9d;
+            z-index: 20;
+        }
+        
+        .love-meter-label {
+            color: #ff6b9d;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .love-bar {
+            width: 150px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .love-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b9d, #ff3366);
+            transition: width 0.5s;
+            border-radius: 10px;
+        }
+        
+        /* Mini Game */
+        #minigame-screen {
+            background: #000;
+        }
+        
+        #minigame-screen h2 {
+            color: #ffff00;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        #minigame-screen p {
+            color: #fff;
+            margin-bottom: 15px;
+        }
+        
+        #pacman-canvas {
+            border: 4px solid #2121de;
+            border-radius: 10px;
+        }
+        
+        .game-ui {
+            display: flex;
+            gap: 40px;
+            margin-top: 15px;
+            color: white;
+            font-size: 1.2em;
+        }
+        
+        /* Restaurant Screen */
+        #restaurant-screen .story-bg {
+            background: linear-gradient(180deg, rgba(139, 69, 19, 0.8) 0%, rgba(70, 35, 10, 0.9) 100%);
+        }
+        
+        .restaurant-interior {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 50px;
+        }
+        
+        .restaurant-name {
+            color: #ffd700;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            margin-bottom: 20px;
+        }
+        
+        .table-scene {
+            display: flex;
+            gap: 100px;
+            align-items: flex-end;
+        }
+        
+        .menu-choice {
+            position: absolute;
+            bottom: 200px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .menu-btn {
+            padding: 15px 30px;
+            background: rgba(139, 69, 19, 0.9);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            color: #ffd700;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        
+        .menu-btn:hover {
+            background: #ffd700;
+            color: #4a2510;
+        }
+        
+        /* Ending Screen */
+        #ending-screen {
+            background: linear-gradient(180deg, #1a0a0a 0%, #000 100%);
+        }
+        
+        #ending-screen.betrayal .story-bg {
+            background: radial-gradient(circle, #3a0a0a 0%, #000 100%);
+            animation: redPulse 2s infinite;
+        }
+        
+        @keyframes redPulse {
+            0%, 100% { filter: brightness(0.3); }
+            50% { filter: brightness(0.5); }
+        }
+        
+        .ending-text {
+            color: #ff3333;
+            font-size: 2em;
+            text-align: center;
+            text-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+            z-index: 10;
+        }
+        
+        .poison-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 0%, rgba(0, 100, 0, 0.3) 100%);
+            animation: poisonPulse 1s infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes poisonPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Chapter Title */
+        .chapter-title {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff6b9d;
+            font-size: 2.5em;
+            text-shadow: 0 0 30px rgba(255, 107, 157, 0.8);
+            opacity: 0;
+            animation: fadeInOut 3s forwards;
+            z-index: 100;
+            text-align: center;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        .hearts {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        
+        .heart {
+            position: absolute;
+            font-size: 2em;
+            animation: floatUp 4s linear infinite;
+            opacity: 0.7;
+        }
+        
+        @keyframes floatUp {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.7; }
+            90% { opacity: 0.7; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+        
+        .skip-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 8px 20px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #666;
+            border-radius: 5px;
+            color: #999;
+            cursor: pointer;
+            font-size: 0.9em;
+            z-index: 100;
+        }
+        
+        .skip-btn:hover {
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Title Screen -->
+        <div id="title-screen" class="screen active">
+            <div class="hearts" id="title-hearts"></div>
+            <h1>💕 Yussef & Saharsh 💕</h1>
+            <p>A Tale of Love... and Betrayal</p>
+            <button class="btn" onclick="startGame()">Begin Story</button>
+        </div>
+        
+        <!-- Story Screen -->
+        <div id="story-screen" class="screen">
+            <div class="story-bg" id="story-bg"></div>
+            <div class="love-meter">
+                <div class="love-meter-label">💕 Love Level</div>
+                <div class="love-bar">
+                    <div class="love-fill" id="love-fill" style="width: 0%"></div>
+                </div>
+            </div>
+            <button class="skip-btn" onclick="skipToMinigame()">Skip to Mini-game</button>
+            <div class="characters" id="characters"></div>
+            <div class="dialogue-box">
+                <div class="speaker-name" id="speaker-name">???</div>
+                <div class="dialogue-text" id="dialogue-text"></div>
+                <div class="continue-hint">Click to continue...</div>
+            </div>
+            <div class="chapter-title" id="chapter-title"></div>
+        </div>
+        
+        <!-- Mini Game Screen -->
+        <div id="minigame-screen" class="screen">
+            <h2>🎮 Love Pac-Man 🎮</h2>
+            <p>Collect hearts to increase your love! Avoid the ghosts!</p>
+            <canvas id="pacman-canvas" width="400" height="400"></canvas>
+            <div class="game-ui">
+                <span>❤️ Hearts: <span id="hearts-collected">0</span>/20</span>
+                <span>⏱️ Time: <span id="game-timer">30</span>s</span>
+            </div>
+        </div>
+        
+        <!-- Restaurant Screen -->
+        <div id="restaurant-screen" class="screen">
+            <div class="story-bg" style="background: linear-gradient(180deg, #2a1810 0%, #1a0f08 100%);"></div>
+            <div class="love-meter">
+                <div class="love-meter-label">💕 Love Level</div>
+                <div class="love-bar">
+                    <div class="love-fill" id="love-fill-restaurant" style="width: 50%"></div>
+                </div>
+            </div>
+            <div class="restaurant-interior">
+                <div class="restaurant-name" id="restaurant-name">🍽️ Chez Amour 🍽️</div>
+                <div class="table-scene">
+                    <div class="character">
+                        <div class="character-avatar">😊</div>
+                        <div class="character-name">Yussef</div>
+                    </div>
+                    <div class="character">
+                        <div class="character-avatar">
+                            <img src="https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg" alt="Saharsh">
+                        </div>
+                        <div class="character-name">Saharsh</div>
+                    </div>
+                </div>
+            </div>
+            <div class="menu-choice" id="menu-choice"></div>
+            <div class="dialogue-box">
+                <div class="speaker-name" id="restaurant-speaker">Waiter</div>
+                <div class="dialogue-text" id="restaurant-dialogue"></div>
+            </div>
+        </div>
+        
+        <!-- Ending Screen -->
+        <div id="ending-screen" class="screen">
+            <div class="story-bg" id="ending-bg"></div>
+            <div class="poison-effect" id="poison-effect" style="display: none;"></div>
+            <div class="characters" id="ending-characters"></div>
+            <div class="dialogue-box">
+                <div class="speaker-name" id="ending-speaker">???</div>
+                <div class="dialogue-text" id="ending-dialogue"></div>
+                <div class="continue-hint">Click to continue...</div>
+            </div>
+        </div>
+        
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="screen">
+            <h1 style="color: #ff3333; font-size: 3em; text-shadow: 0 0 30px #ff0000;">💔 THE END 💔</h1>
+            <p style="color: #999; font-size: 1.3em; margin: 30px 0; text-align: center; max-width: 600px;">
+                What started as a beautiful romance ended in the darkest betrayal...<br><br>
+                Saharsh trusted with all his heart, but Yussef had other plans...
+            </p>
+            <button class="btn" onclick="location.reload()" style="background: linear-gradient(135deg, #333 0%, #111 100%);">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            love: 0,
+            chapter: 0,
+            dialogueIndex: 0,
+            currentScreen: 'title',
+            heartsCollected: 0
+        };
+
+        // Story Data
+        const chapters = [
+            {
+                title: "Chapter 1: A Chance Encounter",
+                background: "linear-gradient(180deg, #4a3f6b 0%, #2d2640 100%)",
+                dialogues: [
+                    { speaker: "Narrator", text: "It was a beautiful evening in the city. The stars twinkled above as fate prepared to bring two souls together..." },
+                    { speaker: "Yussef", text: "What a lovely night... I wonder if something special will happen today.", character: "yussef" },
+                    { speaker: "Saharsh", text: "*bumps into Yussef* Oh! I'm so sorry! I wasn't looking where I was going!", character: "saharsh" },
+                    { speaker: "Yussef", text: "*looks up and freezes* No, no... it's quite alright. I'm Yussef.", character: "yussef" },
+                    { speaker: "Saharsh", text: "*smiles warmly* I'm Saharsh. It's nice to meet you, Yussef.", character: "saharsh" },
+                    { speaker: "Yussef", text: "The pleasure is all mine... Say, would you like to grab some coffee sometime?", character: "yussef" },
+                    { speaker: "Saharsh", text: "*blushes* I... I would love that!", character: "saharsh" }
+                ]
+            },
+            {
+                title: "Chapter 2: The First Date",
+                background: "linear-gradient(180deg, #6b4a3f 0%, #40302d 100%)",
+                dialogues: [
+                    { speaker: "Narrator", text: "A week later, Yussef took Saharsh to the finest restaurant in town..." },
+                    { speaker: "Saharsh", text: "Wow, this place is beautiful! You didn't have to do all this for me.", character: "saharsh" },
+                    { speaker: "Yussef", text: "Nothing is too good for someone as special as you, Saharsh.", character: "yussef" },
+                    { speaker: "Saharsh", text: "*heart flutters* You're making me blush again...", character: "saharsh" },
+                    { speaker: "Yussef", text: "Let's play a little game while we wait for our food. It'll be fun!", character: "yussef" }
+                ]
+            }
+        ];
+
+        const restaurantScenes = [
+            {
+                name: "🍽️ Chez Amour 🍽️",
+                dialogues: [
+                    { speaker: "Waiter", text: "Welcome to Chez Amour! What would you like to order?" },
+                    { speaker: "Yussef", text: "Let me order for both of us. Trust me, Saharsh." },
+                    { speaker: "Saharsh", text: "Of course! I trust you completely, Yussef." }
+                ],
+                choices: [
+                    { text: "🍝 Romantic Pasta", love: 15 },
+                    { text: "🍷 Wine & Cheese", love: 10 },
+                    { text: "🍰 Dessert First!", love: 20 }
+                ]
+            },
+            {
+                name: "🌹 La Rose Rouge 🌹",
+                dialogues: [
+                    { speaker: "Narrator", text: "Their second restaurant date at the exclusive La Rose Rouge..." },
+                    { speaker: "Saharsh", text: "Every moment with you feels like a dream, Yussef.", character: "saharsh" },
+                    { speaker: "Yussef", text: "*smiles mysteriously* You haven't seen anything yet, my dear...", character: "yussef" }
+                ],
+                choices: [
+                    { text: "🥂 Champagne Toast", love: 15 },
+                    { text: "🌹 Rose Petals Dessert", love: 25 },
+                    { text: "💋 Candlelit Special", love: 20 }
+                ]
+            }
+        ];
+
+        const endingDialogues = [
+            { speaker: "Narrator", text: "After weeks of beautiful dates, Yussef invited Saharsh for one final dinner..." },
+            { speaker: "Yussef", text: "Saharsh, I've prepared something very special for you tonight.", character: "yussef" },
+            { speaker: "Saharsh", text: "*eyes sparkling* Oh Yussef, you're always so thoughtful!", character: "saharsh" },
+            { speaker: "Yussef", text: "I made this drink just for you. It's a special recipe... *hands glass*", character: "yussef" },
+            { speaker: "Saharsh", text: "*takes the glass trustingly* For me? You're so sweet!", character: "saharsh" },
+            { speaker: "Saharsh", text: "*drinks* Mmm, it tastes a bit... strange...", character: "saharsh" },
+            { speaker: "Yussef", text: "*dark smile* That would be the poison taking effect...", character: "yussef" },
+            { speaker: "Saharsh", text: "W-what?! Yussef... why...? I trusted you...", character: "saharsh" },
+            { speaker: "Yussef", text: "I'm sorry, Saharsh. But this was always the plan. Goodbye, my love.", character: "yussef" },
+            { speaker: "Saharsh", text: "*falls* How... could... you...", character: "saharsh" },
+            { speaker: "Narrator", text: "And so ended the tragic tale of Saharsh, betrayed by the one he loved most..." }
+        ];
+
+        // Initialize floating hearts on title screen
+        function createTitleHearts() {
+            const container = document.getElementById('title-hearts');
+            for (let i = 0; i < 15; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                heart.textContent = '💕';
+                heart.style.left = Math.random() * 100 + '%';
+                heart.style.animationDelay = Math.random() * 4 + 's';
+                heart.style.fontSize = (1 + Math.random()) + 'em';
+                container.appendChild(heart);
+            }
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            gameState.currentScreen = screenId;
+        }
+
+        function startGame() {
+            gameState.chapter = 0;
+            gameState.dialogueIndex = 0;
+            gameState.love = 0;
+            showScreen('story-screen');
+            showChapter(0);
+        }
+
+        function showChapter(index) {
+            const chapter = chapters[index];
+            const titleEl = document.getElementById('chapter-title');
+            titleEl.textContent = chapter.title;
+            titleEl.style.animation = 'none';
+            titleEl.offsetHeight; // Trigger reflow
+            titleEl.style.animation = 'fadeInOut 3s forwards';
+            
+            document.getElementById('story-bg').style.background = chapter.background;
+            
+            setTimeout(() => {
+                showDialogue(0);
+            }, 3000);
+        }
+
+        function showDialogue(index) {
+            const chapter = chapters[gameState.chapter];
+            if (index >= chapter.dialogues.length) {
+                // Chapter complete
+                if (gameState.chapter === 0) {
+                    gameState.chapter = 1;
+                    gameState.dialogueIndex = 0;
+                    showChapter(1);
+                } else if (gameState.chapter === 1) {
+                    // Start mini-game
+                    startMinigame();
+                }
+                return;
+            }
+            
+            const dialogue = chapter.dialogues[index];
+            gameState.dialogueIndex = index;
+            
+            document.getElementById('speaker-name').textContent = dialogue.speaker;
+            typeText(document.getElementById('dialogue-text'), dialogue.text);
+            
+            // Update characters
+            updateCharacters(dialogue.character);
+        }
+
+        function updateCharacters(speakingChar) {
+            const container = document.getElementById('characters');
+            container.innerHTML = `
+                <div class="character ${speakingChar === 'yussef' ? 'speaking' : ''}">
+                    <div class="character-avatar">😊</div>
+                    <div class="character-name">Yussef</div>
+                </div>
+                <div class="character ${speakingChar === 'saharsh' ? 'speaking' : ''}">
+                    <div class="character-avatar">
+                        <img src="https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg" alt="Saharsh" onerror="this.parentElement.textContent='😄'">
+                    </div>
+                    <div class="character-name">Saharsh</div>
+                </div>
+            `;
+        }
+
+        function typeText(element, text) {
+            element.textContent = '';
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < text.length) {
+                    element.textContent += text[i];
+                    i++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 30);
+        }
+
+        function skipToMinigame() {
+            gameState.love = 20;
+            updateLoveMeter();
+            startMinigame();
+        }
+
+        // Story screen click handler
+        document.getElementById('story-screen').addEventListener('click', (e) => {
+            if (e.target.classList.contains('skip-btn')) return;
+            const chapter = chapters[gameState.chapter];
+            if (gameState.dialogueIndex < chapter.dialogues.length - 1) {
+                showDialogue(gameState.dialogueIndex + 1);
+            } else {
+                showDialogue(gameState.dialogueIndex + 1);
+            }
+        });
+
+        function updateLoveMeter() {
+            document.getElementById('love-fill').style.width = Math.min(gameState.love, 100) + '%';
+            const restaurantFill = document.getElementById('love-fill-restaurant');
+            if (restaurantFill) {
+                restaurantFill.style.width = Math.min(gameState.love, 100) + '%';
+            }
+        }
+
+        // ==================== PAC-MAN MINI-GAME ====================
+        let pacmanGame = null;
+
+        function startMinigame() {
+            showScreen('minigame-screen');
+            
+            const canvas = document.getElementById('pacman-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            pacmanGame = {
+                player: { x: 200, y: 200, radius: 15, direction: 0, mouthOpen: 0 },
+                hearts: [],
+                ghosts: [],
+                collected: 0,
+                timer: 30,
+                running: true,
+                keys: {}
+            };
+            
+            // Create hearts
+            for (let i = 0; i < 20; i++) {
+                pacmanGame.hearts.push({
+                    x: 30 + Math.random() * 340,
+                    y: 30 + Math.random() * 340,
+                    collected: false
+                });
+            }
+            
+            // Create ghosts
+            const ghostColors = ['#ff0000', '#00ffff', '#ffb8ff', '#ffb852'];
+            for (let i = 0; i < 4; i++) {
+                pacmanGame.ghosts.push({
+                    x: 50 + i * 100,
+                    y: 50,
+                    color: ghostColors[i],
+                    dx: (Math.random() - 0.5) * 4,
+                    dy: (Math.random() - 0.5) * 4
+                });
+            }
+            
+            // Timer
+            const timerInterval = setInterval(() => {
+                if (!pacmanGame.running) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                pacmanGame.timer--;
+                document.getElementById('game-timer').textContent = pacmanGame.timer;
+                if (pacmanGame.timer <= 0) {
+                    endMinigame();
+                }
+            }, 1000);
+            
+            // Controls
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            
+            // Game loop
+            function gameLoop() {
+                if (!pacmanGame.running) return;
+                
+                update();
+                render();
+                requestAnimationFrame(gameLoop);
+            }
+            
+            function update() {
+                const speed = 5;
+                const p = pacmanGame.player;
+                
+                if (pacmanGame.keys['ArrowUp'] || pacmanGame.keys['KeyW']) {
+                    p.y -= speed;
+                    p.direction = -Math.PI / 2;
+                }
+                if (pacmanGame.keys['ArrowDown'] || pacmanGame.keys['KeyS']) {
+                    p.y += speed;
+                    p.direction = Math.PI / 2;
+                }
+                if (pacmanGame.keys['ArrowLeft'] || pacmanGame.keys['KeyA']) {
+                    p.x -= speed;
+                    p.direction = Math.PI;
+                }
+                if (pacmanGame.keys['ArrowRight'] || pacmanGame.keys['KeyD']) {
+                    p.x += speed;
+                    p.direction = 0;
+                }
+                
+                // Bounds
+                p.x = Math.max(p.radius, Math.min(400 - p.radius, p.x));
+                p.y = Math.max(p.radius, Math.min(400 - p.radius, p.y));
+                
+                // Mouth animation
+                p.mouthOpen = (p.mouthOpen + 0.3) % (Math.PI * 2);
+                
+                // Collect hearts
+                pacmanGame.hearts.forEach(heart => {
+                    if (!heart.collected) {
+                        const dist = Math.hypot(p.x - heart.x, p.y - heart.y);
+                        if (dist < 25) {
+                            heart.collected = true;
+                            pacmanGame.collected++;
+                            document.getElementById('hearts-collected').textContent = pacmanGame.collected;
+                            
+                            if (pacmanGame.collected >= 20) {
+                                endMinigame();
+                            }
+                        }
+                    }
+                });
+                
+                // Move ghosts
+                pacmanGame.ghosts.forEach(ghost => {
+                    ghost.x += ghost.dx;
+                    ghost.y += ghost.dy;
+                    
+                    if (ghost.x < 20 || ghost.x > 380) ghost.dx *= -1;
+                    if (ghost.y < 20 || ghost.y > 380) ghost.dy *= -1;
+                    
+                    // Check collision with player
+                    const dist = Math.hypot(p.x - ghost.x, p.y - ghost.y);
+                    if (dist < 30) {
+                        // Push player back
+                        p.x += (p.x - ghost.x) * 0.5;
+                        p.y += (p.y - ghost.y) * 0.5;
+                    }
+                });
+            }
+            
+            function render() {
+                // Clear
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, 400, 400);
+                
+                // Draw maze walls (simple)
+                ctx.strokeStyle = '#2121de';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(10, 10, 380, 380);
+                
+                // Draw hearts
+                pacmanGame.hearts.forEach(heart => {
+                    if (!heart.collected) {
+                        ctx.font = '20px Arial';
+                        ctx.fillText('💕', heart.x - 10, heart.y + 7);
+                    }
+                });
+                
+                // Draw player (Pac-Man)
+                const p = pacmanGame.player;
+                const mouthSize = Math.abs(Math.sin(p.mouthOpen)) * 0.5;
+                
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, p.direction + mouthSize, p.direction + Math.PI * 2 - mouthSize);
+                ctx.lineTo(p.x, p.y);
+                ctx.fill();
+                
+                // Draw eye
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(p.x + Math.cos(p.direction - 0.5) * 5, p.y + Math.sin(p.direction - 0.5) * 5 - 5, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw ghosts
+                pacmanGame.ghosts.forEach(ghost => {
+                    ctx.fillStyle = ghost.color;
+                    
+                    // Ghost body
+                    ctx.beginPath();
+                    ctx.arc(ghost.x, ghost.y - 5, 15, Math.PI, 0);
+                    ctx.lineTo(ghost.x + 15, ghost.y + 10);
+                    
+                    // Wavy bottom
+                    for (let i = 0; i < 5; i++) {
+                        const angle = (i % 2 === 0) ? 5 : -5;
+                        ctx.lineTo(ghost.x + 15 - i * 7.5, ghost.y + 10 + angle);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Eyes
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(ghost.x - 5, ghost.y - 5, 5, 0, Math.PI * 2);
+                    ctx.arc(ghost.x + 5, ghost.y - 5, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#00f';
+                    ctx.beginPath();
+                    ctx.arc(ghost.x - 4, ghost.y - 5, 2, 0, Math.PI * 2);
+                    ctx.arc(ghost.x + 6, ghost.y - 5, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+            
+            gameLoop();
+        }
+
+        function handleKeyDown(e) {
+            if (pacmanGame && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) {
+                e.preventDefault();
+                pacmanGame.keys[e.code] = true;
+            }
+        }
+
+        function handleKeyUp(e) {
+            if (pacmanGame) {
+                pacmanGame.keys[e.code] = false;
+            }
+        }
+
+        function endMinigame() {
+            pacmanGame.running = false;
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keyup', handleKeyUp);
+            
+            // Add love based on hearts collected
+            gameState.love += pacmanGame.collected * 2;
+            updateLoveMeter();
+            
+            // Continue to restaurant
+            setTimeout(() => {
+                startRestaurant(0);
+            }, 1000);
+        }
+
+        // ==================== RESTAURANT SCENES ====================
+        let currentRestaurant = 0;
+        let restaurantDialogueIndex = 0;
+
+        function startRestaurant(index) {
+            currentRestaurant = index;
+            restaurantDialogueIndex = 0;
+            
+            showScreen('restaurant-screen');
+            
+            const scene = restaurantScenes[index];
+            document.getElementById('restaurant-name').textContent = scene.name;
+            document.getElementById('love-fill-restaurant').style.width = gameState.love + '%';
+            
+            showRestaurantDialogue(0);
+        }
+
+        function showRestaurantDialogue(index) {
+            const scene = restaurantScenes[currentRestaurant];
+            
+            if (index >= scene.dialogues.length) {
+                // Show choices
+                showRestaurantChoices();
+                return;
+            }
+            
+            const dialogue = scene.dialogues[index];
+            restaurantDialogueIndex = index;
+            
+            document.getElementById('restaurant-speaker').textContent = dialogue.speaker;
+            document.getElementById('restaurant-dialogue').textContent = dialogue.text;
+            document.getElementById('menu-choice').innerHTML = '';
+        }
+
+        function showRestaurantChoices() {
+            const scene = restaurantScenes[currentRestaurant];
+            const choicesContainer = document.getElementById('menu-choice');
+            
+            document.getElementById('restaurant-speaker').textContent = 'What will you order?';
+            document.getElementById('restaurant-dialogue').textContent = 'Choose wisely to impress Saharsh...';
+            
+            choicesContainer.innerHTML = scene.choices.map((choice, i) => `
+                <button class="menu-btn" onclick="makeChoice(${i})">${choice.text}</button>
+            `).join('');
+        }
+
+        function makeChoice(index) {
+            const scene = restaurantScenes[currentRestaurant];
+            const choice = scene.choices[index];
+            
+            gameState.love += choice.love;
+            updateLoveMeter();
+            
+            document.getElementById('menu-choice').innerHTML = '';
+            document.getElementById('restaurant-speaker').textContent = 'Saharsh';
+            document.getElementById('restaurant-dialogue').textContent = 
+                choice.love >= 20 ? "Oh Yussef! This is absolutely perfect! I love it! 💕" :
+                choice.love >= 15 ? "This is wonderful, Yussef. You know me so well! 💕" :
+                "Mmm, this is nice! Thank you, Yussef! 💕";
+            
+            setTimeout(() => {
+                if (currentRestaurant < restaurantScenes.length - 1) {
+                    startRestaurant(currentRestaurant + 1);
+                } else {
+                    startEnding();
+                }
+            }, 2500);
+        }
+
+        document.getElementById('restaurant-screen').addEventListener('click', (e) => {
+            if (e.target.classList.contains('menu-btn')) return;
+            const scene = restaurantScenes[currentRestaurant];
+            if (restaurantDialogueIndex < scene.dialogues.length - 1) {
+                showRestaurantDialogue(restaurantDialogueIndex + 1);
+            } else {
+                showRestaurantChoices();
+            }
+        });
+
+        // ==================== ENDING ====================
+        let endingIndex = 0;
+
+        function startEnding() {
+            showScreen('ending-screen');
+            endingIndex = 0;
+            showEndingDialogue(0);
+        }
+
+        function showEndingDialogue(index) {
+            if (index >= endingDialogues.length) {
+                // Show game over
+                setTimeout(() => {
+                    showScreen('gameover-screen');
+                }, 1000);
+                return;
+            }
+            
+            const dialogue = endingDialogues[index];
+            endingIndex = index;
+            
+            document.getElementById('ending-speaker').textContent = dialogue.speaker;
+            typeText(document.getElementById('ending-dialogue'), dialogue.text);
+            
+            // Update characters
+            const container = document.getElementById('ending-characters');
+            container.innerHTML = `
+                <div class="character ${dialogue.character === 'yussef' ? 'speaking' : ''}">
+                    <div class="character-avatar">${index >= 6 ? '😈' : '😊'}</div>
+                    <div class="character-name">Yussef</div>
+                </div>
+                <div class="character ${dialogue.character === 'saharsh' ? 'speaking' : ''}">
+                    <div class="character-avatar" style="${index >= 9 ? 'filter: grayscale(1) brightness(0.5);' : ''}">
+                        <img src="https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg" alt="Saharsh" onerror="this.parentElement.textContent='😢'">
+                    </div>
+                    <div class="character-name">Saharsh</div>
+                </div>
+            `;
+            
+            // Poison effect
+            if (index >= 5) {
+                document.getElementById('poison-effect').style.display = 'block';
+                document.getElementById('ending-bg').style.background = 'radial-gradient(circle, #1a3a0a 0%, #000 100%)';
+            }
+            
+            if (index >= 8) {
+                document.getElementById('ending-bg').style.background = 'radial-gradient(circle, #3a0a0a 0%, #000 100%)';
+            }
+        }
+
+        document.getElementById('ending-screen').addEventListener('click', () => {
+            if (endingIndex < endingDialogues.length - 1) {
+                showEndingDialogue(endingIndex + 1);
+            } else {
+                showEndingDialogue(endingIndex + 1);
+            }
+        });
+
+        // Initialize
+        createTitleHearts();
+    </script>
+</body>
+</html>

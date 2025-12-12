@@ -9,6 +9,8 @@ class UI {
     cacheElements() {
         this.elements = {
             mainMenu: document.getElementById('mainMenu'),
+            upgradesMenu: document.getElementById('upgradesMenu'),
+            achievementsMenu: document.getElementById('achievementsMenu'),
             restaurantScene: document.getElementById('restaurantScene'),
             pacmanScene: document.getElementById('pacmanScene'),
             endingScene: document.getElementById('endingScene'),
@@ -21,13 +23,26 @@ class UI {
             pacmanScore: document.getElementById('pacmanScore'),
             pacmanLives: document.getElementById('pacmanLives'),
             pacmanTime: document.getElementById('pacmanTime'),
+            pacmanWave: document.getElementById('pacmanWave'),
             pacmanMessage: document.getElementById('pacmanMessage'),
             pacmanMessageText: document.getElementById('pacmanMessageText'),
             pacmanContinue: document.getElementById('pacmanContinue'),
             endingTitle: document.getElementById('endingTitle'),
             endingText: document.getElementById('endingText'),
+            newAchievement: document.getElementById('newAchievement'),
             playMiniGame: document.getElementById('playMiniGame'),
-            restaurantBackground: document.getElementById('restaurantBackground')
+            restaurantBackground: document.getElementById('restaurantBackground'),
+            currencyDisplay: document.getElementById('currencyDisplay'),
+            sceneCurrency: document.getElementById('sceneCurrency'),
+            shopCurrency: document.getElementById('shopCurrency'),
+            dateNumber: document.getElementById('dateNumber'),
+            comboDisplay: document.getElementById('comboDisplay'),
+            comboText: document.getElementById('comboText'),
+            upgradesGrid: document.getElementById('upgradesGrid'),
+            achievementsGrid: document.getElementById('achievementsGrid'),
+            achievementCount: document.getElementById('achievementCount'),
+            powerupsDisplay: document.getElementById('powerupsDisplay'),
+            powerupsList: document.getElementById('powerupsList')
         };
     }
 
@@ -49,6 +64,16 @@ class UI {
                     this.elements.mainMenu.classList.remove('hidden');
                     this.elements.mainMenu.style.opacity = '1';
                     break;
+                case 'upgrades':
+                    this.elements.upgradesMenu.classList.remove('hidden');
+                    this.elements.upgradesMenu.style.opacity = '1';
+                    this.updateUpgradesDisplay();
+                    break;
+                case 'achievements':
+                    this.elements.achievementsMenu.classList.remove('hidden');
+                    this.elements.achievementsMenu.style.opacity = '1';
+                    this.updateAchievementsDisplay();
+                    break;
                 case 'restaurant':
                     this.elements.restaurantScene.classList.remove('hidden');
                     this.elements.restaurantScene.style.opacity = '1';
@@ -63,6 +88,83 @@ class UI {
                     break;
             }
         }, 300);
+    }
+
+    showUpgradesMenu() {
+        this.showScene('upgrades');
+    }
+
+    hideUpgradesMenu() {
+        this.elements.upgradesMenu.classList.add('hidden');
+    }
+
+    showAchievementsMenu() {
+        this.showScene('achievements');
+    }
+
+    hideAchievementsMenu() {
+        this.elements.achievementsMenu.classList.add('hidden');
+    }
+
+    updateUpgradesDisplay() {
+        this.elements.shopCurrency.textContent = game.state.currency;
+        this.elements.upgradesGrid.innerHTML = '';
+        
+        upgrades.upgrades.forEach(upgrade => {
+            const isPurchased = upgrades.isPurchased(upgrade);
+            const canAfford = upgrades.canAfford(upgrade);
+            
+            const card = document.createElement('div');
+            card.className = `upgrade-card bg-gray-800 p-4 rounded-lg border-2 ${
+                isPurchased ? 'border-green-500 purchased' : 
+                canAfford ? 'border-blue-500 hover:border-blue-400' : 'border-gray-600 opacity-50'
+            }`;
+            
+            card.innerHTML = `
+                <div class="text-3xl mb-2 text-center">${upgrade.icon}</div>
+                <h3 class="font-bold text-lg mb-2">${upgrade.name}</h3>
+                <p class="text-sm text-gray-400 mb-3">${upgrade.description}</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-yellow-400 font-bold">💰 ${upgrade.cost}</span>
+                    ${isPurchased ? 
+                        '<span class="text-green-400">✓ Owned</span>' : 
+                        canAfford ? 
+                        '<button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">Buy</button>' :
+                        '<span class="text-red-400">Too Expensive</span>'
+                    }
+                </div>
+            `;
+            
+            if (!isPurchased && canAfford) {
+                const buyButton = card.querySelector('button');
+                buyButton.addEventListener('click', () => {
+                    upgrades.purchaseUpgrade(upgrade.id);
+                });
+            }
+            
+            this.elements.upgradesGrid.appendChild(card);
+        });
+    }
+
+    updateAchievementsDisplay() {
+        this.elements.achievementCount.textContent = achievements.getUnlockedCount();
+        this.elements.achievementsGrid.innerHTML = '';
+        
+        achievements.achievements.forEach(achievement => {
+            const card = document.createElement('div');
+            card.className = `p-3 rounded-lg border-2 ${
+                achievement.unlocked ? 'bg-yellow-900 border-yellow-500' : 'bg-gray-800 border-gray-600'
+            }`;
+            
+            card.innerHTML = `
+                <div class="text-2xl mb-1 text-center">${achievement.unlocked ? achievement.icon : '🔒'}</div>
+                <h4 class="font-bold text-sm mb-1">${achievement.name}</h4>
+                <p class="text-xs text-gray-400">${achievement.description}</p>
+                ${achievement.unlocked ? '<div class="text-xs text-green-400 mt-1">✓ Unlocked</div>' : ''}
+            `;
+            
+            this.elements.achievementsGrid.appendChild(card);
+        });
     }
 
     showDialogue(characterName, text, choices = []) {
@@ -110,10 +212,11 @@ class UI {
         }
     }
 
-    updatePacmanUI(score, lives, time) {
+    updatePacmanUI(score, lives, time, wave = 1) {
         this.elements.pacmanScore.textContent = score;
         this.elements.pacmanLives.textContent = lives;
         this.elements.pacmanTime.textContent = time;
+        this.elements.pacmanWave.textContent = wave;
     }
 
     showPacmanMessage(message, showContinue = true) {
@@ -130,9 +233,32 @@ class UI {
         this.elements.endingTitle.textContent = title;
         this.elements.endingText.textContent = text;
         
+        // Show achievement
+        const achievementName = type === 'perfect' ? 'Perfect Romance' : 
+                               type === 'good' ? 'Happy Ending' :
+                               type === 'betrayal' ? 'The Betrayal' :
+                               type === 'bad' ? 'Heartbreak' : 'Just Friends';
+        this.elements.newAchievement.textContent = achievementName;
+        
         // Apply ending style
         this.elements.endingScene.className = 'absolute inset-0 bg-black flex items-center justify-center';
-        this.elements.endingScene.classList.add(`ending-${type}`);
+        
+        switch(type) {
+            case 'perfect':
+                this.elements.endingScene.style.background = 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)';
+                break;
+            case 'good':
+                this.elements.endingScene.style.background = 'linear-gradient(135deg, #FF69B4 0%, #FFB6C1 100%)';
+                break;
+            case 'betrayal':
+                this.elements.endingScene.style.background = 'linear-gradient(135deg, #1a0000 0%, #330000 100%)';
+                break;
+            case 'bad':
+                this.elements.endingScene.style.background = 'linear-gradient(135deg, #2C3E50 0%, #34495E 100%)';
+                break;
+            default:
+                this.elements.endingScene.style.background = 'linear-gradient(135deg, #2C3E50 0%, #34495E 100%)';
+        }
         
         this.showScene('ending');
     }
@@ -157,6 +283,21 @@ class UI {
                 break;
             case 'rooftop':
                 bg.style.background = 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), linear-gradient(to bottom, #87CEEB, #FFB6C1)';
+                break;
+            case 'mexican':
+                bg.style.background = 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), #D2691E';
+                break;
+            case 'chinese':
+                bg.style.background = 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), #8B0000';
+                break;
+            case 'indian':
+                bg.style.background = 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), #FF6347';
+                break;
+            case 'greek':
+                bg.style.background = 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), #4682B4';
+                break;
+            case 'secret':
+                bg.style.background = 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), linear-gradient(45deg, #9400D3, #4B0082, #0000FF)';
                 break;
         }
     }
@@ -240,6 +381,32 @@ class UI {
         }, 2000);
     }
 
+    showPowerUp(type, duration) {
+        const powerUpElement = document.createElement('div');
+        powerUpElement.className = 'text-yellow-400 font-bold';
+        
+        switch(type) {
+            case 'speed':
+                powerUpElement.textContent = '⚡ Speed Boost!';
+                break;
+            case 'invincible':
+                powerUpElement.textContent = '🛡️ Invincible!';
+                break;
+            case 'magnet':
+                powerUpElement.textContent = '🧲 Coin Magnet!';
+                break;
+            case 'double':
+                powerUpElement.textContent = 'x2 Points!';
+                break;
+        }
+        
+        this.elements.powerupsList.appendChild(powerUpElement);
+        
+        setTimeout(() => {
+            powerUpElement.remove();
+        }, duration);
+    }
+
     showLoadingScreen(show = true) {
         const loadingScreen = document.getElementById('loadingScreen');
         if (show) {
@@ -249,22 +416,6 @@ class UI {
         }
     }
 }
-
-// Add floating animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes floatUp {
-        0% {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        100% {
-            transform: translateY(-100px);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
 
 // Initialize UI
 const ui = new UI();

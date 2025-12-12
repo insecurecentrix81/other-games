@@ -1,9 +1,10 @@
-// Dating and Restaurant System
+// Enhanced Dating and Restaurant System
 class Dating {
     constructor() {
         this.currentRestaurant = null;
         this.isInDate = false;
         this.dateProgress = 0;
+        this.specialMoments = 0;
     }
 
     startDate(restaurantId) {
@@ -26,6 +27,9 @@ class Dating {
             const dialogueId = dialogue.getDialogueForRestaurant(restaurantId, 0);
             dialogue.showDialogue(dialogueId);
         }, 1500);
+
+        // Add currency for starting a date
+        game.addCurrency(10 + restaurantId * 5);
     }
 
     positionCharacters() {
@@ -36,11 +40,14 @@ class Dating {
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
 
-        yussef.style.left = (screenWidth * 0.25) + 'px';
+        // Adjust positions based on love meter
+        const loveProximity = (100 - game.state.loveMeter) / 2;
+        
+        yussef.style.left = (screenWidth * 0.25 - loveProximity) + 'px';
         yussef.style.bottom = '100px';
         yussef.style.position = 'absolute';
 
-        saharsh.style.left = (screenWidth * 0.65) + 'px';
+        saharsh.style.left = (screenWidth * 0.65 + loveProximity) + 'px';
         saharsh.style.bottom = '100px';
         saharsh.style.position = 'absolute';
     }
@@ -48,36 +55,68 @@ class Dating {
     completeDate() {
         this.isInDate = false;
         this.dateProgress = 0;
+        game.state.currentDate++;
 
         // Check if ready for next restaurant
-        if (game.state.loveMeter >= 20 * (game.state.currentRestaurant + 1)) {
+        const requiredLove = this.currentRestaurant.minLoveRequired;
+        if (game.state.loveMeter >= requiredLove) {
+            // Bonus for exceeding requirements
+            const excessLove = game.state.loveMeter - requiredLove;
+            if (excessLove > 20) {
+                game.addCurrency(50);
+                ui.createFloatingText('Perfect Date! +50 💰', window.innerWidth / 2, 200, '#FFD700');
+            }
+            
             this.nextRestaurant();
         } else {
             // Need more love points
             ui.showMiniGameButton(true);
+            ui.createFloatingText(`Need ${requiredLove - game.state.loveMeter} more love points!`, window.innerWidth / 2, 200, '#FFA500');
         }
     }
 
     nextRestaurant() {
-        game.state.currentRestaurant++;
-        game.state.currentDate = 0;
-
-        if (game.state.currentRestaurant >= game.restaurants.length) {
-            // All restaurants completed, trigger final chapter
-            game.triggerFinalChapter();
+        // Randomly select next restaurant from available ones
+        const availableRestaurants = game.restaurants.filter(r => {
+            return game.state.loveMeter >= r.minLoveRequired - 10; // Allow some flexibility
+        });
+        
+        if (availableRestaurants.length > 0) {
+            const nextRestaurant = availableRestaurants[Math.floor(Math.random() * availableRestaurants.length)];
+            game.state.currentRestaurant = nextRestaurant.id;
+            
+            // Check if all restaurants have been visited
+            if (game.state.currentDate >= 10) {
+                game.triggerFinalChapter();
+            } else {
+                // Start next restaurant date
+                setTimeout(() => {
+                    this.startDate(game.state.currentRestaurant);
+                }, 2000);
+            }
         } else {
-            // Start next restaurant date
-            this.startDate(game.state.currentRestaurant);
+            // No restaurants available, trigger mini-game
+            ui.showMiniGameButton(true);
         }
     }
 
     handleMiniGameResult(won, score) {
         if (won) {
             // Success in mini-game increases love
-            const loveGain = Math.min(15, this.currentRestaurant.difficulty * 3);
+            const baseLoveGain = 10 + this.currentRestaurant.difficulty * 3;
+            const loveGain = Math.min(15, baseLoveGain + Math.floor(score / 100));
             game.updateLoveMeter(loveGain);
             
-            ui.createFloatingText(`+${loveGain} Love Points!`, window.innerWidth / 2, 200, '#FF69B4');
+            // Currency bonus
+            const currencyBonus = Math.floor(score / 50);
+            game.addCurrency(currencyBonus);
+            
+            ui.createFloatingText(`+${loveGain} Love Points! +${currencyBonus} 💰`, window.innerWidth / 2, 200, '#FF69B4');
+            
+            // Check for special moment
+            if (loveGain > 12) {
+                this.triggerSpecialMoment();
+            }
             
             // Continue story
             setTimeout(() => {
@@ -104,35 +143,66 @@ class Dating {
         const restaurantScene = document.getElementById('restaurantScene');
         
         // Create floating hearts
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 8; i++) {
             setTimeout(() => {
                 const heart = document.createElement('div');
                 heart.innerHTML = '❤️';
                 heart.style.cssText = `
                     position: absolute;
-                    font-size: 20px;
+                    font-size: ${20 + Math.random() * 20}px;
                     left: ${Math.random() * window.innerWidth}px;
                     bottom: 0;
-                    animation: floatHeart 3s ease-out forwards;
+                    animation: floatHeart ${3 + Math.random() * 2}s ease-out forwards;
                     pointer-events: none;
+                    opacity: ${0.6 + Math.random() * 0.4};
                 `;
                 restaurantScene.appendChild(heart);
                 
-                setTimeout(() => heart.remove(), 3000);
-            }, i * 500);
+                setTimeout(() => heart.remove(), 5000);
+            }, i * 300);
+        }
+        
+        // Add sparkles
+        for (let i = 0; i < 10; i++) {
+            setTimeout(() => {
+                const sparkle = document.createElement('div');
+                sparkle.innerHTML = '✨';
+                sparkle.style.cssText = `
+                    position: absolute;
+                    font-size: 16px;
+                    left: ${Math.random() * window.innerWidth}px;
+                    top: ${Math.random() * window.innerHeight}px;
+                    animation: sparkle 2s ease-out forwards;
+                    pointer-events: none;
+                `;
+                restaurantScene.appendChild(sparkle);
+                
+                setTimeout(() => sparkle.remove(), 2000);
+            }, i * 200);
         }
     }
 
     triggerSpecialMoment() {
+        this.specialMoments++;
+        
         // Create a special romantic moment
         this.createRomanticAtmosphere();
         
         // Add screen effect
         ui.addScreenEffect('fade-to-black');
         
+        // Bonus love for special moments
+        game.updateLoveMeter(5);
+        game.addCurrency(25);
+        
         setTimeout(() => {
             ui.addScreenEffect('fade-to-black');
         }, 1000);
+        
+        // Check achievements
+        if (this.specialMoments >= 3) {
+            achievements.unlock('special_moments');
+        }
     }
 
     updateCharacterPositionsBasedOnEmotion() {
@@ -141,14 +211,41 @@ class Dating {
         
         // Move characters closer if love is high
         if (game.state.loveMeter > 70) {
-            const distance = (100 - game.state.loveMeter) * 2;
+            const distance = (100 - game.state.loveMeter) * 3;
             yussef.style.left = `calc(25vw - ${distance}px)`;
             saharsh.style.left = `calc(65vw + ${distance}px)`;
+            
+            // Add floating effect
+            yussef.style.animation = 'float 2s ease-in-out infinite';
+            saharsh.style.animation = 'float 2s ease-in-out infinite reverse';
         }
+    }
+
+    calculateDateScore() {
+        // Calculate overall date performance
+        let score = 0;
+        
+        // Base score for completing date
+        score += 100;
+        
+        // Love meter bonus
+        score += game.state.loveMeter * 2;
+        
+        // Restaurant difficulty bonus
+        score += this.currentRestaurant.difficulty * 50;
+        
+        // Special moments bonus
+        score += this.specialMoments * 25;
+        
+        // Upgrade bonuses
+        score += game.state.upgrades.charm * 30;
+        score += game.state.upgrades.charisma * 40;
+        
+        return score;
     }
 }
 
-// Add floating heart animation
+// Add floating animations
 const style = document.createElement('style');
 style.textContent = `
     @keyframes floatHeart {
@@ -157,8 +254,32 @@ style.textContent = `
             opacity: 1;
         }
         100% {
-            transform: translateY(-500px) rotate(360deg);
+            transform: translateY(-600px) rotate(360deg);
             opacity: 0;
+        }
+    }
+    
+    @keyframes sparkle {
+        0% {
+            transform: scale(0) rotate(0deg);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.5) rotate(180deg);
+            opacity: 0.8;
+        }
+        100% {
+            transform: scale(0) rotate(360deg);
+            opacity: 0;
+        }
+    }
+    
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
         }
     }
 `;

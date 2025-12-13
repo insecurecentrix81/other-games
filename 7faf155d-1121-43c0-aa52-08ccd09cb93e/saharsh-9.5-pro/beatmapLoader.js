@@ -40,6 +40,10 @@ export const BEATMAP_SETS = [
     }
 ];
 
+export function getBeatmapSets() {
+    return BEATMAP_SETS;
+}
+
 // Cache for parsed beatmaps to avoid re-fetching
 export const beatmapCache = new Map();
 

@@ -4,12 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Calvin with Eric - A romance-action adventure game">
+  <meta name="theme-color" content="#121212">
   <title>Calvin with Eric</title>
   <link rel="stylesheet" href="styles.css">
   <!-- Load Phaser 3 from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
   <!-- Load Howler for audio -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+  <!-- Preload key fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="game-container">
@@ -18,9 +21,25 @@
   
   <!-- Preload assets to avoid flickering -->
   <div class="hidden">
+    <!-- Character sprites -->
     <img src="assets/characters/calvin_idle.png" alt="Calvin idle">
+    <img src="assets/characters/calvin_run.png" alt="Calvin running">
+    <img src="assets/characters/calvin_jump.png" alt="Calvin jumping">
+    <img src="assets/characters/calvin_attack.png" alt="Calvin attacking">
+    
     <img src="assets/characters/eric_idle.png" alt="Eric idle">
+    <img src="assets/characters/eric_follow.png" alt="Eric following">
+    <img src="assets/characters/eric_heal.png" alt="Eric healing">
+    <img src="assets/characters/eric_sync_attack.png" alt="Eric sync attack">
+    
+    <!-- Monster sprites -->
     <img src="assets/monsters/slime.png" alt="Slime monster">
+    <img src="assets/monsters/goblin.png" alt="Goblin monster">
+    <img src="assets/monsters/wizard.png" alt="Wizard monster">
+    
+    <!-- UI assets -->
+    <img src="assets/ui/heart.png" alt="Heart icon">
+    <img src="assets/ui/particle.png" alt="Particle effect">
   </div>
   
   <!-- UI elements that need to be accessible via DOM -->
@@ -34,6 +53,25 @@
   <div id="health-container" class="ui-element">
     <div class="heart-icon">❤</div>
     <div id="health-bar" class="health-fill"></div>
+  </div>
+
+  <!-- Dialogue system -->
+  <div id="dialogue-container" class="ui-element hidden">
+    <div class="dialogue-box">
+      <div class="dialogue-portrait">
+        <img src="assets/characters/eric_idle.png" alt="Eric">
+      </div>
+      <div class="dialogue-text"></div>
+      <div class="choice-container"></div>
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-text">Loading Calvin with Eric...</div>
+    <div class="progress-bar">
+      <div id="progress-fill" class="progress-fill"></div>
+    </div>
   </div>
 
   <!-- Script imports in dependency order -->

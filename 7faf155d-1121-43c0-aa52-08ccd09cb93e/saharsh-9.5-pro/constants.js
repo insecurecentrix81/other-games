@@ -31,6 +31,13 @@ export const SCORE_VALUES = {
     SPINNER_BONUS: 1000
 };
 
+export const HIT_RESULTS = {
+    PERFECT: 300,
+    GREAT: 100,
+    GOOD: 50,
+    MISS: 0,
+};
+
 // Health changes for different hit results
 export const HEALTH_CHANGES = {
     300: 5,

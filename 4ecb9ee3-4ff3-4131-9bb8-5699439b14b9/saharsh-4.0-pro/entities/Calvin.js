@@ -1,6 +1,6 @@
 /**
  * Calvin.js
- * Player character entity
+ * Player character entity with enhanced abilities
  */
 
 class Calvin {
@@ -16,7 +16,7 @@ class Calvin {
     this.sprite.setDepth(10);
     
     // Animation states
-    this.state = 'idle'; // 'idle', 'running', 'jumping', 'attacking', 'hurt', 'dead'
+    this.state = 'idle'; // 'idle', 'running', 'jumping', 'attacking', 'hurt', 'dead', 'dashing'
     this.isAttacking = false;
     this.attackCooldown = 0;
     this.isInvincible = false;
@@ -30,11 +30,20 @@ class Calvin {
     this.jumpCount = 0;
     this.maxJumps = 2; // Double jump capability
     this.hasDoubleJump = false; // Unlocked via progression
+    this.isDashing = false;
+    this.dashCooldown = 0;
     
     // Combat properties
     this.comboCounter = 0;
     this.comboTimer = 0;
     this.comboWindow = 2.0; // seconds to continue combo
+    this.lastHitTime = 0;
+    this.criticalChance = 0.1; // 10% base crit chance
+    
+    // Ability states
+    this.ultimateReady = false;
+    this.ultimateCharge = 0;
+    this.ultimateMax = 100;
     
     // Initialize animations
     this.createAnimations();
@@ -56,7 +65,8 @@ class Calvin {
       jump: 1,
       attack: 15,
       hurt: 1,
-      die: 5
+      die: 5,
+      dash: 20
     };
     
     // Idle animation
@@ -106,6 +116,22 @@ class Calvin {
       frameRate: frameRate.die,
       repeat: 0
     });
+    
+    // Dash animation
+    this.scene.anims.create({
+      key: 'calvin-dash',
+      frames: this.scene.anims.generateFrameNumbers('calvin', { start: 16, end: 18 }),
+      frameRate: frameRate.dash,
+      repeat: 0
+    });
+    
+    // Ultimate attack animation
+    this.scene.anims.create({
+      key: 'calvin-ultimate',
+      frames: this.scene.anims.generateFrameNumbers('calvin', { start: 19, end: 21 }),
+      frameRate: 30,
+      repeat: 0
+    });
   }
 
   /**
@@ -116,6 +142,57 @@ class Calvin {
     this.scene.events.on('gameOver', () => {
       this.destroy();
     });
+    
+    // Listen for upgrades
+    this.scene.events.on('upgradePurchased', (effects) => {
+      this.applyUpgrade(effects);
+    });
+    
+    // Listen for scene changes
+    this.scene.events.on('sceneTransitionComplete', () => {
+      // Reset position if in a safe area
+      this.resetAfterTransition();
+    });
+  }
+
+  /**
+   * Apply upgrade effects
+   * @param {Object} effects
+   */
+  applyUpgrade(effects) {
+    if (effects.maxHealth) {
+      this.stateManager.maxHealth += effects.maxHealth;
+      this.stateManager.health = Math.min(
+        this.stateManager.health + effects.maxHealth, 
+        this.stateManager.maxHealth
+      );
+    }
+    
+    if (effects.moveSpeed) {
+      // Multiplier effect
+      this.scene.inputHandler.attackCooldown = 
+        this.scene.inputHandler.attackCooldown * (1 - effects.moveSpeed);
+    }
+    
+    if (effects.doubleJump) {
+      this.hasDoubleJump = true;
+    }
+    
+    if (effects.ultimateCombo) {
+      this.comboWindow = 3.0; // Extended combo window
+    }
+  }
+
+  /**
+   * Reset position after scene transition
+   */
+  resetAfterTransition() {
+    // Position appropriately if Calvin exists
+    if (this.scene.eric && this.stateManager) {
+      const ericX = this.scene.eric.sprite.x;
+      const offsetX = this.lastDirection === 'right' ? -60 : 60;
+      this.sprite.setPosition(ericX + offsetX, this.scene.eric.sprite.y);
+    }
   }
 
   /**
@@ -131,6 +208,9 @@ class Calvin {
     // Handle invincibility and flashing
     this.updateInvincibility();
     
+    // Handle cooldowns
+    this.updateCooldowns();
+    
     // Get relationship tier for combat bonuses
     const relationshipTier = GAME_CONFIG.getRelationshipTier(this.stateManager.relationshipScore);
     
@@ -145,24 +225,39 @@ class Calvin {
       }
     }
     
+    // Ultimate charge based on combos
+    if (this.lastHitTime > 0) {
+      const timeSinceHit = (Date.now() - this.lastHitTime) / 1000;
+      if (timeSinceHit < 0.5) {
+        // Charge ultimate when in combat
+        this.ultimateCharge = Math.min(this.ultimateCharge + 0.5, this.ultimateMax);
+      } else {
+        // Slowly drain when not in combat
+        this.ultimateCharge = Math.max(this.ultimateCharge - 0.1, 0);
+      }
+    }
+    
+    // Check if ultimate is ready
+    this.ultimateReady = this.ultimateCharge >= this.ultimateMax;
+    
     // Horizontal movement
     if (input.left) {
       this.sprite.setVelocityX(-GAME_CONFIG.PLAYER.moveSpeed);
       this.lastDirection = 'left';
       this.sprite.flipX = true;
-      playAnimation = 'calvin-run';
+      playAnimation = this.isDashing ? 'calvin-dash' : 'calvin-run';
     } else if (input.right) {
       this.sprite.setVelocityX(GAME_CONFIG.PLAYER.moveSpeed);
       this.lastDirection = 'right';
       this.sprite.flipX = false;
-      playAnimation = 'calvin-run';
+      playAnimation = this.isDashing ? 'calvin-dash' : 'calvin-run';
     } else {
       this.sprite.setVelocityX(0);
       playAnimation = 'calvin-idle';
     }
     
     // Jumping logic
-    if ((input.up || input.space) && !this.isAttacking) {
+    if (this.scene.inputHandler.isJumpInputActive() && !this.isAttacking && !this.isDashing) {
       // Allow double jump
       const canJump = this.sprite.body.onFloor() || 
                       (this.jumpCount < this.maxJumps && this.hasDoubleJump);
@@ -182,9 +277,19 @@ class Calvin {
       this.jumpCount = 0;
     }
     
+    // Dash ability
+    if (input.z && !this.isDashing && this.dashCooldown <= 0 && (input.left || input.right)) {
+      this.dash();
+    }
+    
     // Attack logic
-    if ((input.space || input.z) && !this.isAttacking && this.attackCooldown <= 0) {
-      this.attack(relationshipTier);
+    if ((input.space || input.x) && !this.isAttacking && this.attackCooldown <= 0) {
+      // Use ultimate attack if ready
+      if (this.ultimateReady && input.space && input.x) {
+        this.ultimateAttack(relationshipTier);
+      } else {
+        this.attack(relationshipTier);
+      }
     }
     
     // Update attack cooldown
@@ -226,6 +331,73 @@ class Calvin {
   }
 
   /**
+   * Update cooldowns
+   */
+  updateCooldowns() {
+    if (this.dashCooldown > 0) {
+      this.dashCooldown -= this.scene.game.loop.delta / 1000;
+    }
+  }
+
+  /**
+   * Perform dash ability
+   */
+  dash() {
+    this.isDashing = true;
+    this.dashCooldown = 2.0; // 2 second cooldown
+    
+    // Play dash animation
+    this.sprite.anims.play('calvin-dash', true);
+    this.state = 'dashing';
+    
+    // Set high velocity in current direction
+    const speed = GAME_CONFIG.PLAYER.moveSpeed * 3;
+    const direction = this.lastDirection === 'right' ? 1 : -1;
+    this.sprite.setVelocityX(speed * direction);
+    
+    // Duration of dash
+    const duration = 0.3; // 300ms
+    
+    // Screen effect
+    this.createDashEffect();
+    
+    // End dash after duration
+    this.scene.time.delayedCall(duration * 1000, () => {
+      this.isDashing = false;
+      this.sprite.setVelocityX(0);
+      
+      // Return to appropriate animation
+      if (this.sprite.body.onFloor()) {
+        this.state = 'idle';
+      }
+    });
+  }
+
+  /**
+   * Create visual effect for dash
+   */
+  createDashEffect() {
+    // Create motion trail
+    const particles = this.scene.add.particles('particle');
+    const emitter = particles.createEmitter({
+      x: this.sprite.x,
+      y: this.sprite.y,
+      speed: 100,
+      angle: this.lastDirection === 'right' ? 0 : 180,
+      scale: { start: 0.5, end: 0 },
+      blendMode: 'ADD',
+      lifespan: 500,
+      quantity: 5,
+      alpha: { start: 0.8, end: 0 }
+    });
+    
+    // Clean up after effect
+    this.scene.time.delayedCall(500, () => {
+      particles.destroy();
+    });
+  }
+
+  /**
    * Perform attack action
    * @param {string} relationshipTier - Current relationship tier
    */
@@ -254,6 +426,12 @@ class Calvin {
     // Apply combo bonus
     if (this.comboCounter >= 3) {
       damage += Math.floor(baseDamage * 0.2 * Math.min(this.comboCounter, 10));
+    }
+    
+    // Critical hit
+    const isCritical = Math.random() < this.criticalChance;
+    if (isCritical) {
+      damage *= 2;
     }
     
     // Create attack hitbox
@@ -287,16 +465,27 @@ class Calvin {
       hitTargets.add(monster);
       
       monster.takeDamage(damage);
+      this.lastHitTime = Date.now();
+      
+      // Update combo
+      this.comboCounter++;
+      this.comboTimer = this.comboWindow;
+      
+      // Track best combo
+      if (this.comboCounter > this.stateManager.stats.maxCombo) {
+        this.stateManager.stats.maxCombo = this.comboCounter;
+      }
       
       // Create hit effect
-      this.createHitEffect(monster.x, monster.y);
+      this.createHitEffect(monster.x, monster.y, isCritical);
       
       // Update score
       this.stateManager.score += 10;
       
       // Play hit sound
-      if (this.scene.sound.exists('hit')) {
-        this.scene.sound.play('hit', { volume: this.stateManager.settings.effectsVolume });
+      const soundKey = isCritical ? 'hit-critical' : 'hit';
+      if (this.scene.sound.exists(soundKey)) {
+        this.scene.sound.play(soundKey, { volume: this.stateManager.settings.effectsVolume });
       }
     });
     
@@ -314,12 +503,143 @@ class Calvin {
   }
 
   /**
+   * Perform ultimate attack
+   * @param {string} relationshipTier
+   */
+  ultimateAttack(relationshipTier) {
+    this.isAttacking = true;
+    this.attackCooldown = 1.0; // 1 second cooldown
+    this.state = 'attacking';
+    this.ultimateCharge = 0;
+    this.ultimateReady = false;
+    
+    // Play ultimate animation
+    this.sprite.anims.play('calvin-ultimate', true);
+    
+    // Calculate massive damage based on relationship
+    let damage = GAME_CONFIG.PLAYER.attackDamage * 5;
+    const tierMultiplier = relationshipTier === 'unbreakable' ? 2 : 
+                          relationshipTier === 'strong' ? 1.5 : 1;
+    damage *= tierMultiplier;
+    
+    // Create large area of effect
+    const aoe = this.scene.add.circle(
+      this.sprite.x,
+      this.sprite.y - 50,
+      150,
+      0x00ff00,
+      0
+    );
+    
+    aoe.alpha = 0; // Invisible hitbox
+    this.scene.physics.world.enable(aoe);
+    aoe.body.setAllowGravity(false);
+    aoe.body.setImmovable(true);
+    aoe.body.setCircle(150);
+    
+    // Track hit targets
+    const hitTargets = new Set();
+    
+    // Check for collisions with monsters
+    this.scene.physics.add.overlap(aoe, this.scene.monsters, (aoe, monster) => {
+      if (hitTargets.has(monster)) return;
+      hitTargets.add(monster);
+      
+      monster.takeDamage(damage);
+      this.lastHitTime = Date.now();
+      
+      // Create hit effect
+      this.createUltimateHitEffect(monster.x, monster.y);
+    });
+    
+    // Create healing pulse for Eric
+    if (this.scene.eric) {
+      const healEffect = this.scene.add.circle(
+        this.scene.eric.sprite.x,
+        this.scene.eric.sprite.y,
+        80,
+        0x4caf50,
+        0
+      );
+      
+      healEffect.alpha = 0;
+      this.scene.physics.world.enable(healEffect);
+      healEffect.body.setAllowGravity(false);
+      healEffect.body.setImmovable(true);
+      healEffect.body.setCircle(80);
+      
+      this.scene.time.delayedCall(100, () => {
+        // Heal Eric by 25% of max health
+        const healAmount = Math.floor(this.stateManager.maxHealth * 0.25);
+        this.scene.eric.healAmount = healAmount;
+        
+        // Create healing effect
+        this.scene.eric.createHealingEffect(this.scene.eric.sprite.x, this.scene.eric.sprite.y);
+        
+        healEffect.destroy();
+      });
+    }
+    
+    // Create relationship pulse
+    this.relationshipManager.createRelationshipPulse(10);
+    
+    // Create visual effect
+    this.createUltimateEffect();
+    
+    // Play ultimate sound
+    if (this.scene.sound.exists('ultimate')) {
+      this.scene.sound.play('ultimate', { volume: this.stateManager.settings.effectsVolume });
+    }
+    
+    // Remove hitbox after duration
+    this.scene.time.delayedCall(800, () => {
+      aoe.destroy();
+      this.isAttacking = false;
+      
+      // Return to appropriate animation
+      if (this.sprite.body.onFloor()) {
+        this.state = 'idle';
+      }
+    });
+  }
+
+  /**
+   * Create visual effect for ultimate attack
+   */
+  createUltimateEffect() {
+    // Large pulse effect
+    const pulse = this.scene.add.circle(
+      this.sprite.x,
+      this.sprite.y - 30,
+      0,
+      0x4caf50,
+      0.8
+    );
+    
+    pulse.setDepth(8);
+    
+    this.scene.tweens.add({
+      targets: pulse,
+      radius: { value: 200, duration: 400 },
+      alpha: { value: 0, duration: 400 },
+      ease: 'Power2',
+      onComplete: () => {
+        pulse.destroy();
+      }
+    });
+    
+    // Screen flash
+    this.scene.cameras.main.flash(500, 76, 175, 80);
+  }
+
+  /**
    * Create visual effect for attack hit
    * @param {number} x
    * @param {number} y
+   * @param {boolean} critical - Whether it was a critical hit
    */
-  createHitEffect(x, y) {
-    // Create blood-like particles
+  createHitEffect(x, y, critical = false) {
+    // Create particles
     const particles = this.scene.add.particles('particle');
     const emitter = particles.createEmitter({
       x: x,
@@ -329,16 +649,77 @@ class Calvin {
       scale: { start: 0.5, end: 0 },
       blendMode: 'ADD',
       lifespan: 500,
-      quantity: { min: 5, max: 10 },
+      quantity: critical ? 15 : 8,
       gravityY: 200,
       alpha: { start: 1, end: 0 }
     });
     
+    // Critical hit effects
+    if (critical) {
+      // Create text effect for "CRITICAL!"
+      const text = this.scene.add.text(
+        x,
+        y - 50,
+        'CRITICAL!',
+        {
+          fontSize: '36px',
+          color: '#ff4d4d',
+          stroke: '#000000',
+          strokeThickness: 4,
+          fontStyle: 'bold'
+        }
+      );
+      
+      text.setOrigin(0.5);
+      text.setDepth(1001);
+      
+      this.scene.tweens.add({
+        targets: text,
+        y: text.y - 80,
+        alpha: 0,
+        duration: 1500,
+        ease: 'Power2',
+        onComplete: () => {
+          text.destroy();
+        }
+      });
+    }
+    
     // Screen shake effect
-    this.scene.cameras.main.shake(100, 0.005);
+    this.scene.cameras.main.shake(critical ? 150 : 100, critical ? 0.008 : 0.005);
     
     // Clean up after effect
     this.scene.time.delayedCall(500, () => {
+      particles.destroy();
+    });
+  }
+
+  /**
+   * Create visual effect for ultimate hit
+   * @param {number} x
+   * @param {number} y
+   */
+  createUltimateHitEffect(x, y) {
+    // More intense particles
+    const particles = this.scene.add.particles('particle');
+    const emitter = particles.createEmitter({
+      x: x,
+      y: y,
+      speed: { min: 150, max: 250 },
+      angle: { min: 0, max: 360 },
+      scale: { start: 0.8, end: 0 },
+      blendMode: 'ADD',
+      lifespan: 800,
+      quantity: 20,
+      gravityY: 300,
+      alpha: { start: 1, end: 0 }
+    });
+    
+    // Screen shake
+    this.scene.cameras.main.shake(300, 0.015);
+    
+    // Clean up after effect
+    this.scene.time.delayedCall(800, () => {
       particles.destroy();
     });
   }
@@ -437,6 +818,7 @@ class Calvin {
     this.scene.cameras.main.shake(500, 0.03);
     
     // Notify scene
+    this.stateManager.stats.deaths++;
     this.scene.events.emit('playerDied');
   }
 
@@ -446,6 +828,8 @@ class Calvin {
   destroy() {
     // Remove event listeners
     this.scene.events.off('gameOver');
+    this.scene.events.off('upgradePurchased');
+    this.scene.events.off('sceneTransitionComplete');
     
     // Destroy sprite
     if (this.sprite) {
@@ -453,9 +837,4 @@ class Calvin {
       this.sprite = null;
     }
   }
-}
-
-// Export for module systems
-if (typeof module !== 'undefined') {
-  module.exports = Calvin;
 }

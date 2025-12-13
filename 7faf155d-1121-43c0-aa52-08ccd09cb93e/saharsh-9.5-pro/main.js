@@ -10,9 +10,10 @@ import { Game } from './game.js';
 let game = null;
 
 /**
- * Initialize the game when DOM is ready
+ * Initialize the game
+ * @export
  */
-document.addEventListener('DOMContentLoaded', async () => {
+export async function init() {
     try {
         // Get canvas element
         const canvas = document.getElementById('game-canvas');
@@ -42,15 +43,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
         });
 
+        // Setup visibility change handler
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && game && game.state === 'playing') {
+                // Auto-pause when tab loses focus
+                game.pauseGame();
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (game) {
+                game.stopGameLoop();
+            }
+        });
+
         // Initialize and start the game
         await game.initialize();
         console.log('osu! Web Clone initialized successfully');
+
+        // Export game instance for debugging
+        window.osuGame = () => game;
 
     } catch (error) {
         console.error('Failed to initialize game:', error);
         showErrorScreen(error.message);
     }
-});
+}
 
 /**
  * Setup input prevention for gameplay keys
@@ -84,63 +103,20 @@ function setupInputPrevention() {
  */
 function showErrorScreen(message) {
     // Hide loading screen if visible
-    const loadingScreen = document.getElementById('loading-screen');
+    const loadingScreen = document.getElementById('screen-loading');
     if (loadingScreen) {
-        loadingScreen.style.display = 'none';
+        loadingScreen.classList.remove('active');
     }
 
-    // Create or show error screen
-    let errorScreen = document.getElementById('error-screen');
-    if (!errorScreen) {
-        errorScreen = document.createElement('div');
-        errorScreen.id = 'error-screen';
-        errorScreen.className = 'screen active';
-        errorScreen.innerHTML = `
-            <div class="error-container">
-                <h1>Failed to Load Game</h1>
-                <p class="error-message">${escapeHtml(message)}</p>
-                <p class="error-hint">Please check the console for more details.</p>
-                <button onclick="location.reload()" class="btn btn-primary">Retry</button>
-            </div>
-        `;
-        document.body.appendChild(errorScreen);
-    } else {
-        const msgEl = errorScreen.querySelector('.error-message');
-        if (msgEl) {
-            msgEl.textContent = message;
-        }
-        errorScreen.style.display = 'flex';
+    // Show error screen
+    const errorScreen = document.getElementById('screen-error');
+    const errorMessage = document.getElementById('error-message');
+    
+    if (errorScreen && errorMessage) {
+        errorMessage.textContent = message;
         errorScreen.classList.add('active');
+    } else {
+        // Fallback if error screen doesn't exist
+        alert('Failed to load game: ' + message);
     }
 }
-
-/**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-/**
- * Handle visibility change (tab switching)
- */
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && game && game.state === 'playing') {
-        // Auto-pause when tab loses focus
-        game.pauseGame();
-    }
-});
-
-/**
- * Cleanup on page unload
- */
-window.addEventListener('beforeunload', () => {
-    if (game) {
-        game.stopGameLoop();
-    }
-});
-
-// Export game instance for debugging
-window.osuGame = () => game;

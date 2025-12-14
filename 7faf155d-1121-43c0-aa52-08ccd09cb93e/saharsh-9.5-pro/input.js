@@ -332,12 +332,16 @@ export class InputManager {
             return { x: 256, y: 192 }; // Center of playfield
         }
         
+        // Calculate scale if not provided
+        const scaleX = playfieldRect.scaleX || (playfieldRect.width / 512);
+        const scaleY = playfieldRect.scaleY || (playfieldRect.height / 384);
+        
         // Convert screen coordinates to osu! playfield coordinates
         const relX = this.mouseX - playfieldRect.x;
         const relY = this.mouseY - playfieldRect.y;
         
-        const osuX = relX / playfieldRect.scaleX;
-        const osuY = relY / playfieldRect.scaleY;
+        const osuX = relX / scaleX;
+        const osuY = relY / scaleY;
         
         return { x: osuX, y: osuY };
     }

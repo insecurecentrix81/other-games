@@ -33,15 +33,19 @@ export class UIManager {
      * Cache all screen DOM elements
      */
     initScreens() {
+        // Updated to match HTML IDs (screen-* format)
         const screenIds = [
-            'loading-screen',
-            'menu-screen',
-            'song-select-screen',
-            'mod-select-screen',
-            'gameplay-screen',
-            'pause-screen',
-            'results-screen',
-            'failed-screen'
+            'screen-loading',
+            'screen-menu',
+            'screen-song-select',
+            'screen-mod-select',
+            'screen-countdown',
+            'screen-paused',
+            'screen-results',
+            'screen-failed',
+            'screen-settings',
+            'screen-help',
+            'screen-error'
         ];
 
         screenIds.forEach(id => {
@@ -52,9 +56,11 @@ export class UIManager {
         });
 
         // Loading specific elements
-        this.loadingProgress = document.getElementById('loading-progress');
-        this.loadingText = document.getElementById('loading-text');
         this.loadingBar = document.getElementById('loading-bar');
+        this.loadingText = document.getElementById('loading-text');
+        
+        // Gameplay HUD (not a screen, but needs to be toggled)
+        this.gameplayHud = document.getElementById('gameplay-hud');
     }
 
     /**
@@ -64,9 +70,9 @@ export class UIManager {
         this.hud = {
             score: document.getElementById('hud-score'),
             combo: document.getElementById('hud-combo'),
+            comboLabel: document.getElementById('hud-combo-label'),
             accuracy: document.getElementById('hud-accuracy'),
-            healthBar: document.getElementById('health-bar-fill'),
-            healthContainer: document.getElementById('health-bar')
+            healthBar: document.getElementById('health-bar')
         };
     }
 
@@ -74,59 +80,38 @@ export class UIManager {
      * Initialize results screen elements
      */
     initResultsElements() {
+        // Updated to match HTML IDs (results-* format)
         this.resultsElements = {
-            grade: document.getElementById('result-grade'),
-            score: document.getElementById('result-score'),
-            accuracy: document.getElementById('result-accuracy'),
-            maxCombo: document.getElementById('result-max-combo'),
-            count300: document.getElementById('result-300'),
-            count100: document.getElementById('result-100'),
-            count50: document.getElementById('result-50'),
-            countMiss: document.getElementById('result-miss'),
-            title: document.getElementById('result-title'),
-            version: document.getElementById('result-version')
+            grade: document.getElementById('results-grade'),
+            score: document.getElementById('results-score'),
+            accuracy: document.getElementById('results-accuracy'),
+            maxCombo: document.getElementById('results-max-combo'),
+            count300: document.getElementById('results-count-300'),
+            count100: document.getElementById('results-count-100'),
+            count50: document.getElementById('results-count-50'),
+            countMiss: document.getElementById('results-count-miss'),
+            title: document.getElementById('results-title'),
+            beatmap: document.getElementById('results-beatmap'),
+            mods: document.getElementById('results-mods-list'),
+            pp: document.getElementById('results-pp')
         };
     }
 
     /**
-     * Initialize mod buttons and their click handlers
+     * Initialize mod buttons from existing HTML structure
      */
     initModButtons() {
-        const modContainer = document.getElementById('mod-buttons');
-        if (!modContainer) return;
-
-        const modDefinitions = [
-            { id: 'EZ', name: 'Easy', flag: MOD_FLAGS.EASY, desc: 'Reduces difficulty' },
-            { id: 'NF', name: 'No Fail', flag: MOD_FLAGS.NO_FAIL, desc: 'Cannot fail' },
-            { id: 'HT', name: 'Half Time', flag: MOD_FLAGS.HALF_TIME, desc: '0.75x speed' },
-            { id: 'HR', name: 'Hard Rock', flag: MOD_FLAGS.HARD_ROCK, desc: 'Increases difficulty' },
-            { id: 'DT', name: 'Double Time', flag: MOD_FLAGS.DOUBLE_TIME, desc: '1.5x speed' },
-            { id: 'HD', name: 'Hidden', flag: MOD_FLAGS.HIDDEN, desc: 'Fading circles' },
-            { id: 'FL', name: 'Flashlight', flag: MOD_FLAGS.FLASHLIGHT, desc: 'Limited vision' },
-            { id: 'RX', name: 'Relax', flag: MOD_FLAGS.RELAX, desc: 'Auto click' },
-            { id: 'AP', name: 'Autopilot', flag: MOD_FLAGS.AUTOPILOT, desc: 'Auto aim' },
-            { id: 'AT', name: 'Auto', flag: MOD_FLAGS.AUTO, desc: 'Watch autoplay' }
-        ];
-
-        modContainer.innerHTML = '';
+        // Get all mod buttons from HTML
+        const buttons = document.querySelectorAll('.mod-btn[data-flag]');
         
-        modDefinitions.forEach(mod => {
-            const button = document.createElement('button');
-            button.className = 'mod-button';
-            button.dataset.flag = mod.flag;
-            button.dataset.id = mod.id;
-            button.innerHTML = `
-                <span class="mod-id">${mod.id}</span>
-                <span class="mod-name">${mod.name}</span>
-            `;
-            button.title = mod.desc;
+        buttons.forEach(button => {
+            const flag = parseInt(button.dataset.flag);
             
             button.addEventListener('click', () => {
-                this.emit('modToggle', mod.flag);
+                this.emit('modToggle', flag);
             });
             
-            modContainer.appendChild(button);
-            this.modButtons.push({ element: button, flag: mod.flag });
+            this.modButtons.push({ element: button, flag: flag });
         });
     }
 
@@ -136,11 +121,13 @@ export class UIManager {
     initEventListeners() {
         // Menu buttons
         this.addClickListener('btn-play', () => this.emit('play'));
+        this.addClickListener('btn-settings', () => this.showScreen('screen-settings'));
+        this.addClickListener('btn-help', () => this.showScreen('screen-help'));
         
         // Song select buttons
         this.addClickListener('btn-mods', () => this.emit('openMods'));
         this.addClickListener('btn-back-menu', () => this.emit('backToMenu'));
-        this.addClickListener('btn-start-game', () => this.emit('startGame'));
+        this.addClickListener('btn-play-beatmap', () => this.emit('startGame'));
         
         // Mod select buttons
         this.addClickListener('btn-close-mods', () => this.emit('closeMods'));
@@ -148,8 +135,8 @@ export class UIManager {
         
         // Pause screen buttons
         this.addClickListener('btn-resume', () => this.emit('resume'));
-        this.addClickListener('btn-retry-pause', () => this.emit('retry'));
-        this.addClickListener('btn-quit-pause', () => this.emit('quit'));
+        this.addClickListener('btn-retry', () => this.emit('retry'));
+        this.addClickListener('btn-quit', () => this.emit('quit'));
         
         // Results screen buttons
         this.addClickListener('btn-retry-results', () => this.emit('retry'));
@@ -158,6 +145,21 @@ export class UIManager {
         // Failed screen buttons
         this.addClickListener('btn-retry-failed', () => this.emit('retry'));
         this.addClickListener('btn-quit-failed', () => this.emit('quit'));
+        
+        // Settings close button
+        this.addClickListener('btn-close-settings', () => this.showScreen('screen-menu'));
+        this.addClickListener('btn-save-settings', () => this.showScreen('screen-menu'));
+        
+        // Help close button
+        this.addClickListener('btn-close-help', () => this.showScreen('screen-menu'));
+        
+        // Error dismiss button
+        this.addClickListener('btn-error-dismiss', () => {
+            const errorScreen = this.screens['screen-error'];
+            if (errorScreen) {
+                errorScreen.classList.remove('active');
+            }
+        });
     }
 
     /**
@@ -190,20 +192,34 @@ export class UIManager {
      * Show a specific screen, hiding all others
      */
     showScreen(screenId) {
+        // Hide all screens
         Object.values(this.screens).forEach(screen => {
             if (screen) {
                 screen.classList.remove('active');
-                screen.style.display = 'none';
             }
         });
 
+        // Hide gameplay HUD by default
+        if (this.gameplayHud) {
+            this.gameplayHud.classList.add('hidden');
+        }
+
+        // Handle gameplay state separately (show HUD, hide screens)
+        if (screenId === 'gameplay' || screenId === 'gameplay-screen') {
+            if (this.gameplayHud) {
+                this.gameplayHud.classList.remove('hidden');
+            }
+            this.currentScreen = 'gameplay';
+            return;
+        }
+
+        // Show the requested screen
         const screen = this.screens[screenId];
         if (screen) {
-            screen.style.display = 'flex';
-            // Force reflow for animation
-            screen.offsetHeight;
             screen.classList.add('active');
             this.currentScreen = screenId;
+        } else {
+            console.warn(`Screen not found: ${screenId}`);
         }
     }
 
@@ -217,9 +233,6 @@ export class UIManager {
         if (this.loadingText && text) {
             this.loadingText.textContent = text;
         }
-        if (this.loadingProgress) {
-            this.loadingProgress.textContent = `${Math.round(progress * 100)}%`;
-        }
     }
 
     /**
@@ -227,11 +240,21 @@ export class UIManager {
      */
     updateHUD(data) {
         if (this.hud.score) {
-            this.hud.score.textContent = String(data.score).padStart(8, '0');
+            this.hud.score.textContent = String(Math.floor(data.score)).padStart(8, '0');
         }
         
         if (this.hud.combo) {
-            this.hud.combo.textContent = data.combo > 0 ? `${data.combo}x` : '';
+            if (data.combo > 0) {
+                this.hud.combo.textContent = `${data.combo}`;
+                if (this.hud.comboLabel) {
+                    this.hud.comboLabel.textContent = 'x';
+                }
+            } else {
+                this.hud.combo.textContent = '';
+                if (this.hud.comboLabel) {
+                    this.hud.comboLabel.textContent = '';
+                }
+            }
         }
         
         if (this.hud.accuracy) {
@@ -273,8 +296,8 @@ export class UIManager {
      */
     updateScoreMultiplier(activeMods) {
         const multiplierElement = document.getElementById('score-multiplier');
-        if (!multiplierElement) return;
-
+        const modMultiplierElement = document.getElementById('mod-total-multiplier');
+        
         let multiplier = 1.0;
         
         if (activeMods & MOD_FLAGS.EASY) multiplier *= 0.5;
@@ -290,9 +313,16 @@ export class UIManager {
             multiplier = 0;
         }
 
-        multiplierElement.textContent = multiplier === 0 
+        const displayText = multiplier === 0 
             ? 'Unranked' 
             : `${multiplier.toFixed(2)}x`;
+            
+        if (multiplierElement) {
+            multiplierElement.textContent = displayText;
+        }
+        if (modMultiplierElement) {
+            modMultiplierElement.textContent = displayText;
+        }
     }
 
     /**
@@ -300,32 +330,34 @@ export class UIManager {
      */
     async showCountdown() {
         return new Promise(resolve => {
-            this.countdownElement = document.getElementById('countdown');
-            if (!this.countdownElement) {
+            const countdownScreen = this.screens['screen-countdown'];
+            const countdownNumber = document.getElementById('countdown-number');
+            
+            if (!countdownScreen || !countdownNumber) {
                 resolve();
                 return;
             }
 
-            this.countdownElement.style.display = 'flex';
+            countdownScreen.classList.add('active');
             let count = 3;
             
             const updateCountdown = () => {
                 if (count > 0) {
-                    this.countdownElement.textContent = count;
-                    this.countdownElement.classList.remove('pulse');
-                    void this.countdownElement.offsetWidth; // Force reflow
-                    this.countdownElement.classList.add('pulse');
+                    countdownNumber.textContent = count;
+                    countdownNumber.classList.remove('pulse');
+                    void countdownNumber.offsetWidth; // Force reflow
+                    countdownNumber.classList.add('pulse');
                     count--;
                     this.countdownTimeout = setTimeout(updateCountdown, 1000);
                 } else if (count === 0) {
-                    this.countdownElement.textContent = 'GO!';
-                    this.countdownElement.classList.remove('pulse');
-                    void this.countdownElement.offsetWidth;
-                    this.countdownElement.classList.add('pulse');
+                    countdownNumber.textContent = 'GO!';
+                    countdownNumber.classList.remove('pulse');
+                    void countdownNumber.offsetWidth;
+                    countdownNumber.classList.add('pulse');
                     count--;
                     this.countdownTimeout = setTimeout(updateCountdown, 500);
                 } else {
-                    this.countdownElement.style.display = 'none';
+                    countdownScreen.classList.remove('active');
                     resolve();
                 }
             };
@@ -342,8 +374,9 @@ export class UIManager {
             clearTimeout(this.countdownTimeout);
             this.countdownTimeout = null;
         }
-        if (this.countdownElement) {
-            this.countdownElement.style.display = 'none';
+        const countdownScreen = this.screens['screen-countdown'];
+        if (countdownScreen) {
+            countdownScreen.classList.remove('active');
         }
     }
 
@@ -354,7 +387,7 @@ export class UIManager {
         // Update all result fields
         if (this.resultsElements.grade) {
             this.resultsElements.grade.textContent = data.grade;
-            this.resultsElements.grade.className = `grade grade-${data.grade.toLowerCase().replace('+', 'plus')}`;
+            this.resultsElements.grade.className = `grade-letter grade-${data.grade.toLowerCase().replace('+', 'plus')}`;
         }
         
         if (this.resultsElements.score) {
@@ -386,30 +419,29 @@ export class UIManager {
         }
         
         if (this.resultsElements.title) {
-            this.resultsElements.title.textContent = data.title || 'Unknown';
+            this.resultsElements.title.textContent = 'Results';
         }
         
-        if (this.resultsElements.version) {
-            this.resultsElements.version.textContent = data.version || '';
+        if (this.resultsElements.beatmap) {
+            this.resultsElements.beatmap.textContent = `${data.title || 'Unknown'} [${data.version || ''}]`;
         }
 
-        this.showScreen('results-screen');
+        this.showScreen('screen-results');
     }
 
     /**
      * Show failed screen
      */
     showFailed() {
-        this.showScreen('failed-screen');
+        this.showScreen('screen-failed');
     }
 
     /**
      * Show pause overlay
      */
     showPause() {
-        const pauseScreen = this.screens['pause-screen'];
+        const pauseScreen = this.screens['screen-paused'];
         if (pauseScreen) {
-            pauseScreen.style.display = 'flex';
             pauseScreen.classList.add('active');
         }
     }
@@ -418,10 +450,9 @@ export class UIManager {
      * Hide pause overlay
      */
     hidePause() {
-        const pauseScreen = this.screens['pause-screen'];
+        const pauseScreen = this.screens['screen-paused'];
         if (pauseScreen) {
             pauseScreen.classList.remove('active');
-            pauseScreen.style.display = 'none';
         }
     }
 
@@ -429,18 +460,24 @@ export class UIManager {
      * Update song info display in song select
      */
     updateSongInfo(beatmap) {
-        const titleEl = document.getElementById('selected-title');
-        const artistEl = document.getElementById('selected-artist');
-        const mapperEl = document.getElementById('selected-mapper');
-        const versionEl = document.getElementById('selected-version');
+        const titleEl = document.getElementById('beatmap-title');
+        const artistEl = document.getElementById('beatmap-artist');
+        const mapperEl = document.getElementById('beatmap-mapper');
+        const versionEl = document.getElementById('beatmap-version');
         
         if (titleEl) titleEl.textContent = beatmap.title || 'Unknown';
         if (artistEl) artistEl.textContent = beatmap.artist || 'Unknown Artist';
-        if (mapperEl) mapperEl.textContent = `Mapped by ${beatmap.creator || 'Unknown'}`;
+        if (mapperEl) mapperEl.textContent = beatmap.creator || 'Unknown';
         if (versionEl) versionEl.textContent = beatmap.version || '';
 
         // Update difficulty stats
         this.updateDifficultyStats(beatmap);
+        
+        // Enable play button
+        const playBtn = document.getElementById('btn-play-beatmap');
+        if (playBtn) {
+            playBtn.disabled = false;
+        }
     }
 
     /**
@@ -455,21 +492,41 @@ export class UIManager {
         ];
 
         stats.forEach(stat => {
-            const el = document.getElementById(stat.id);
-            const barEl = document.getElementById(`${stat.id}-bar`);
+            const barEl = document.getElementById(stat.id);
+            const valueEl = document.getElementById(`${stat.id}-value`);
             
-            if (el) {
-                el.textContent = stat.value?.toFixed(1) || '0';
-            }
+            const value = stat.value || 0;
+            
             if (barEl) {
-                barEl.style.width = `${(stat.value || 0) * 10}%`;
+                barEl.style.width = `${value * 10}%`;
+            }
+            if (valueEl) {
+                valueEl.textContent = value.toFixed(1);
             }
         });
 
-        // Object count
-        const objectCountEl = document.getElementById('object-count');
-        if (objectCountEl && beatmap.hitObjects) {
-            objectCountEl.textContent = `${beatmap.hitObjects.length} objects`;
+        // Update object counts
+        const circleCount = document.getElementById('count-circles');
+        const sliderCount = document.getElementById('count-sliders');
+        const spinnerCount = document.getElementById('count-spinners');
+        
+        if (beatmap.hitObjects) {
+            let circles = 0, sliders = 0, spinners = 0;
+            beatmap.hitObjects.forEach(obj => {
+                if (obj.type & 1) circles++;
+                else if (obj.type & 2) sliders++;
+                else if (obj.type & 8) spinners++;
+            });
+            
+            if (circleCount) circleCount.textContent = circles;
+            if (sliderCount) sliderCount.textContent = sliders;
+            if (spinnerCount) spinnerCount.textContent = spinners;
+        }
+        
+        // Update star rating
+        const starValue = document.getElementById('star-value');
+        if (starValue && beatmap.starRating) {
+            starValue.textContent = beatmap.starRating.toFixed(2);
         }
     }
 
@@ -477,15 +534,15 @@ export class UIManager {
      * Show error message to user
      */
     showError(message) {
-        const errorEl = document.getElementById('error-message');
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-            setTimeout(() => {
-                errorEl.style.display = 'none';
-            }, 5000);
+        const errorScreen = this.screens['screen-error'];
+        const errorMessage = document.getElementById('error-message');
+        
+        if (errorScreen && errorMessage) {
+            errorMessage.textContent = message;
+            errorScreen.classList.add('active');
         } else {
             console.error('Game Error:', message);
+            alert('Error: ' + message);
         }
     }
 
@@ -507,6 +564,7 @@ export class UIManager {
     cleanup() {
         this.cancelCountdown();
         this.hidePause();
+        this.resetHUD();
     }
 }
 

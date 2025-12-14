@@ -327,12 +327,8 @@ export class Game {
             let hitObject = null;
             
             try {
-                // Determine object type from type bitmask
-                const isCircle = (objData.type & 1) !== 0;
-                const isSlider = (objData.type & 2) !== 0;
-                const isSpinner = (objData.type & 8) !== 0;
-                
-                if (isCircle) {
+                // Use the type string instead of typeFlags
+                if (objData.type === 'circle') {
                     // Circle
                     hitObject = new Circle(
                         objData.x || 0,
@@ -341,7 +337,7 @@ export class Game {
                         objData.comboNumber || 1,
                         objData.comboColorIndex || 0
                     );
-                } else if (isSlider) {
+                } else if (objData.type === 'slider') {
                     // Slider
                     hitObject = new Slider(
                         objData.x || 0,
@@ -356,7 +352,7 @@ export class Game {
                         objData.duration || 500,
                         objData.curvePoints || []
                     );
-                } else if (isSpinner) {
+                } else if (objData.type === 'spinner') {
                     // Spinner
                     hitObject = new Spinner(
                         objData.time || 0,

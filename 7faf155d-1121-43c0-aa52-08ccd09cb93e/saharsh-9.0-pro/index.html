@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebOSU</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-900 overflow-hidden select-none text-white font-['Exo_2']">
+
+    <!-- Game Container -->
+    <div id="game-container" class="relative w-full h-screen flex justify-center items-center bg-black">
+        
+        <!-- Background Layer -->
+        <div id="background-layer" class="absolute inset-0 bg-cover bg-center transition-all duration-500 opacity-30 z-0"></div>
+        
+        <!-- Canvas Layer -->
+        <canvas id="game-canvas" class="absolute z-10 block"></canvas>
+
+        <!-- UI Overlay Layer -->
+        <div id="ui-layer" class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between">
+            
+            <!-- HUD (Heads Up Display) - Hidden by default -->
+            <div id="game-hud" class="hidden w-full h-full relative">
+                <!-- Top Left: Health & Score -->
+                <div class="absolute top-4 left-4 flex flex-col gap-2">
+                    <div class="text-4xl font-bold tracking-widest" id="score-display">000000</div>
+                    <div class="text-xl text-gray-300" id="accuracy-display">100.00%</div>
+                </div>
+
+                <!-- Top Right: Combo -->
+                <div class="absolute top-4 right-4 text-left">
+                    <div class="text-6xl font-bold text-blue-400 drop-shadow-lg" id="combo-display">0x</div>
+                </div>
+
+                <!-- Health Bar -->
+                <div class="absolute top-0 left-0 w-full h-2 bg-gray-800">
+                    <div id="health-bar" class="h-full bg-gradient-to-r from-red-500 to-green-500 w-full transition-all duration-100 ease-linear"></div>
+                </div>
+                
+                <!-- Progress Pie/Bar (Bottom Right) -->
+                <div class="absolute bottom-4 right-4 w-16 h-16">
+                     <svg class="transform -rotate-90 w-full h-full">
+                        <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-gray-700" />
+                        <circle id="progress-ring" cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-white" stroke-dasharray="176" stroke-dashoffset="176" />
+                    </svg>
+                </div>
+                
+                <!-- Key Overlay -->
+                <div class="absolute bottom-10 right-10 flex gap-2">
+                    <div id="k1" class="w-10 h-10 border-2 border-white rounded flex items-center justify-center font-bold transition-colors">Z</div>
+                    <div id="k2" class="w-10 h-10 border-2 border-white rounded flex items-center justify-center font-bold transition-colors">X</div>
+                </div>
+
+                <!-- Modifiers Display -->
+                <div id="active-mods-display" class="absolute top-20 right-4 flex flex-col gap-1 text-right text-sm font-bold text-yellow-400"></div>
+
+                <!-- Skip Button -->
+                <div id="skip-btn" class="absolute bottom-20 right-4 hidden pointer-events-auto cursor-pointer bg-white text-black px-4 py-1 rounded-full opacity-50 hover:opacity-100 transition-opacity animate-pulse">
+                    SPACE to Skip
+                </div>
+            </div>
+
+            <!-- Loading Screen -->
+            <div id="loading-screen" class="absolute inset-0 bg-black flex flex-col items-center justify-center z-50 pointer-events-auto">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-pink-500 mb-4"></div>
+                <h2 class="text-2xl font-bold">Loading WebOSU...</h2>
+                <p id="loading-text" class="text-gray-400 mt-2">Initializing...</p>
+            </div>
+
+            <!-- Song Select Screen -->
+            <div id="song-select-screen" class="absolute inset-0 bg-gray-900 bg-opacity-90 flex hidden pointer-events-auto backdrop-blur-sm">
+                <!-- Left Side: Header/Logo -->
+                <div class="w-1/3 p-8 flex flex-col justify-center items-center border-r border-gray-700 bg-black bg-opacity-40">
+                    <h1 class="text-6xl font-black italic text-transparent bg-clip-text bg-gradient-to-br from-pink-400 to-purple-600 mb-4 drop-shadow-[0_0_10px_rgba(236,72,153,0.5)]">
+                        WebOSU!
+                    </h1>
+                    <p class="text-gray-400 mb-8 text-center">Rhythm is just a click away.</p>
+                    
+                    <!-- Mods Section -->
+                    <div class="w-full bg-gray-800 rounded-lg p-4 mb-4 border border-gray-700">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-lg">Mods</h3>
+                            <button id="reset-mods" class="text-xs text-red-400 hover:text-red-300">Reset</button>
+                        </div>
+                        <div id="mod-grid" class="grid grid-cols-4 gap-2">
+                            <!-- Generated in JS -->
+                        </div>
+                        <div id="mod-multiplier" class="mt-2 text-center text-sm font-bold text-yellow-300">
+                            Score Multiplier: 1.00x
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-gray-500 text-center mt-auto">
+                        Arrow Keys / Mouse Wheel to scroll<br>
+                        Enter to Play<br>
+                        F1 for Mods
+                    </div>
+                </div>
+
+                <!-- Right Side: Beatmap List -->
+                <div class="w-2/3 h-full overflow-y-auto custom-scrollbar relative">
+                    <div id="beatmap-list" class="flex flex-col gap-2 p-4 pt-20">
+                        <!-- Beatmaps injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="results-screen" class="absolute inset-0 bg-gray-900 bg-opacity-95 hidden pointer-events-auto flex flex-col items-center justify-center z-40">
+                <h2 class="text-4xl font-bold mb-2" id="result-title">Ranking</h2>
+                <div class="text-9xl font-black italic mb-6 drop-shadow-lg" id="result-grade">SS</div>
+                
+                <div class="flex gap-12 text-2xl mb-8">
+                    <div class="text-center">
+                        <div class="text-gray-400 text-sm">Score</div>
+                        <div id="result-score" class="font-mono">000000</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-sm">Max Combo</div>
+                        <div id="result-combo" class="font-mono">0x</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-sm">Accuracy</div>
+                        <div id="result-acc" class="font-mono">100.00%</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-x-12 gap-y-2 mb-8 text-lg font-mono">
+                    <div class="text-blue-300">300: <span id="result-300" class="text-white">0</span></div>
+                    <div class="text-green-300">100: <span id="result-100" class="text-white">0</span></div>
+                    <div class="text-yellow-300">50: <span id="result-50" class="text-white">0</span></div>
+                    <div class="text-red-500">Miss: <span id="result-miss" class="text-white">0</span></div>
+                </div>
+
+                <button id="back-btn" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded font-bold text-xl transition-colors">
+                    Back to Song Select
+                </button>
+            </div>
+
+            <!-- Failed Screen -->
+            <div id="failed-screen" class="absolute inset-0 bg-red-900 bg-opacity-80 hidden pointer-events-auto flex flex-col items-center justify-center z-40">
+                <h2 class="text-6xl font-black mb-4">FAILED</h2>
+                <button id="retry-btn" class="px-8 py-3 bg-white text-black hover:bg-gray-200 rounded font-bold text-xl transition-colors mb-4">
+                    Retry
+                </button>
+                <button id="fail-back-btn" class="px-8 py-3 bg-transparent border border-white hover:bg-white hover:text-black rounded font-bold text-xl transition-colors">
+                    Back to Menu
+                </button>
+            </div>
+            
+        </div>
+        
+        <!-- Custom Cursor -->
+        <div id="custom-cursor" class="fixed w-10 h-10 pointer-events-none z-[100] transform -translate-x-1/2 -translate-y-1/2 hidden lg:block mix-blend-screen">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/ec/Osu%21_Logo_2016.svg" alt="cursor" class="w-full h-full opacity-80">
+        </div>
+    </div>
+
+    <!-- Scripts (Order Matters) -->
+    <script src="js/utils.js"></script>
+    <script src="js/parser.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/mods.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

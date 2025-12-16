@@ -190,21 +190,32 @@ window.OsuParser = (function() {
         const tPoints = beatmap.TimingPoints;
         if (!tPoints || tPoints.length === 0) return;
         
-        // Default values
         const sliderMult = beatmap.Difficulty.SliderMultiplier || 1.4;
-        const tickRate = beatmap.Difficulty.SliderTickRate || 1;
 
         beatmap.HitObjects.forEach(obj => {
             if (obj.type === 'slider') {
-                // Find active timing point
+                // Find active timing point (closest previous)
+                // Note: tPoints are sorted by time in parser main
                 let currentTp = tPoints[0];
-                let currentUninheritedTp = tPoints[0];
+                let currentUninheritedTp = tPoints.find(tp => tp.uninherited); // Default fallback
 
+                // Find the timing point active at the START of the slider
                 for (let i = 0; i < tPoints.length; i++) {
-                    if (tPoints[i].time > obj.time) break;
-                    currentTp = tPoints[i];
-                    if (tPoints[i].uninherited) currentUninheritedTp = tPoints[i];
+                    if (tPoints[i].time <= obj.time) {
+                        currentTp = tPoints[i];
+                    } else {
+                        break;
+                    }
                 }
+                
+                // Find the last uninherited point
+                for (let i = 0; i < tPoints.length; i++) {
+                     if (tPoints[i].time <= obj.time && tPoints[i].uninherited) {
+                         currentUninheritedTp = tPoints[i];
+                     }
+                }
+                
+                if (!currentUninheritedTp) currentUninheritedTp = tPoints[0];
 
                 // Calculate velocity
                 let svMultiplier = 1.0;
@@ -212,14 +223,16 @@ window.OsuParser = (function() {
                     svMultiplier = 100.0 / -currentTp.beatLength;
                 }
                 
-                // Clamp SV to reasonable limits if broken
-                if (svMultiplier < 0.1) svMultiplier = 0.1;
-                if (svMultiplier > 10) svMultiplier = 10;
+                // Ensure valid beat length
+                const beatLength = currentUninheritedTp ? currentUninheritedTp.beatLength : 600;
 
                 const pxPerBeat = sliderMult * 100 * svMultiplier;
-                const beats = obj.pixelLength / pxPerBeat;
+                // If pixel length is missing/zero, default to something to prevent invisible sliders
+                if (!obj.pixelLength) obj.pixelLength = 0;
                 
-                obj.duration = beats * currentUninheritedTp.beatLength * obj.slides;
+                const beats = pxPerBeat > 0 ? obj.pixelLength / pxPerBeat : 0;
+                
+                obj.duration = beats * beatLength * obj.slides;
                 obj.endTime = obj.time + obj.duration;
             } 
             else if (obj.type === 'circle') {

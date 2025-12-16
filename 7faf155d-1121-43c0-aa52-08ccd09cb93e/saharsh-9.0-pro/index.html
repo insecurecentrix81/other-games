@@ -163,7 +163,12 @@
         
         <!-- Custom Cursor -->
         <div id="custom-cursor" class="fixed w-10 h-10 pointer-events-none z-[100] transform -translate-x-1/2 -translate-y-1/2 hidden lg:block mix-blend-screen">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/e/ec/Osu%21_Logo_2016.svg" alt="cursor" class="w-full h-full opacity-80">
+            <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/e/ec/Osu%21_Logo_2016.svg" 
+                alt="cursor" 
+                class="w-full h-full opacity-80" 
+                onerror="this.style.display='none'; this.parentElement.classList.add('fallback-cursor')"
+            >
         </div>
     </div>
 

@@ -37,41 +37,46 @@ window.AudioManager = (function() {
             audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
             return true;
         } catch (e) {
-            console.error("Audio Load Error:", e);
+            console.warn("Audio Load Error (Running in fallback mode):", e);
+            audioBuffer = null;
             return false;
         }
     }
 
     function play(offsetMs = 0) {
-        if (!audioCtx || !audioBuffer) return;
+        if (!audioCtx) init();
         if (isPlaying) stop();
 
+        isPlaying = true;
+
+        // Fallback Mode (No Audio File)
+        if (!audioBuffer) {
+            // Use performance.now() as the clock source
+            startTime = performance.now() - (offsetMs / playbackRate);
+            return;
+        }
+
+        // Standard Mode
         sourceNode = audioCtx.createBufferSource();
         sourceNode.buffer = audioBuffer;
         sourceNode.playbackRate.value = playbackRate;
 
         gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0.5; // Default volume 50%
+        gainNode.gain.value = 0.5;
 
         sourceNode.connect(gainNode);
         gainNode.connect(audioCtx.destination);
 
-        // Calculate start time
-        // If offsetMs is positive, we start 'offsetMs' into the track
-        // If negative, we schedule start in future (not handled here, logic usually handles pre-time)
         const startOffset = Math.max(0, offsetMs / 1000);
-        
         startTime = audioCtx.currentTime - (startOffset / playbackRate);
         sourceNode.start(0, startOffset);
-        
-        isPlaying = true;
     }
 
     function stop() {
         if (sourceNode) {
             try {
                 sourceNode.stop();
-            } catch (e) { /* ignore if already stopped */ }
+            } catch (e) { }
             sourceNode.disconnect();
             sourceNode = null;
         }
@@ -86,28 +91,37 @@ window.AudioManager = (function() {
 
     function setRate(rate) {
         playbackRate = rate;
+        
+        // Update live source if exists
         if (isPlaying && sourceNode) {
             sourceNode.playbackRate.value = rate;
-            // Re-sync start time so current position remains continuous
             const currentPos = getPosition();
             startTime = audioCtx.currentTime - (currentPos / 1000 / rate);
+        } 
+        // Update fallback timer
+        else if (isPlaying && !audioBuffer) {
+            const currentPos = getPosition();
+            startTime = performance.now() - (currentPos / rate);
         }
     }
 
-    /**
-     * Get current track time in milliseconds.
-     * Returns 0 if not playing.
-     */
     function getPosition() {
-        if (!audioCtx || !isPlaying) return pauseTime; // Return last paused time if stopped
+        if (!isPlaying) return pauseTime;
         
-        // Calculate based on hardware clock
-        const elapsed = (audioCtx.currentTime - startTime) * playbackRate * 1000;
-        return elapsed;
+        // Fallback Clock
+        if (!audioBuffer) {
+            return (performance.now() - startTime) * playbackRate;
+        }
+
+        // Web Audio Clock
+        return (audioCtx.currentTime - startTime) * playbackRate * 1000;
     }
     
     function getDuration() {
-        return audioBuffer ? (audioBuffer.duration * 1000) : 0;
+        // Return placeholder duration (e.g. 5 mins) if no audio, or 0
+        // Game loop handles end via hit objects, so 0 is fine, but progress ring might need a value.
+        // Let's return a safe large number if fallback, or 0.
+        return audioBuffer ? (audioBuffer.duration * 1000) : 300000;
     }
 
     return {

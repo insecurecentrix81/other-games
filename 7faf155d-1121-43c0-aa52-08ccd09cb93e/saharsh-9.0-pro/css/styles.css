@@ -14,6 +14,14 @@ body {
     pointer-events: none;
 }
 
+.fallback-cursor {
+    background-color: #ec4899; /* pink-500 */
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ec4899;
+    opacity: 0.8;
+}
+
 /* Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
     width: 8px;

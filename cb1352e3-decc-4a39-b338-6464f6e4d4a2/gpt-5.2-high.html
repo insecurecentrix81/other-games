@@ -1,166 +1,2506 @@
-# Eric m failing class — Secure Centrix81
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Eric m failing class — Secure Centrix81</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; background: #05070c; overflow: hidden; }
+    #gameRoot { height: 100%; width: 100%; }
+    canvas { display:block; }
+    .panel-glass { background: rgba(10, 14, 24, .62); border: 1px solid rgba(255,255,255,.10); backdrop-filter: blur(10px); }
+    .btn { user-select: none; }
+    .btn:active { transform: translateY(1px); }
+    .kbar { box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset; }
+    .shake { animation: shake .18s linear 1; }
+    @keyframes shake {
+      0% { transform: translate(0,0); }
+      25% { transform: translate(2px, -1px); }
+      50% { transform: translate(-2px, 1px); }
+      75% { transform: translate(1px, 2px); }
+      100% { transform: translate(0,0); }
+    }
+    .pulseGlow { animation: pulseGlow 1.2s ease-in-out infinite; }
+    @keyframes pulseGlow {
+      0%,100% { filter: drop-shadow(0 0 0 rgba(56,189,248,.0)); }
+      50% { filter: drop-shadow(0 0 12px rgba(56,189,248,.35)); }
+    }
+    .vignette {
+      pointer-events:none;
+      position:absolute; inset:0;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,.65) 80%, rgba(0,0,0,.9) 100%);
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+    .crt {
+      pointer-events:none;
+      position:absolute; inset:0;
+      background: linear-gradient(rgba(255,255,255,.03), rgba(255,255,255,0));
+      mix-blend-mode: overlay;
+      opacity:.28;
+    }
+    .scanlines {
+      pointer-events:none;
+      position:absolute; inset:0;
+      background: repeating-linear-gradient(to bottom, rgba(255,255,255,.03), rgba(255,255,255,.03) 1px, rgba(0,0,0,0) 3px, rgba(0,0,0,0) 6px);
+      opacity:.10;
+    }
+    .noSelect { -webkit-user-select:none; user-select:none; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
-A fast, replayable **3D school-dungeon RPG** where you play as Eric M., a student trapped in a nightmare version of school. Stress becomes monsters, homework becomes hazards, and **The Teacher** is always hunting you.
+    /* Mobile controls */
+    #mobileControls { display:none; }
+    @media (max-width: 900px), (pointer: coarse) {
+      #mobileControls { display:block; }
+    }
+  </style>
+</head>
+<body>
+  <div id="gameRoot" class="relative w-screen h-screen overflow-hidden">
+    <div id="threeWrap" class="absolute inset-0"></div>
 
-Built as a single-page web game using **Three.js** (3D) and **Tailwind** (UI).
+    <div class="vignette" id="vignette"></div>
+    <div class="crt"></div>
+    <div class="scanlines"></div>
 
----
+    <!-- HUD -->
+    <div id="hud" class="absolute top-0 left-0 right-0 p-3 md:p-4 flex items-start justify-between gap-3 pointer-events-none">
+      <div class="panel-glass rounded-xl p-3 w-[min(560px,90vw)] pointer-events-auto">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <div class="h-9 w-9 rounded-lg bg-sky-500/15 border border-sky-400/25 grid place-items-center">
+              <div class="h-2.5 w-2.5 rounded-full bg-sky-300"></div>
+            </div>
+            <div>
+              <div class="text-white font-semibold leading-tight">Eric m failing class</div>
+              <div class="text-xs text-slate-300"><span id="zoneLabel">—</span> <span class="text-slate-400">•</span> <span id="objectiveLabel">—</span></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnPause" class="btn pointer-events-auto text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100">Pause <span class="text-slate-400">(Esc)</span></button>
+            <button id="btnRestart" class="btn pointer-events-auto text-xs px-3 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/20 border border-rose-400/20 text-rose-100">Restart <span class="text-rose-200/70">(R)</span></button>
+          </div>
+        </div>
 
-## Quick Start
+        <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div class="rounded-lg bg-white/5 border border-white/10 p-2">
+            <div class="text-[11px] text-slate-300">HP</div>
+            <div class="kbar mt-1 h-2.5 rounded bg-black/30 overflow-hidden">
+              <div id="hpBar" class="h-full bg-emerald-400" style="width:100%"></div>
+            </div>
+            <div class="mt-1 text-[11px] text-slate-300"><span id="hpText">0</span>/<span id="hpMaxText">0</span></div>
+          </div>
+          <div class="rounded-lg bg-white/5 border border-white/10 p-2">
+            <div class="text-[11px] text-slate-300">Stamina</div>
+            <div class="kbar mt-1 h-2.5 rounded bg-black/30 overflow-hidden">
+              <div id="staBar" class="h-full bg-sky-400" style="width:100%"></div>
+            </div>
+            <div class="mt-1 text-[11px] text-slate-300"><span id="staText">0</span>/<span id="staMaxText">0</span></div>
+          </div>
+          <div class="rounded-lg bg-white/5 border border-white/10 p-2">
+            <div class="text-[11px] text-slate-300">Level</div>
+            <div class="mt-1 text-sm text-white font-semibold">Lv <span id="lvlText">1</span> <span class="text-slate-400 text-xs">XP</span> <span id="xpText" class="text-slate-200">0</span>/<span id="xpNextText" class="text-slate-300">0</span></div>
+            <div class="mt-1 text-[11px] text-slate-400">ATK <span id="atkText">0</span> • DEF <span id="defText">0</span> • SPD <span id="spdText">0</span></div>
+          </div>
+          <div class="rounded-lg bg-white/5 border border-white/10 p-2">
+            <div class="text-[11px] text-slate-300">Run</div>
+            <div class="mt-1 text-sm text-white font-semibold"><span id="timerText">0:00</span> <span class="text-slate-400 text-xs">until Exam</span></div>
+            <div class="mt-1 text-[11px] text-slate-400">Credits <span id="creditsText">0</span>/3 • Focus <span id="focusText">0</span> • Detentions <span id="detentionText">0</span></div>
+          </div>
+        </div>
 
-1. Download/open the project.
-2. Open `index.html` in a modern desktop browser (Chrome/Edge/Firefox recommended).
-3. Click **Start Run**.
+        <div class="mt-2 flex items-center justify-between">
+          <div class="text-[11px] text-slate-400">Teacher pressure: <span id="pressureText" class="text-slate-200">—</span></div>
+          <div class="text-[11px] text-slate-400">Combo: <span id="comboText" class="text-amber-200">x1</span> • Score: <span id="scoreText" class="text-slate-100">0</span> • Best: <span id="bestText" class="text-slate-200">0</span></div>
+        </div>
+      </div>
 
-No build step required.
+      <div class="panel-glass rounded-xl p-3 w-[min(300px,88vw)] pointer-events-auto">
+        <div class="flex items-center justify-between">
+          <div class="text-white font-semibold">Minimap</div>
+          <div class="text-xs text-slate-300">Interact <span class="mono">E</span></div>
+        </div>
+        <canvas id="minimap" width="260" height="180" class="mt-2 w-full rounded-lg bg-black/30 border border-white/10"></canvas>
+        <div class="mt-2 text-xs text-slate-300">
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-400/20">Library safe</span>
+            <span class="px-2 py-1 rounded bg-amber-500/10 border border-amber-400/20">Classrooms</span>
+            <span class="px-2 py-1 rounded bg-rose-500/10 border border-rose-400/20">Cafeteria</span>
+            <span class="px-2 py-1 rounded bg-indigo-500/10 border border-indigo-400/20">Gym</span>
+            <span class="px-2 py-1 rounded bg-slate-500/10 border border-slate-400/20">Exam</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
----
+    <!-- Overlay / Menus -->
+    <div id="overlay" class="absolute inset-0 grid place-items-center p-4">
+      <!-- dynamic -->
+    </div>
 
-## Core Gameplay Loop (One More Try)
+    <!-- Floating toast/log -->
+    <div id="toast" class="absolute bottom-3 left-1/2 -translate-x-1/2 w-[min(900px,92vw)] pointer-events-none">
+      <div id="toastInner" class="panel-glass rounded-xl p-3 text-slate-100 text-sm hidden"></div>
+    </div>
 
-1. **Explore** a procedurally generated school (maze-like hallways + fixed major rooms).
-2. **Earn Credits (0–3)** by dealing with rivals in classrooms.
-3. Use the **Library (safe zone)** to recover and spend **Focus** on supplies.
-4. After 3 credits: **defeat the Gym boss**.
-5. Then push to the **Exam Wing** and face **The Teacher**.
-6. Your **ending** depends on Knowledge, detentions, and remaining time.
+    <!-- Mobile controls -->
+    <div id="mobileControls" class="absolute inset-x-0 bottom-0 p-3 pointer-events-none">
+      <div class="flex items-end justify-between">
+        <div class="pointer-events-auto select-none">
+          <div class="text-[11px] text-slate-200/80 mb-2">Move</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div></div>
+            <button data-mbtn="up" class="btn w-14 h-14 rounded-xl panel-glass border border-white/10 text-white">▲</button>
+            <div></div>
+            <button data-mbtn="left" class="btn w-14 h-14 rounded-xl panel-glass border border-white/10 text-white">◀</button>
+            <button data-mbtn="down" class="btn w-14 h-14 rounded-xl panel-glass border border-white/10 text-white">▼</button>
+            <button data-mbtn="right" class="btn w-14 h-14 rounded-xl panel-glass border border-white/10 text-white">▶</button>
+          </div>
+        </div>
+        <div class="pointer-events-auto select-none">
+          <div class="text-[11px] text-slate-200/80 mb-2 text-right">Actions</div>
+          <div class="flex gap-2">
+            <button data-mbtn="dash" class="btn w-16 h-16 rounded-xl bg-sky-500/15 hover:bg-sky-500/20 border border-sky-400/20 text-sky-100">Dash</button>
+            <button data-mbtn="interact" class="btn w-16 h-16 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white">E</button>
+            <button data-mbtn="confirm" class="btn w-16 h-16 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/20 border border-emerald-400/20 text-emerald-100">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-Sessions are designed to be short and replayable with persistent best score.
+<script>
+(() => {
+  // --- Namespaced storage keys ---
+  const KEY = (k) => `${location.pathname}::sc81::ericFailingClass::${k}`;
+  const storage = {
+    get(k, d){ try{ const v = localStorage.getItem(KEY(k)); return v==null? d : JSON.parse(v); }catch{ return d; } },
+    set(k, v){ try{ localStorage.setItem(KEY(k), JSON.stringify(v)); }catch{} },
+    del(k){ try{ localStorage.removeItem(KEY(k)); }catch{} }
+  };
 
----
+  // --- Prevent scroll on game keys ---
+  const scrollKeys = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "]);
+  window.addEventListener('keydown', (e) => {
+    if(scrollKeys.has(e.key)) e.preventDefault();
+  }, { passive:false });
 
-## Controls
+  // --- Tiny audio synth ---
+  let audioCtx;
+  function blip(type='square', freq=220, dur=0.07, gain=0.045){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(gain, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + dur);
+    } catch {}
+  }
 
-### Desktop
-- **Move:** WASD or Arrow Keys
-- **Dash/Sprint:** Hold **Shift** (uses stamina)
-- **Interact:** **E** (Library shop)
-- **Battle skills:** **1–4**
-- **Pause:** **Esc**
-- **Restart run:** **R**
+  // --- RNG (seeded) ---
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
 
-### Mobile / Touch
-On small screens or coarse pointers, on-screen controls appear:
-- D-pad for movement
-- Buttons for Dash / Interact / Confirm
+  // --- UI helpers ---
+  const $ = (id) => document.getElementById(id);
+  const overlay = $('overlay');
+  const vignette = $('vignette');
+  const toastInner = $('toastInner');
+  let toastTimer = 0;
+  function toast(msg, ms=1600){
+    toastInner.textContent = msg;
+    toastInner.classList.remove('hidden');
+    toastTimer = ms;
+  }
 
----
+  function fmtTime(s){
+    s = Math.max(0, Math.floor(s));
+    const m = Math.floor(s/60), r = s%60;
+    return `${m}:${String(r).padStart(2,'0')}`;
+  }
 
-## Zones
+  // --- Game constants ---
+  const CELL = 2.1;
+  const GRID_W = 31; // odd for maze
+  const GRID_H = 31;
+  const WALK = 0, WALL = 1;
+  const Z = {
+    HALL: 'Hallways',
+    LIB: 'Library',
+    CAF: 'Cafeteria',
+    GYM: 'Gym',
+    EXAM: 'Exam Wing',
+    CLASS: 'Classroom'
+  };
 
-- **Library (Safe Zone):** Teacher cannot enter. Passive HP/Stamina recovery. Contains the Shop.
-- **Hallways:** Main traversal routes. Random encounters can occur (low chance, cooldown-limited).
-- **Classrooms:** Rival encounters (Anbu / Saharsh / Calvin).
-- **Cafeteria:** Higher monster pressure.
-- **Gym:** Boss fight (Finals Golem).
-- **Exam Wing:** Final battle (The Teacher).
+  const DIFFICULTIES = {
+    normal: { name: 'Normal', teacherBase: 2.05, teacherGrow: 0.20, dmgMult: 1.0, xpMult: 1.0, timer: 360 },
+    hard: { name: 'Hard', teacherBase: 2.28, teacherGrow: 0.28, dmgMult: 1.18, xpMult: 1.1, timer: 300 },
+  };
 
----
+  // --- Input ---
+  const keys = new Set();
+  const justPressed = new Set();
+  window.addEventListener('keydown', (e) => {
+    if(!keys.has(e.key)) justPressed.add(e.key);
+    keys.add(e.key);
+    if(["Tab"].includes(e.key)) e.preventDefault();
+  }, { passive:false });
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.key);
+  });
 
-## Teacher Pressure & Detention
+  // Mobile buttons map to keys
+  const mobileHeld = new Set();
+  function setMobileKey(btn, down){
+    const map = {
+      up: 'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight',
+      dash: 'Shift', interact: 'e', confirm: ' '
+    };
+    const k = map[btn];
+    if(!k) return;
+    if(down){ if(!keys.has(k)) justPressed.add(k); keys.add(k); mobileHeld.add(k); }
+    else { keys.delete(k); mobileHeld.delete(k); }
+  }
+  document.querySelectorAll('[data-mbtn]').forEach(b => {
+    const btn = b.getAttribute('data-mbtn');
+    const down = (ev) => { ev.preventDefault(); setMobileKey(btn, true); };
+    const up = (ev) => { ev.preventDefault(); setMobileKey(btn, false); };
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('pointerleave', up);
+  });
 
-- The Teacher patrols and pathfinds toward you.
-- Pressure increases as the Teacher gets close.
-- If caught outside the Library:
-  - You get sent to **Detention**
-  - Lose time
-  - Often lose an item
-  - The Teacher becomes more dangerous over the run
+  // --- Three.js setup ---
+  const wrap = $('threeWrap');
+  const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.45;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  wrap.appendChild(renderer.domElement);
 
-A **Hall Pass** can auto-save you from being caught.
+  const scene = new THREE.Scene();
+  // Brighter + clearer visibility
+  scene.fog = new THREE.FogExp2(0x0b1020, 0.028);
+  scene.background = new THREE.Color(0x0b1020);
 
----
+  const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.05, 200);
 
-## Battles (Turn-Based)
+  const ambient = new THREE.AmbientLight(0xd6eaff, 0.62);
+  scene.add(ambient);
 
-When an encounter triggers, the game enters a turn-based battle overlay.
+  const hemi = new THREE.HemisphereLight(0xe5f4ff, 0x1a2040, 1.15);
+  scene.add(hemi);
 
-### Player Stats
-- **HP** (health)
-- **Stamina** (skills + dash)
-- **ATK / DEF / SPD**
-- **Level / XP** (leveling improves stats)
+  const dir = new THREE.DirectionalLight(0xffffff, 1.25);
+  dir.position.set(12, 22, -10);
+  dir.castShadow = true;
+  dir.shadow.mapSize.set(1024,1024);
+  dir.shadow.camera.near = 1;
+  dir.shadow.camera.far = 80;
+  dir.shadow.camera.left = -35;
+  dir.shadow.camera.right = 35;
+  dir.shadow.camera.top = 35;
+  dir.shadow.camera.bottom = -35;
+  scene.add(dir);
 
-### Skills
-- **1 — Homework Strike:** solid damage; scales with combo
-- **2 — Study Shield:** blocks the next hits
-- **3 — Speed Dash:** adds dodge/initiative style buffs
-- **4 — Excuse Escape:** attempt to flee (chance depends on SPD + zone)
+  // Fill lights so walls remain readable
+  const fill = new THREE.DirectionalLight(0xbad7ff, 0.45);
+  fill.position.set(-14, 16, 12);
+  scene.add(fill);
 
-### Items
-- **Energy Drink:** restore HP + stamina
-- **Notebook:** +Knowledge and +XP (instant)
-- **Study Guide:** +DEF and +Knowledge (instant)
-- **Pencil:** temporary ATK buff
-- **Hall Pass:** free escape from chase/battles
+  const houseLight = new THREE.PointLight(0x9ad8ff, 0.28, 160, 2);
+  houseLight.position.set(0, 22, 0);
+  scene.add(houseLight);
 
-### Combo & Score
-Winning fights increases combo (up to a cap). Higher combo means more score and stronger momentum.
+  const playerLight = new THREE.PointLight(0x62d7ff, 1.35, 22, 2);
+  playerLight.castShadow = false;
+  scene.add(playerLight);
 
----
+  const teacherLight = new THREE.PointLight(0xff4d6d, 1.45, 20, 2);
+  scene.add(teacherLight);
 
-## Outsmart Mini-Games
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(300,300),
+    new THREE.MeshStandardMaterial({ color: 0x121a33, roughness: 1, metalness: 0 })
+  );
+  ground.rotation.x = -Math.PI/2;
+  ground.position.y = -0.01;
+  scene.add(ground);
 
-Some rivals/bosses can be approached via mini-games instead of direct fighting.
+  function onResize(){
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', onResize);
 
-- **Reaction timing:** hit Space when the marker is in the success zone.
-- **Focus memory:** memorize and click the flashing sequence in order.
+  // --- Map generation (maze + rooms) ---
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function inBounds(x,y){ return x>=0 && y>=0 && x<GRID_W && y<GRID_H; }
 
-Failing can still lead to battle or consequences, keeping the pace high.
+  function carveMaze(seed){
+    const rng = mulberry32(seed);
+    const grid = Array.from({length:GRID_H}, () => Array.from({length:GRID_W}, () => WALL));
+    const zone = Array.from({length:GRID_H}, () => Array.from({length:GRID_W}, () => Z.HALL));
+    const explored = Array.from({length:GRID_H}, () => Array.from({length:GRID_W}, () => false));
 
----
+    // Start cell
+    const stack = [];
+    function carve(x,y){
+      grid[y][x] = WALK;
+    }
+    const sx = 1 + 2*Math.floor(rng()*((GRID_W-1)/2));
+    const sy = 1 + 2*Math.floor(rng()*((GRID_H-1)/2));
+    carve(sx,sy);
+    stack.push([sx,sy]);
+    const dirs = [[2,0],[-2,0],[0,2],[0,-2]];
 
-## Win / Loss Conditions
+    while(stack.length){
+      const [x,y] = stack[stack.length-1];
+      const options = [];
+      for(const [dx,dy] of dirs){
+        const nx = x+dx, ny = y+dy;
+        if(inBounds(nx,ny) && grid[ny][nx]===WALL){
+          options.push([dx,dy]);
+        }
+      }
+      if(!options.length){ stack.pop(); continue; }
+      const [dx,dy] = options[Math.floor(rng()*options.length)];
+      const mx = x + dx/2, my = y + dy/2;
+      const nx = x + dx, ny = y + dy;
+      carve(mx,my);
+      carve(nx,ny);
+      stack.push([nx,ny]);
+    }
 
-### You win by:
-- Earning **3 credits**
-- Clearing the **Gym boss**
-- Reaching the **Exam Wing** and defeating **The Teacher** before time runs out
+    function carveRect(x0,y0,w,h, zname){
+      for(let y=y0;y<y0+h;y++) for(let x=x0;x<x0+w;x++){
+        if(!inBounds(x,y)) continue;
+        grid[y][x]=WALK;
+        zone[y][x]=zname;
+      }
+    }
 
-### You lose if:
-- **Time reaches 0** before finishing
-- **HP reaches 0** from pressure/encounters
+    // Place rooms (fixed locations but maze corridors random)
+    const rooms = {
+      library: { x: 2, y: 2, w: 8, h: 7, z: Z.LIB },
+      cafeteria: { x: GRID_W-10, y: 2, w: 8, h: 7, z: Z.CAF },
+      gym: { x: GRID_W-12, y: GRID_H-12, w: 10, h: 9, z: Z.GYM },
+      exam: { x: 2, y: GRID_H-10, w: 8, h: 8, z: Z.EXAM },
+      classA: { x: 12, y: 2, w: 7, h: 6, z: Z.CLASS },
+      classB: { x: 2, y: 12, w: 7, h: 6, z: Z.CLASS },
+      classC: { x: 12, y: 12, w: 7, h: 6, z: Z.CLASS }
+    };
+    Object.values(rooms).forEach(r => carveRect(r.x,r.y,r.w,r.h,r.z));
 
----
+    // Connect room doors to maze by carving short corridors to nearest open cell
+    function connectDoor(r, door){
+      const [dx,dy] = door;
+      const ox = r.x + (dx<0?0:dx>0?r.w-1:Math.floor(r.w/2));
+      const oy = r.y + (dy<0?0:dy>0?r.h-1:Math.floor(r.h/2));
+      const px = ox + dx;
+      const py = oy + dy;
+      if(!inBounds(px,py)) return;
+      grid[py][px]=WALK;
+      // extend a few steps until hit walk
+      let cx=px, cy=py;
+      for(let i=0;i<4;i++){
+        if(!inBounds(cx,cy)) break;
+        grid[cy][cx]=WALK;
+        cx += dx; cy += dy;
+      }
+    }
+    connectDoor(rooms.library, [1,0]);
+    connectDoor(rooms.library, [0,1]);
+    connectDoor(rooms.cafeteria, [-1,0]);
+    connectDoor(rooms.cafeteria, [0,1]);
+    connectDoor(rooms.gym, [-1,0]);
+    connectDoor(rooms.gym, [0,-1]);
+    connectDoor(rooms.exam, [1,0]);
+    connectDoor(rooms.exam, [0,-1]);
+    connectDoor(rooms.classA, [0,1]);
+    connectDoor(rooms.classB, [1,0]);
+    connectDoor(rooms.classC, [0,-1]);
 
-## Endings
+    // Mark zones for corridors inside rooms already; others are hall.
+    // Ensure walls around boundary
+    for(let x=0;x<GRID_W;x++){ grid[0][x]=WALL; grid[GRID_H-1][x]=WALL; }
+    for(let y=0;y<GRID_H;y++){ grid[y][0]=WALL; grid[y][GRID_W-1]=WALL; }
 
-Endings depend on:
-- **Knowledge** (from Notebooks/Study Guides)
-- **Detentions** (penalties)
-- **Time remaining**
+    // Door tiles for library boundary (teacher cannot enter)
+    const libDoors = [];
+    for(let y=rooms.library.y;y<rooms.library.y+rooms.library.h;y++){
+      for(let x=rooms.library.x;x<rooms.library.x+rooms.library.w;x++){
+        // boundary cells that have a neighbor hall
+        if(zone[y][x]!==Z.LIB) continue;
+        const n = [[1,0],[-1,0],[0,1],[0,-1]];
+        for(const [dx,dy] of n){
+          const nx=x+dx, ny=y+dy;
+          if(inBounds(nx,ny) && grid[ny][nx]===WALK && zone[ny][nx]!==Z.LIB){
+            libDoors.push({x,y});
+          }
+        }
+      }
+    }
 
-Possible outcomes include:
-- Passed the Class
-- Barely Passed
-- Barely Survived
-- Failed Completely
+    return { grid, zone, rooms, explored, libDoors, seed };
+  }
 
----
+  // --- World building ---
+  let floorInst, wallInst, decoGroup, pickupsGroup;
+  function cellToWorld(x,y){
+    const wx = (x - GRID_W/2) * CELL + CELL/2;
+    const wz = (y - GRID_H/2) * CELL + CELL/2;
+    return new THREE.Vector3(wx, 0, wz);
+  }
+  function worldToCell(v){
+    const x = Math.floor((v.x - CELL/2)/CELL + GRID_W/2);
+    const y = Math.floor((v.z - CELL/2)/CELL + GRID_H/2);
+    return { x, y };
+  }
 
-## Tech Notes
+  const ZCOL = {
+    [Z.HALL]: 0x0d1428,
+    [Z.LIB]: 0x0b2a22,
+    [Z.CAF]: 0x2a0b14,
+    [Z.GYM]: 0x140b2a,
+    [Z.EXAM]: 0x1b1b1b,
+    [Z.CLASS]: 0x2a220b
+  };
 
-- **Rendering:** Three.js (WebGL)
-- **UI:** Tailwind via CDN
-- **Persistence:** `localStorage` with namespaced keys using `location.pathname` to avoid conflicts
-- **Map:** Procedural maze + fixed rooms with connectors
-- **AI:** Grid A* pathfinding for the Teacher (cannot enter Library)
+  function rebuildWorld(map){
+    // cleanup
+    if(floorInst) scene.remove(floorInst);
+    if(wallInst) scene.remove(wallInst);
+    if(decoGroup) scene.remove(decoGroup);
+    if(pickupsGroup) scene.remove(pickupsGroup);
+    decoGroup = new THREE.Group();
+    pickupsGroup = new THREE.Group();
+    scene.add(decoGroup);
+    scene.add(pickupsGroup);
 
----
+    // Count
+    let floors=0, walls=0;
+    for(let y=0;y<GRID_H;y++) for(let x=0;x<GRID_W;x++){
+      if(map.grid[y][x]===WALK) floors++;
+      else walls++;
+    }
 
-## Tips
+    const floorGeo = new THREE.PlaneGeometry(CELL, CELL);
+    floorGeo.rotateX(-Math.PI/2);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, metalness: 0.0, vertexColors: true });
+    floorInst = new THREE.InstancedMesh(floorGeo, floorMat, floors);
+    floorInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    floorInst.receiveShadow = true;
+    floorInst.castShadow = false;
+    floorInst.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(floors*3), 3);
 
-- The **Library is your reset button**: recover, shop, breathe.
-- Sprinting is powerful, but stamina is life—avoid running empty near the Teacher.
-- Use **Skip Turn / stamina recovery** in battle when low.
-- Stack Knowledge early if you want the best ending.
+    const wallGeo = new THREE.BoxGeometry(CELL, 2.4, CELL);
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x151c33,
+      roughness: 0.85,
+      metalness: 0.02,
+      vertexColors: true,
+      emissive: 0x0b1020,
+      emissiveIntensity: 0.24
+    });
+    wallInst = new THREE.InstancedMesh(wallGeo, wallMat, walls);
+    wallInst.castShadow = true;
+    wallInst.receiveShadow = true;
+    wallInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    wallInst.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(walls*3), 3);
 
----
+    const m = new THREE.Matrix4();
+    let fi=0, wi=0;
+    const c = new THREE.Color();
+    for(let y=0;y<GRID_H;y++) for(let x=0;x<GRID_W;x++){
+      const pos = cellToWorld(x,y);
+      if(map.grid[y][x]===WALK){
+        m.makeTranslation(pos.x, 0, pos.z);
+        floorInst.setMatrixAt(fi, m);
+        const col = ZCOL[map.zone[y][x]] ?? ZCOL[Z.HALL];
+        c.setHex(col);
+        // Slight variation
+        const jitter = (Math.sin((x*19+y*23+map.seed)%1000)*0.5+0.5)*0.08;
+        c.offsetHSL(0, 0, -jitter);
+        floorInst.setColorAt(fi, c);
+        fi++;
 
-## Credits
+        // Some small props for juice
+        if(map.zone[y][x]===Z.CLASS && (x+y)%7===0){
+          const desk = new THREE.Mesh(
+            new THREE.BoxGeometry(CELL*0.55, 0.6, CELL*0.35),
+            new THREE.MeshStandardMaterial({ color: 0x2b2f3e, roughness:0.9 })
+          );
+          desk.position.set(pos.x + 0.15, 0.3, pos.z - 0.2);
+          desk.castShadow = true;
+          decoGroup.add(desk);
+        }
+        if(map.zone[y][x]===Z.LIB && (x+y)%9===0){
+          const shelf = new THREE.Mesh(
+            new THREE.BoxGeometry(CELL*0.6, 1.6, CELL*0.3),
+            new THREE.MeshStandardMaterial({ color: 0x153a33, roughness:0.9 })
+          );
+          shelf.position.set(pos.x - 0.2, 0.8, pos.z + 0.15);
+          shelf.castShadow = true;
+          decoGroup.add(shelf);
+        }
+      } else {
+        m.makeTranslation(pos.x, 1.2, pos.z);
+        wallInst.setMatrixAt(wi, m);
+        // Wall color depends on nearest zone hint
+        let col = 0x121830;
+        const nn = [[1,0],[-1,0],[0,1],[0,-1]];
+        for(const [dx,dy] of nn){
+          const nx=x+dx, ny=y+dy;
+          if(inBounds(nx,ny) && map.grid[ny][nx]===WALK){
+            col = (ZCOL[map.zone[ny][nx]] ?? 0x121830);
+            break;
+          }
+        }
+        c.setHex(col);
+        // Lift wall brightness a bit so the scene reads better
+        c.offsetHSL(0, -0.06, -0.12);
+        wallInst.setColorAt(wi, c);
+        wi++;
+      }
+    }
 
-Created for **Secure Centrix81**.
+    floorInst.instanceMatrix.needsUpdate = true;
+    wallInst.instanceMatrix.needsUpdate = true;
+    if(floorInst.instanceColor) floorInst.instanceColor.needsUpdate = true;
+    if(wallInst.instanceColor) wallInst.instanceColor.needsUpdate = true;
 
-Libraries:
-- Three.js
-- Tailwind CSS
+    scene.add(floorInst);
+    scene.add(wallInst);
+
+    // Add subtle emissive markers in special rooms
+    const markerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x66ccff, emissiveIntensity: 0.55, roughness: 0.6 });
+    for(const [name,r] of Object.entries(map.rooms)){
+      const center = cellToWorld(r.x + Math.floor(r.w/2), r.y + Math.floor(r.h/2));
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.12, 10, 24), markerMat);
+      ring.rotation.x = Math.PI/2;
+      ring.position.set(center.x, 0.08, center.z);
+      ring.userData = { marker: true, room: name };
+      decoGroup.add(ring);
+    }
+  }
+
+  // --- Entities / combat ---
+  function xpToNext(level){
+    return Math.floor(40 + (level-1)*26 + Math.pow(level, 1.55)*10);
+  }
+
+  const ITEM_DB = {
+    energy: { name:'Energy Drink', desc:'Restore 22 HP and 18 stamina.', use: (g)=>{ g.player.hp = Math.min(g.player.maxHP, g.player.hp + 22); g.player.sta = Math.min(g.player.maxSta, g.player.sta + 18); toast('Chugged an Energy Drink. +HP +Stamina'); blip('sine', 660, .08, .05); } },
+    hallpass: { name:'Hall Pass', desc:'One free escape from Teacher chase or battles.', use: (g)=>{ g.player.hallPass = (g.player.hallPass||0) + 1; toast('Pocketed a Hall Pass.'); blip('triangle', 520, .06, .04);} },
+    pencil: { name:'Pencil', desc:'+ATK for 3 turns in battle.', use: (g)=>{ g.player.buffs.atk += 3; g.player.buffs.atkTurns = Math.max(g.player.buffs.atkTurns, 3); toast('Sharpened Pencil. ATK up!'); blip('square', 420, .06, .04); } },
+    notebook: { name:'Notebook', desc:'+Knowledge and +XP (consumed instantly).', use: (g)=>{ g.player.knowledge += 1; g.player.xp += 18; toast('Filled a Notebook. Knowledge +1, XP +18'); blip('sine', 740, .08, .05); } },
+    guide: { name:'Study Guide', desc:'+DEF permanently (consumed instantly).', use: (g)=>{ g.player.def += 1; g.player.knowledge += 1; toast('Read Study Guide. DEF +1, Knowledge +1'); blip('triangle', 610, .08, .05); } }
+  };
+
+  const SKILL_DB = {
+    strike: { name:'Homework Strike', key:'1', sta: 10, cd: 0, desc:'Solid hit. Extra damage if combo is high.',
+      act: (g, ctx)=>{
+        const mult = 1.0 + Math.min(0.35, (g.combo-1)*0.06);
+        const dmg = dealDamage(g, ctx.enemy, Math.floor((g.player.atk + g.player.buffs.atk) * mult), 'strike');
+        g.player.sta -= 10;
+        ctx.log.push(`Eric uses Homework Strike! (${dmg} dmg)`);
+      }
+    },
+    shield: { name:'Study Shield', key:'2', sta: 12, cd: 0, desc:'Reduce next 2 hits. Great for Teacher bursts.',
+      act: (g, ctx)=>{
+        g.player.sta -= 12;
+        g.player.buffs.shieldHits = Math.max(g.player.buffs.shieldHits, 2);
+        g.player.buffs.shieldTurns = Math.max(g.player.buffs.shieldTurns, 3);
+        ctx.log.push('Eric raises a Study Shield. (2 hits protected)');
+        blip('triangle', 330, .07, .05);
+      }
+    },
+    dash: { name:'Speed Dash', key:'3', sta: 14, cd: 0, desc:'In battle: gain initiative & dodge chance. In halls: hold Shift to sprint.',
+      act: (g, ctx)=>{
+        g.player.sta -= 14;
+        g.player.buffs.dashTurns = Math.max(g.player.buffs.dashTurns, 2);
+        g.player.buffs.dodge = Math.max(g.player.buffs.dodge, 0.25);
+        ctx.log.push('Eric focuses. Speed Dash stance! (dodge up)');
+        blip('sine', 520, .06, .05);
+      }
+    },
+    escape: { name:'Excuse Escape', key:'4', sta: 8, cd: 0, desc:'Attempt to flee. Higher chance with SPD and in hallways.',
+      act: (g, ctx)=>{
+        g.player.sta -= 8;
+        const base = 0.34;
+        const spd = g.player.spd + (g.player.buffs.dashTurns>0?2:0);
+        const zoneBonus = (g.curZone===Z.HALL?0.10 : (g.curZone===Z.CAF? -0.05 : 0));
+        const chance = clamp(base + (spd*0.03) + zoneBonus - (ctx.enemy.tier||0)*0.06, 0.08, 0.78);
+        const r = g.rng();
+        if(r < chance){
+          ctx.fled = true;
+          ctx.log.push(`Excuse Escape works! (fled)`);
+          blip('sine', 820, .07, .06);
+        } else {
+          ctx.log.push(`Excuse Escape fails... (${Math.round(chance*100)}% chance)`);
+          blip('square', 110, .08, .05);
+        }
+      }
+    }
+  };
+
+  function makeEnemy(id, scale=1){
+    // tier roughly indicates difficulty
+    const base = {
+      slime: { name:'Stress Slime', maxHP: 30, atk: 7, def: 2, spd: 6, tier: 1, focus: 10, xp: 26 },
+      bat: { name:'Pop-Quiz Bat', maxHP: 26, atk: 9, def: 1, spd: 10, tier: 1, focus: 12, xp: 28 },
+      wisp: { name:'Rumor Wisp', maxHP: 22, atk: 10, def: 1, spd: 12, tier: 2, focus: 14, xp: 34 },
+      anbu: { name:'Anbu (Rival)', maxHP: 56, atk: 12, def: 4, spd: 10, tier: 3, focus: 25, xp: 70, rival:true },
+      saharsh: { name:'Saharsh (Rival)', maxHP: 52, atk: 13, def: 3, spd: 12, tier: 3, focus: 25, xp: 72, rival:true },
+      calvin: { name:'Calvin (Rival)', maxHP: 58, atk: 11, def: 5, spd: 8, tier: 3, focus: 25, xp: 74, rival:true },
+      finals: { name:'Finals Golem (Gym Boss)', maxHP: 92, atk: 15, def: 6, spd: 7, tier: 4, focus: 55, xp: 120, boss:true },
+      teacher: { name:'The Teacher', maxHP: 120, atk: 17, def: 7, spd: 12, tier: 5, focus: 80, xp: 160, boss:true, teacher:true }
+    }[id];
+    const e = JSON.parse(JSON.stringify(base));
+    const s = scale;
+    e.maxHP = Math.floor(e.maxHP * s);
+    e.atk = Math.floor(e.atk * (0.9 + 0.1*s));
+    e.def = Math.floor(e.def * (0.95 + 0.05*s));
+    e.spd = Math.floor(e.spd * (0.9 + 0.1*s));
+    e.hp = e.maxHP;
+    e.id = id;
+    return e;
+  }
+
+  function dealDamage(g, target, rawAtk, tag='hit'){
+    const variance = 0.90 + g.rng()*0.22;
+    const base = Math.max(1, Math.floor((rawAtk - target.def) * variance));
+    target.hp = Math.max(0, target.hp - base);
+    // juice
+    if(tag==='strike'){ blip('square', 220 + base*6, 0.05, 0.04); }
+    else { blip('sine', 180 + base*5, 0.06, 0.035); }
+    return base;
+  }
+
+  function enemyMove(g, ctx){
+    const e = ctx.enemy;
+    const log = ctx.log;
+    // Simple AI with occasional specials
+    const r = g.rng();
+    if(e.id==='bat' && r<0.22){
+      const dmg = dealDamage(g, g.player, e.atk+4, 'hit');
+      log.push(`${e.name} dives with a surprise quiz! (${dmg} dmg)`);
+      g.player.sta = Math.max(0, g.player.sta - 6);
+      log.push(`Stamina drained (-6)`);
+      return;
+    }
+    if(e.id==='wisp' && r<0.24){
+      log.push(`${e.name} spreads a rumor... (DEF down)`);
+      g.player.buffs.rumorTurns = Math.max(g.player.buffs.rumorTurns, 2);
+      blip('triangle', 160, .08, .035);
+      return;
+    }
+    if(e.id==='anbu' && r<0.25){
+      log.push('Anbu steals your momentum! (combo reset)');
+      g.combo = 1;
+      blip('square', 140, .08, .04);
+      const dmg = dealDamage(g, g.player, e.atk+2, 'hit');
+      log.push(`Anbu backhands with gossip. (${dmg} dmg)`);
+      return;
+    }
+    if(e.id==='saharsh' && r<0.25){
+      log.push('Saharsh sets a distraction! (dodge reduced)');
+      g.player.buffs.dodge = Math.max(0, g.player.buffs.dodge - 0.12);
+      const dmg = dealDamage(g, g.player, e.atk+3, 'hit');
+      log.push(`Distraction hit. (${dmg} dmg)`);
+      return;
+    }
+    if(e.id==='calvin' && r<0.25){
+      log.push('Calvin blocks with a binder. (you take less, but stamina taxed)');
+      const dmg = dealDamage(g, g.player, e.atk, 'hit');
+      g.player.sta = Math.max(0, g.player.sta - 10);
+      log.push(`${dmg} dmg, -10 stamina`);
+      return;
+    }
+    if(e.id==='finals' && r<0.28){
+      log.push('Finals Golem slams the floor!');
+      const dmg = dealDamage(g, g.player, e.atk+6, 'hit');
+      log.push(`Shockwave. (${dmg} dmg)`);
+      g.player.buffs.stunTurns = Math.max(g.player.buffs.stunTurns, 1);
+      return;
+    }
+    if(e.id==='teacher'){
+      if(r<0.20 && g.player.hp < g.player.maxHP*0.55){
+        log.push('The Teacher assigns a surprise essay. (big hit)');
+        const dmg = dealDamage(g, g.player, e.atk+7, 'hit');
+        log.push(`${dmg} dmg`);
+        return;
+      }
+      if(r<0.18){
+        log.push('The Teacher threatens detention... (stamina crushed)');
+        g.player.sta = Math.max(0, g.player.sta - 18);
+        const dmg = dealDamage(g, g.player, e.atk+1, 'hit');
+        log.push(`${dmg} dmg, -18 stamina`);
+        return;
+      }
+    }
+
+    // Basic attack
+    const dmg = dealDamage(g, g.player, e.atk, 'hit');
+    log.push(`${e.name} attacks. (${dmg} dmg)`);
+  }
+
+  // --- A* pathfinding on grid ---
+  function astar(map, start, goal){
+    const sx=start.x, sy=start.y, gx=goal.x, gy=goal.y;
+    if(sx===gx && sy===gy) return [{x:sx,y:sy}];
+    const W=GRID_W, H=GRID_H;
+    const open=[];
+    const came = Array.from({length:H},()=>Array.from({length:W},()=>null));
+    const gScore = Array.from({length:H},()=>Array.from({length:W},()=>Infinity));
+    const fScore = Array.from({length:H},()=>Array.from({length:W},()=>Infinity));
+    function h(x,y){ return Math.abs(x-gx)+Math.abs(y-gy); }
+
+    gScore[sy][sx]=0;
+    fScore[sy][sx]=h(sx,sy);
+    open.push({x:sx,y:sy,f:fScore[sy][sx]});
+
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    while(open.length){
+      open.sort((a,b)=>a.f-b.f);
+      const cur=open.shift();
+      if(cur.x===gx && cur.y===gy){
+        const path=[];
+        let cx=gx, cy=gy;
+        while(!(cx===sx && cy===sy)){
+          path.push({x:cx,y:cy});
+          const p=came[cy][cx];
+          if(!p) break;
+          cx=p.x; cy=p.y;
+        }
+        path.push({x:sx,y:sy});
+        path.reverse();
+        return path;
+      }
+      for(const [dx,dy] of dirs){
+        const nx=cur.x+dx, ny=cur.y+dy;
+        if(!inBounds(nx,ny)) continue;
+        if(map.grid[ny][nx]===WALL) continue;
+        // Teacher cannot enter library tiles
+        if(map.zone[ny][nx]===Z.LIB) continue;
+        const tg=gScore[cur.y][cur.x]+1;
+        if(tg<gScore[ny][nx]){
+          came[ny][nx]={x:cur.x,y:cur.y};
+          gScore[ny][nx]=tg;
+          fScore[ny][nx]=tg+h(nx,ny);
+          if(!open.some(o=>o.x===nx&&o.y===ny)) open.push({x:nx,y:ny,f:fScore[ny][nx]});
+        }
+      }
+    }
+    return null;
+  }
+
+  // --- Game state ---
+  const game = {
+    state: 'boot',
+    rng: mulberry32(12345),
+    map: null,
+    difficulty: 'normal',
+    runStartMs: 0,
+    timeLeft: 360,
+    elapsed: 0,
+    score: 0,
+    encounterCd: 0,
+    bestScore: storage.get('bestScore', 0),
+    bestEnding: storage.get('bestEnding', null),
+    combo: 1,
+    comboBest: storage.get('comboBest', 1),
+    curZone: Z.HALL,
+    objective: '',
+    flags: {
+      gymUnlocked: false,
+      examUnlocked: false,
+      gymCleared: false,
+      teacherEnraged: false,
+      ended: false
+    },
+    rivals: {
+      anbu: { cleared:false },
+      saharsh: { cleared:false },
+      calvin: { cleared:false }
+    },
+    visited: {},
+    pickups: [],
+    player: null,
+    teacher: null,
+    battle: null
+  };
+
+  // --- Meshes for player/teacher ---
+  const playerMat = new THREE.MeshStandardMaterial({ color: 0x62d7ff, roughness: 0.35, metalness: 0.06, emissive: 0x1a4960, emissiveIntensity: 0.28 });
+  const teacherMat = new THREE.MeshStandardMaterial({ color: 0xff4d6d, roughness: 0.35, metalness: 0.08, emissive: 0x5a0b1b, emissiveIntensity: 0.35 });
+
+  const playerMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.38, 0.68, 6, 12), playerMat);
+  playerMesh.castShadow = true;
+  playerMesh.receiveShadow = false;
+  scene.add(playerMesh);
+
+  const teacherMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.78, 6, 12), teacherMat);
+  teacherMesh.castShadow = true;
+  scene.add(teacherMesh);
+
+  // floating "panic" icon
+  const teacherAura = new THREE.Mesh(new THREE.TorusKnotGeometry(0.35, 0.10, 64, 10),
+    new THREE.MeshStandardMaterial({ color:0xff4d6d, emissive:0xff2e55, emissiveIntensity:0.55, roughness:0.4, metalness:0.1 })
+  );
+  teacherAura.position.y = 1.95;
+  teacherMesh.add(teacherAura);
+
+  // --- Core mechanics ---
+  function resetRun(seedOverride=null){
+    const seed = seedOverride ?? Math.floor((Date.now() + Math.random()*9999) % 2147483647);
+    game.rng = mulberry32(seed);
+    game.map = carveMaze(seed);
+    rebuildWorld(game.map);
+
+    // Player
+    const start = cellToWorld(game.map.rooms.library.x+2, game.map.rooms.library.y+2);
+    game.player = {
+      pos: start.clone(),
+      vel: new THREE.Vector3(),
+      r: 0.35,
+      maxHP: 100,
+      hp: 100,
+      maxSta: 60,
+      sta: 60,
+      atk: 11,
+      def: 4,
+      spd: 9,
+      knowledge: 0,
+      level: 1,
+      xp: 0,
+      focus: 0,
+      credits: 0,
+      detentions: 0,
+      hallPass: 0,
+      inv: { energy: 1, pencil: 1, notebook: 0, guide: 0 },
+      buffs: {
+        shieldHits: 0, shieldTurns: 0,
+        dashTurns: 0, dodge: 0,
+        atk: 0, atkTurns: 0,
+        rumorTurns: 0,
+        stunTurns: 0
+      }
+    };
+
+    // Teacher
+    const tstart = cellToWorld(Math.floor(GRID_W/2), Math.floor(GRID_H/2));
+    game.teacher = {
+      pos: tstart.clone(),
+      path: null,
+      pathIdx: 0,
+      repathT: 0,
+      speed: DIFFICULTIES[game.difficulty].teacherBase,
+      lastSeen: 0
+    };
+
+    // Progress
+    game.flags = {
+      gymUnlocked: false,
+      examUnlocked: false,
+      gymCleared: false,
+      teacherEnraged: false,
+      ended: false
+    };
+    game.rivals = {
+      anbu: { cleared:false },
+      saharsh: { cleared:false },
+      calvin: { cleared:false }
+    };
+    game.pickups = [];
+    game.visited = {};
+    game.combo = 1;
+    game.elapsed = 0;
+    game.score = 0;
+    game.timeLeft = DIFFICULTIES[game.difficulty].timer;
+    game.curZone = Z.LIB;
+    game.encounterCd = 6.0;
+
+    // Spawn some pickups in corridors
+    spawnWorldPickups();
+
+    // Place meshes
+    playerMesh.position.copy(game.player.pos).add(new THREE.Vector3(0,0.55,0));
+    teacherMesh.position.copy(game.teacher.pos).add(new THREE.Vector3(0,0.6,0));
+
+    game.runStartMs = performance.now();
+  }
+
+  function spawnWorldPickups(){
+    pickupsGroup.clear();
+    game.pickups.length = 0;
+    const candidates=[];
+    for(let y=1;y<GRID_H-1;y++) for(let x=1;x<GRID_W-1;x++){
+      if(game.map.grid[y][x]!==WALK) continue;
+      const z = game.map.zone[y][x];
+      if(z===Z.LIB) continue;
+      // avoid room centers
+      if((x+y)%3!==0) continue;
+      candidates.push({x,y,z});
+    }
+    // Place 16 pickups
+    const count = 16;
+    for(let i=0;i<count;i++){
+      const idx = Math.floor(game.rng()*candidates.length);
+      const c = candidates.splice(idx,1)[0];
+      if(!c) break;
+      const roll = game.rng();
+      let item = 'energy';
+      if(roll<0.28) item='energy';
+      else if(roll<0.50) item='notebook';
+      else if(roll<0.70) item='pencil';
+      else if(roll<0.88) item='guide';
+      else item='hallpass';
+      const pos = cellToWorld(c.x,c.y);
+      const orb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 16, 12),
+        new THREE.MeshStandardMaterial({
+          color: item==='energy'?0x22c55e : item==='notebook'?0xf59e0b : item==='pencil'?0x38bdf8 : item==='guide'?0xa78bfa : 0xffffff,
+          emissive: item==='hallpass'?0xe2e8f0 : 0x0,
+          emissiveIntensity: item==='hallpass'?0.35:0,
+          roughness: 0.2,
+          metalness: 0.05
+        })
+      );
+      orb.position.set(pos.x, 0.32, pos.z);
+      orb.userData = { item, cell: {x:c.x,y:c.y}, t: game.rng()*Math.PI*2 };
+      pickupsGroup.add(orb);
+      game.pickups.push({ item, x:c.x, y:c.y, taken:false });
+    }
+  }
+
+  function canWalkCell(x,y){
+    if(!inBounds(x,y)) return false;
+    return game.map.grid[y][x]===WALK;
+  }
+
+  function resolveCollision(pos){
+    // Circle collision against wall cells around the player cell
+    const r = game.player.r;
+    const c = worldToCell(pos);
+    for(let oy=-1;oy<=1;oy++) for(let ox=-1;ox<=1;ox++){
+      const x = c.x+ox, y=c.y+oy;
+      if(!inBounds(x,y) || game.map.grid[y][x]!==WALL) continue;
+      // AABB in world coords
+      const center = cellToWorld(x,y);
+      const minX = center.x - CELL/2, maxX = center.x + CELL/2;
+      const minZ = center.z - CELL/2, maxZ = center.z + CELL/2;
+      const closestX = clamp(pos.x, minX, maxX);
+      const closestZ = clamp(pos.z, minZ, maxZ);
+      const dx = pos.x - closestX;
+      const dz = pos.z - closestZ;
+      const d2 = dx*dx + dz*dz;
+      if(d2 < r*r){
+        const d = Math.sqrt(d2) || 0.0001;
+        const push = (r - d) + 0.0005;
+        pos.x += (dx/d) * push;
+        pos.z += (dz/d) * push;
+      }
+    }
+    return pos;
+  }
+
+  function updateZoneAndTriggers(){
+    const c = worldToCell(game.player.pos);
+    if(!inBounds(c.x,c.y)) return;
+    game.map.explored[c.y][c.x] = true;
+    const z = game.map.zone[c.y][c.x];
+    game.curZone = z;
+
+    // Objective logic
+    if(game.player.credits < 3){
+      game.objective = `Earn credits from rivals (${game.player.credits}/3)`;
+    } else if(!game.flags.gymCleared){
+      game.objective = 'Reach the Gym and defeat the boss';
+    } else {
+      game.objective = 'Reach the Exam wing and face The Teacher';
+    }
+
+    // Room triggers
+    // Each classroom hosts a rival (unique)
+    // Determine which classroom by coordinate in its rectangle
+    const rooms = game.map.rooms;
+    const inRect = (r) => c.x>=r.x && c.x<r.x+r.w && c.y>=r.y && c.y<r.y+r.h;
+
+    // Rival rooms
+    const rivalOrder = [
+      { id:'anbu', room:'classA' },
+      { id:'saharsh', room:'classB' },
+      { id:'calvin', room:'classC' }
+    ];
+    for(const rr of rivalOrder){
+      const r = rooms[rr.room];
+      if(inRect(r) && !game.rivals[rr.id].cleared){
+        // only trigger when entering first time
+        const key = `rival:${rr.id}`;
+        if(!game.visited[key]){
+          game.visited[key]=true;
+          startRivalEncounter(rr.id);
+          return;
+        }
+      }
+    }
+
+    // Gym boss trigger
+    if(inRect(rooms.gym) && game.player.credits>=3 && !game.flags.gymCleared){
+      const key='boss:gym';
+      if(!game.visited[key]){
+        game.visited[key]=true;
+        startDialogue([
+          { speaker:'Narrator', text:'The Gym lights flicker. The air feels heavy—like every missed assignment is waiting to drop.' },
+          { speaker:'Eric', text:'Okay… one boss. Then the exam. Then freedom.' },
+          { speaker:'Narrator', text:'A Finals Golem forms from crushed papers and stress.' }
+        ], [
+          { label:'Fight (Boss)', act:()=> startBattle(makeEnemy('finals', enemyScale()), { onWin:()=>{ game.flags.gymCleared=true; game.flags.teacherEnraged=true; toast('Gym cleared! The Teacher is enraged...'); } }) },
+          { label:'Try to Outsmart (mini-game)', act:()=> startMiniGame('focus', { difficulty: 3, onWin:()=>{ toast('You outsmart the boss? It weakens!'); startBattle(makeEnemy('finals', enemyScale()*0.85), { onWin:()=>{ game.flags.gymCleared=true; game.flags.teacherEnraged=true; toast('Gym cleared! The Teacher is enraged...'); } }); }, onLose:()=>{ startBattle(makeEnemy('finals', enemyScale()), { onWin:()=>{ game.flags.gymCleared=true; game.flags.teacherEnraged=true; toast('Gym cleared! The Teacher is enraged...'); } }); } }) }
+        ]);
+      }
+      return;
+    }
+
+    // Exam wing trigger
+    if(inRect(rooms.exam) && game.flags.gymCleared && !game.flags.ended){
+      const key='boss:teacher';
+      if(!game.visited[key]){
+        game.visited[key]=true;
+        startDialogue([
+          { speaker:'Narrator', text:'You reach the Exam Wing. The world is quiet—too quiet.' },
+          { speaker:'Eric', text:'If I pass… it all ends.' },
+          { speaker:'The Teacher', text:'No shortcuts. No excuses. Show me what you learned.' }
+        ], [
+          { label:'Face The Teacher', act:()=> startBattle(makeEnemy('teacher', enemyScale()*1.05), { onWin:()=> finishRun() }) }
+        ]);
+      }
+      return;
+    }
+
+    // Random encounters (with cooldown to prevent chain-spawns)
+    if(game.state==='playing'){
+      if(game.encounterCd <= 0){
+        if(z===Z.CAF && game.rng()<0.035){
+          game.encounterCd = 7.5; // cafeteria is dangerous but not nonstop
+          startBattle(randomMonster(), { onWin:()=>{} });
+          return;
+        }
+        if(z===Z.HALL && game.rng()<0.010){
+          game.encounterCd = 9.0;
+          startBattle(randomMonster(), { onWin:()=>{} });
+          return;
+        }
+      }
+    }
+
+    // Library interactions
+    if(z===Z.LIB){
+      // passive regen
+      game.player.hp = Math.min(game.player.maxHP, game.player.hp + 0.08);
+      game.player.sta = Math.min(game.player.maxSta, game.player.sta + 0.18);
+    }
+  }
+
+  function randomMonster(){
+    const t = game.elapsed;
+    const p = clamp(t/240, 0, 1);
+    const r = game.rng();
+    if(r < 0.45 - p*0.15) return makeEnemy('slime', enemyScale());
+    if(r < 0.82 - p*0.05) return makeEnemy('bat', enemyScale());
+    return makeEnemy('wisp', enemyScale());
+  }
+
+  function enemyScale(){
+    // scales with level, time, and difficulty
+    const d = DIFFICULTIES[game.difficulty];
+    const lvl = game.player?.level ?? 1;
+    const timeK = 1 + Math.min(0.35, game.elapsed/420);
+    const lvlK = 1 + (lvl-1)*0.08;
+    return timeK*lvlK*(0.98 + (d.dmgMult-1)*0.35);
+  }
+
+  function startRivalEncounter(id){
+    const rivalName = id==='anbu'?'Anbu':(id==='saharsh'?'Saharsh':'Calvin');
+    startDialogue([
+      { speaker:rivalName, text:'You look stressed. Got anything worth taking?' },
+      { speaker:'Eric', text:'I just need to pass. I’m not here for drama.' },
+      { speaker:rivalName, text:'Then prove it.' }
+    ], [
+      { label:'Battle', act:()=> startBattle(makeEnemy(id, enemyScale()), { onWin:()=>{
+        game.rivals[id].cleared=true;
+        game.player.credits++;
+        toast(`${rivalName} defeated. +1 credit`);
+        // reward
+        grantItemDrop('notebook');
+      } }) },
+      { label:'Outsmart (mini-game)', act:()=> startMiniGame('reaction', { difficulty: 2, onWin:()=>{
+        game.rivals[id].cleared=true;
+        game.player.credits++;
+        toast(`You outsmarted ${rivalName}. +1 credit`);
+        game.player.focus += 10;
+        blip('sine', 880, .07, .06);
+      }, onLose:()=>{
+        // punishment: steal item if any
+        const stealables = Object.keys(game.player.inv).filter(k=>game.player.inv[k]>0);
+        if(stealables.length){
+          const pick = stealables[Math.floor(game.rng()*stealables.length)];
+          game.player.inv[pick] = Math.max(0, game.player.inv[pick]-1);
+          toast(`${rivalName} stole your ${ITEM_DB[pick]?.name || pick}!`);
+          blip('square', 120, .09, .05);
+        }
+        // battle anyway but slightly easier to keep flow
+        startBattle(makeEnemy(id, enemyScale()*0.93), { onWin:()=>{
+          game.rivals[id].cleared=true;
+          game.player.credits++;
+          toast(`${rivalName} defeated. +1 credit`);
+        } });
+      } }) },
+      { label:'Avoid', act:()=>{
+        // risk: teacher pressure increases and might steal
+        toast(`You avoid ${rivalName}… but rumors spread. Teacher pressure rises.`);
+        game.teacher.lastSeen = 9999;
+        game.combo = 1;
+        blip('triangle', 200, .08, .04);
+        closeOverlay();
+        setState('playing');
+      } }
+    ]);
+  }
+
+  // --- Overlays: menu, dialog, battle, minigame ---
+  function closeOverlay(){ overlay.innerHTML=''; overlay.classList.add('pointer-events-none'); }
+  function openOverlay(html){ overlay.classList.remove('pointer-events-none'); overlay.innerHTML = html; }
+
+  function setState(s){
+    game.state = s;
+    if(s==='playing') closeOverlay();
+    if(s==='paused') showPause();
+  }
+
+  function showTitle(){
+    const best = storage.get('bestScore', 0);
+    const ending = storage.get('bestEnding', null);
+    openOverlay(`
+      <div class="w-[min(980px,96vw)]">
+        <div class="panel-glass rounded-2xl p-5 md:p-7">
+          <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div>
+              <div class="text-slate-200 text-xs">Secure Centrix81 presents</div>
+              <h1 class="mt-1 text-3xl md:text-4xl font-extrabold text-white tracking-tight">Eric m failing class</h1>
+              <div class="mt-2 text-slate-300 max-w-2xl">A fast, replayable 3D school-dungeon RPG: dodge the Teacher, clear rivals, farm Focus, and reach the Exam before time runs out.</div>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <span class="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200">3D exploration + chase</span>
+                <span class="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200">Turn-based battles</span>
+                <span class="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200">Mini-games to outsmart</span>
+                <span class="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200">Multiple endings</span>
+              </div>
+            </div>
+            <div class="panel-glass rounded-xl p-4 w-full md:w-[340px] border border-white/10">
+              <div class="text-white font-semibold">Best Run</div>
+              <div class="mt-2 text-slate-300 text-sm">Score: <span class="text-white font-semibold">${best}</span></div>
+              <div class="text-slate-300 text-sm">Best ending: <span class="text-white font-semibold">${ending || '—'}</span></div>
+              <div class="mt-3 text-xs text-slate-400">Tip: Quick sessions. Fail fast, learn routes, and chain combos.</div>
+            </div>
+          </div>
+
+          <div class="mt-5 grid md:grid-cols-3 gap-3">
+            <div class="panel-glass rounded-xl p-4 border border-white/10">
+              <div class="text-white font-semibold">Controls</div>
+              <div class="mt-2 text-sm text-slate-300 space-y-1">
+                <div><span class="mono">WASD</span>/<span class="mono">Arrows</span> move</div>
+                <div><span class="mono">Shift</span> dash (stamina)</div>
+                <div><span class="mono">E</span> interact (Library shop)</div>
+                <div><span class="mono">1–4</span> battle skills</div>
+                <div><span class="mono">Esc</span> pause • <span class="mono">R</span> restart</div>
+              </div>
+            </div>
+            <div class="panel-glass rounded-xl p-4 border border-white/10">
+              <div class="text-white font-semibold">Goal</div>
+              <div class="mt-2 text-sm text-slate-300">Defeat or outsmart rivals for <span class="text-white font-semibold">3 credits</span> → beat the <span class="text-white font-semibold">Gym boss</span> → reach the <span class="text-white font-semibold">Exam wing</span> before the timer ends.</div>
+              <div class="mt-2 text-xs text-slate-400">The Teacher patrols and gets faster over time. If caught: detention + setback.</div>
+            </div>
+            <div class="panel-glass rounded-xl p-4 border border-white/10">
+              <div class="text-white font-semibold">Difficulty</div>
+              <div class="mt-2 flex gap-2">
+                <button id="diffNormal" class="btn px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 text-sm">Normal</button>
+                <button id="diffHard" class="btn px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 text-sm">Hard</button>
+              </div>
+              <div class="mt-2 text-xs text-slate-400">Hard = shorter timer + stronger enemies + faster Teacher.</div>
+            </div>
+          </div>
+
+          <div class="mt-5 flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
+            <div class="text-xs text-slate-400">Each run generates a new school layout.</div>
+            <div class="flex gap-2">
+              <button id="btnStart" class="btn px-4 py-3 rounded-xl bg-sky-500/20 hover:bg-sky-500/25 border border-sky-400/25 text-white font-semibold">Start Run</button>
+              <button id="btnHow" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">How to Win</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+
+    $('diffNormal').onclick = () => { game.difficulty='normal'; toast('Difficulty: Normal'); };
+    $('diffHard').onclick = () => { game.difficulty='hard'; toast('Difficulty: Hard'); };
+    $('btnStart').onclick = () => {
+      resetRun();
+      toast('Run start: Escape the Teacher, earn credits, reach the Exam!');
+      setState('playing');
+    };
+    $('btnHow').onclick = () => {
+      startDialogue([
+        { speaker:'Narrator', text:'Your grade is a survival meter.' },
+        { speaker:'Narrator', text:'Win fights (or outsmart rivals) for Focus and XP. Spend Focus in the Library to prep for the Exam.' },
+        { speaker:'Narrator', text:'Teacher catches you? Detention: you lose time + momentum, and the Teacher gets meaner.' }
+      ], [
+        { label:'Got it', act:()=> showTitle() }
+      ], { allowResume:false });
+    };
+  }
+
+  function showPause(){
+    openOverlay(`
+      <div class="panel-glass rounded-2xl p-5 w-[min(560px,92vw)]">
+        <div class="text-white text-2xl font-bold">Paused</div>
+        <div class="mt-2 text-slate-300 text-sm">Take a breath. The Teacher won’t.</div>
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <button id="pResume" class="btn px-4 py-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/25 border border-emerald-400/25 text-emerald-50 font-semibold">Resume</button>
+          <button id="pRestart" class="btn px-4 py-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/25 border border-rose-400/25 text-rose-50 font-semibold">Restart</button>
+          <button id="pTitle" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Title</button>
+          <button id="pMute" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Audio: On</button>
+        </div>
+        <div class="mt-4 text-xs text-slate-400">Tip: Use the Library to recover and shop. Use Hall Pass to escape pressure.</div>
+      </div>
+    `);
+    $('pResume').onclick = () => setState('playing');
+    $('pRestart').onclick = () => { resetRun(); setState('playing'); };
+    $('pTitle').onclick = () => { setState('menu'); showTitle(); };
+    $('pMute').onclick = (e) => {
+      // soft "mute" by suspending context
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(audioCtx.state==='running'){ audioCtx.suspend(); e.target.textContent='Audio: Off'; }
+        else { audioCtx.resume(); e.target.textContent='Audio: On'; }
+      } catch {}
+    };
+  }
+
+  function startDialogue(lines, choices, opts={}){
+    const allowResume = opts.allowResume ?? true;
+    let idx = 0;
+    setState('dialogue');
+    function render(){
+      const L = lines[idx];
+      openOverlay(`
+        <div class="w-[min(900px,96vw)]">
+          <div class="panel-glass rounded-2xl p-5 md:p-6">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-xs text-slate-400">Scene</div>
+                <div class="text-white text-xl font-bold">${escapeHtml(L.speaker)}</div>
+              </div>
+              ${allowResume?`<div class="text-xs text-slate-400">Confirm <span class="mono">Space</span></div>`:''}
+            </div>
+            <div class="mt-3 text-slate-100 text-lg leading-relaxed">${escapeHtml(L.text)}</div>
+
+            <div class="mt-5 flex flex-col md:flex-row gap-2 md:justify-between md:items-center">
+              <div class="text-xs text-slate-400">${idx+1}/${lines.length}</div>
+              <div class="flex flex-wrap gap-2 justify-end">
+                ${idx < lines.length-1
+                  ? `<button id="dlgNext" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Next</button>`
+                  : choices.map((c,i)=>`<button data-choice="${i}" class="btn px-4 py-3 rounded-xl ${i===0?'bg-sky-500/20 hover:bg-sky-500/25 border-sky-400/25 text-white':'bg-white/5 hover:bg-white/10 border-white/10 text-slate-100'} border font-semibold">${escapeHtml(c.label)}</button>`).join('')
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+      const next = $('dlgNext');
+      if(next){ next.onclick = ()=>{ idx++; render(); blip('sine', 520, .04, .03);} }
+      overlay.querySelectorAll('[data-choice]').forEach(btn => {
+        btn.onclick = () => {
+          const i = +btn.getAttribute('data-choice');
+          blip('sine', 610, .05, .04);
+          choices[i]?.act?.();
+        };
+      });
+    }
+    render();
+  }
+
+  function startMiniGame(type, cfg){
+    setState('minigame');
+
+    // Helper: if a minigame finishes and the callback doesn't open a new overlay,
+    // return safely to exploration.
+    const finishMinigame = (cb) => {
+      try{ cb?.(); } finally {
+        // If callback didn't transition state, go back to playing.
+        // (E.g., rival outsmart should resume exploration.)
+        if(game.state==='minigame'){
+          game.battle = null;
+          setState('playing');
+        }
+      }
+    };
+
+    if(type==='reaction') return miniReaction({ ...cfg, _finish: finishMinigame });
+    return miniFocus({ ...cfg, _finish: finishMinigame });
+  }
+
+  function miniReaction(cfg){
+    const rounds = 3;
+    let round = 1;
+    let t = 0;
+    let speed = 1.15 + cfg.difficulty*0.25;
+    let successes = 0;
+    let active = true;
+
+    function render(){
+      openOverlay(`
+        <div class="panel-glass rounded-2xl p-5 w-[min(760px,96vw)]">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-white text-2xl font-bold">Outsmart</div>
+              <div class="text-slate-300 text-sm">Press <span class="mono">Space</span> when the marker is inside the green zone. Win 2/3.</div>
+            </div>
+            <div class="text-sm text-slate-200">Round <span class="font-semibold">${round}</span> / ${rounds} • Wins <span class="font-semibold">${successes}</span></div>
+          </div>
+          <div class="mt-4">
+            <div class="h-10 rounded-xl bg-black/30 border border-white/10 overflow-hidden relative">
+              <div class="absolute inset-y-0 left-[42%] w-[16%] bg-emerald-500/25 border-x border-emerald-300/30"></div>
+              <div id="marker" class="absolute top-0 bottom-0 w-2 bg-white/80"></div>
+            </div>
+            <div class="mt-3 flex items-center justify-between">
+              <div class="text-xs text-slate-400">One-tap timing. No mercy.</div>
+              <button id="mgQuit" class="btn px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 text-sm">Give up</button>
+            </div>
+          </div>
+        </div>
+      `);
+      $('mgQuit').onclick = ()=>{ active=false; cfg._finish?.(cfg.onLose); };
+    }
+
+    render();
+
+    function step(dt){
+      if(!active) return;
+      t += dt*speed;
+      const x = (Math.sin(t)*0.5+0.5) * 100; // percent
+      const marker = overlay.querySelector('#marker');
+      if(marker) marker.style.left = `calc(${x}% - 4px)`;
+
+      if(justPressed.has(' ') || justPressed.has('Spacebar')){
+        blip('square', 420, .04, .045);
+        const inGreen = x > 42 && x < 58;
+        if(inGreen){ successes++; toast('Nice timing!'); blip('sine', 760, .05, .05); }
+        else { toast('Too early/late…'); blip('square', 130, .06, .04); }
+        round++;
+        if(round>rounds){
+          active=false;
+          if(successes>=2) cfg._finish?.(cfg.onWin); else cfg._finish?.(cfg.onLose);
+          return;
+        }
+        // slightly change rhythm each round
+        speed *= 1.05;
+        t += game.rng()*1.2;
+        render();
+      }
+    }
+
+    game.battle = { kind:'minigame', step };
+  }
+
+  function miniFocus(cfg){
+    // Quick memory grid: show sequence then hide and click
+    const N = 6;
+    const targetLen = 4 + cfg.difficulty;
+    const grid = Array.from({length:N}, (_,i)=>i);
+    const seq = [];
+    for(let i=0;i<targetLen;i++) seq.push(grid[Math.floor(game.rng()*grid.length)]);
+
+    let phase = 'show'; // show -> input
+    let showT = 1.35 + cfg.difficulty*0.15;
+    let idx = 0;
+    let ok = true;
+
+    function render(){
+      openOverlay(`
+        <div class="panel-glass rounded-2xl p-5 w-[min(820px,96vw)]">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-white text-2xl font-bold">Focus Check</div>
+              <div class="text-slate-300 text-sm">Memorize the flashing tiles. Then click in order.</div>
+            </div>
+            <div class="text-sm text-slate-200">${phase==='show'?'Memorize':'Input'} • Step <span class="font-semibold">${idx+1}</span> / ${targetLen}</div>
+          </div>
+          <div class="mt-4 grid grid-cols-3 gap-3">
+            ${grid.map(i=>`<button data-tile="${i}" class="tile btn h-20 rounded-xl border ${phase==='show'?'bg-white/5 border-white/10':'bg-black/30 hover:bg-white/10 border-white/10'} text-white"></button>`).join('')}
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <div class="text-xs text-slate-400">Win: weaken the boss before the fight.</div>
+            <button id="mgQuit" class="btn px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 text-sm">Give up</button>
+          </div>
+        </div>
+      `);
+      $('mgQuit').onclick = ()=>{ cfg._finish?.(cfg.onLose); };
+
+      overlay.querySelectorAll('[data-tile]').forEach(btn => {
+        btn.textContent = '';
+        btn.onclick = () => {
+          if(phase!=='input') return;
+          const t = +btn.getAttribute('data-tile');
+          const want = seq[idx];
+          btn.classList.add('shake');
+          setTimeout(()=>btn.classList.remove('shake'), 220);
+          if(t===want){
+            blip('sine', 740, .05, .055);
+            btn.style.background = 'rgba(34,197,94,.20)';
+            idx++;
+            if(idx>=targetLen){ cfg._finish?.(cfg.onWin); return; }
+          } else {
+            ok=false;
+            blip('square', 120, .08, .05);
+            cfg._finish?.(cfg.onLose);
+          }
+        };
+      });
+
+      if(phase==='show'){
+        // flash sequence
+        const tiles = [...overlay.querySelectorAll('[data-tile]')];
+        let i=0;
+        const interval = setInterval(()=>{
+          if(phase!=='show') { clearInterval(interval); return; }
+          tiles.forEach(t=>t.style.background='rgba(255,255,255,.05)');
+          const idxTile = seq[i];
+          const el = tiles.find(t => +t.getAttribute('data-tile')===idxTile);
+          if(el){
+            el.style.background='rgba(56,189,248,.22)';
+            el.classList.add('pulseGlow');
+            setTimeout(()=>el.classList.remove('pulseGlow'), 180);
+          }
+          blip('sine', 520 + i*40, .03, .03);
+          i++;
+          if(i>=seq.length){
+            clearInterval(interval);
+          }
+        }, 240);
+      }
+    }
+
+    function step(dt){
+      if(phase==='show'){
+        showT -= dt;
+        if(showT<=0){
+          phase='input';
+          idx=0;
+          render();
+        }
+      }
+    }
+
+    render();
+    game.battle = { kind:'minigame', step };
+  }
+
+  function grantItemDrop(force=null){
+    // reward variety
+    const r = game.rng();
+    let item = force;
+    if(!item){
+      if(r<0.32) item='energy';
+      else if(r<0.52) item='notebook';
+      else if(r<0.72) item='pencil';
+      else item='guide';
+    }
+    if(item==='hallpass'){
+      game.player.hallPass = (game.player.hallPass||0)+1;
+    } else {
+      game.player.inv[item] = (game.player.inv[item]||0) + 1;
+    }
+    toast(`Found: ${ITEM_DB[item].name}`);
+    blip('triangle', 720, .06, .05);
+  }
+
+  function startBattle(enemy, opts={}){
+    setState('battle');
+    // End minigame if active
+    if(game.battle && game.battle.kind==='minigame') game.battle = null;
+
+    // Enemy tuned with difficulty
+    const d = DIFFICULTIES[game.difficulty];
+    enemy.atk = Math.floor(enemy.atk * d.dmgMult);
+
+    const ctx = {
+      enemy,
+      log: [],
+      turn: 'player',
+      fled: false,
+      done: false,
+      onWin: opts.onWin || (()=>{}),
+      onLose: opts.onLose || (()=>{}),
+    };
+    game.battle = ctx;
+
+    function skipTurnRecover(){
+      if(ctx.done) return;
+      if(ctx.turn!=='player') return;
+      if(game.player.buffs.stunTurns>0) return;
+      const p = game.player;
+      const gain = Math.max(8, Math.floor(p.maxSta * 0.22));
+      p.sta = Math.min(p.maxSta, p.sta + gain);
+      ctx.log.push(`You catch your breath. (+${gain} stamina)`);
+      blip('sine', 520, .06, .04);
+      ctx.turn = 'enemy';
+      tickBattle();
+    }
+
+    function render(){
+      const p = game.player;
+      const e = ctx.enemy;
+      const skills = [SKILL_DB.strike, SKILL_DB.shield, SKILL_DB.dash, SKILL_DB.escape];
+      const invKeys = Object.keys(p.inv).filter(k=>p.inv[k]>0);
+
+      openOverlay(`
+        <div class="w-[min(1020px,96vw)]">
+          <div class="panel-glass rounded-2xl p-5 md:p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-xs text-slate-400">Battle</div>
+                <div class="text-white text-2xl font-extrabold">${escapeHtml(e.name)}</div>
+                <div class="mt-1 text-sm text-slate-300">Tier <span class="text-white font-semibold">${e.tier||1}</span> • ${e.boss?'<span class="text-rose-200">Boss</span>':'<span class="text-slate-300">Encounter</span>'}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-400">Your Plan</div>
+                <div class="text-sm text-slate-200">Use skills (<span class="mono">1–4</span>) or items. Escape is risky.</div>
+              </div>
+            </div>
+
+            <div class="mt-4 grid md:grid-cols-2 gap-3">
+              <div class="rounded-xl bg-black/30 border border-white/10 p-3">
+                <div class="flex items-center justify-between">
+                  <div class="text-white font-semibold">Eric</div>
+                  <div class="text-xs text-slate-400">Shield hits: <span class="text-slate-200">${p.buffs.shieldHits||0}</span> • Dodge: <span class="text-slate-200">${Math.round((p.buffs.dodge||0)*100)}%</span></div>
+                </div>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                  <div class="rounded-lg bg-white/5 border border-white/10 p-2">
+                    <div class="text-[11px] text-slate-300">HP</div>
+                    <div class="kbar mt-1 h-2.5 rounded bg-black/30 overflow-hidden"><div class="h-full bg-emerald-400" style="width:${Math.round((p.hp/p.maxHP)*100)}%"></div></div>
+                    <div class="mt-1 text-[11px] text-slate-300">${Math.floor(p.hp)}/${p.maxHP}</div>
+                  </div>
+                  <div class="rounded-lg bg-white/5 border border-white/10 p-2">
+                    <div class="text-[11px] text-slate-300">Stamina</div>
+                    <div class="kbar mt-1 h-2.5 rounded bg-black/30 overflow-hidden"><div class="h-full bg-sky-400" style="width:${Math.round((p.sta/p.maxSta)*100)}%"></div></div>
+                    <div class="mt-1 text-[11px] text-slate-300">${Math.floor(p.sta)}/${p.maxSta}</div>
+                  </div>
+                </div>
+                <div class="mt-2 text-xs text-slate-400">ATK ${p.atk + p.buffs.atk} • DEF ${p.def - (p.buffs.rumorTurns>0?2:0)} • SPD ${p.spd + (p.buffs.dashTurns>0?2:0)}</div>
+              </div>
+
+              <div class="rounded-xl bg-black/30 border border-white/10 p-3">
+                <div class="flex items-center justify-between">
+                  <div class="text-white font-semibold">${escapeHtml(e.name)}</div>
+                  <div class="text-xs text-slate-400">ATK ${e.atk} • DEF ${e.def} • SPD ${e.spd}</div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-[11px] text-slate-300">HP</div>
+                  <div class="kbar mt-1 h-3 rounded bg-black/30 overflow-hidden"><div class="h-full bg-rose-400" style="width:${Math.round((e.hp/e.maxHP)*100)}%"></div></div>
+                  <div class="mt-1 text-[11px] text-slate-300">${Math.floor(e.hp)}/${e.maxHP}</div>
+                </div>
+
+                <div class="mt-3 text-xs text-slate-300">Combat log</div>
+                <div class="mt-1 h-28 overflow-auto rounded-lg bg-black/30 border border-white/10 p-2 text-xs text-slate-200" id="battleLog">${ctx.log.slice(-6).map(l=>`<div>• ${escapeHtml(l)}</div>`).join('')}</div>
+              </div>
+            </div>
+
+            <div class="mt-4 grid md:grid-cols-2 gap-3">
+              <div class="rounded-xl bg-white/5 border border-white/10 p-3">
+                <div class="text-white font-semibold">Skills</div>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                  ${skills.map((s,i)=>{
+                    const can = game.player.sta >= s.sta && game.player.buffs.stunTurns<=0;
+                    return `<button data-skill="${i}" class="btn px-3 py-3 rounded-xl border ${can?'bg-sky-500/12 hover:bg-sky-500/18 border-sky-400/20 text-slate-50':'bg-white/5 border-white/10 text-slate-500'}">
+                      <div class="flex items-center justify-between">
+                        <div class="font-semibold">${escapeHtml(s.name)}</div>
+                        <div class="text-xs mono">${escapeHtml(s.key)}</div>
+                      </div>
+                      <div class="mt-1 text-xs ${can?'text-slate-200':'text-slate-500'}">STA ${s.sta} • ${escapeHtml(s.desc)}</div>
+                    </button>`;
+                  }).join('')}
+                </div>
+                <div class="mt-2 text-xs text-slate-400">If you’re stunned, you lose your turn.</div>
+              </div>
+
+              <div class="rounded-xl bg-white/5 border border-white/10 p-3">
+                <div class="flex items-center justify-between">
+                  <div class="text-white font-semibold">Inventory</div>
+                  <div class="text-xs text-slate-400">Hall Pass: <span class="text-slate-200">${game.player.hallPass||0}</span></div>
+                </div>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                  ${invKeys.length? invKeys.map(k=>{
+                    const it = ITEM_DB[k];
+                    return `<button data-item="${k}" class="btn px-3 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100">
+                      <div class="flex items-center justify-between">
+                        <div class="font-semibold">${escapeHtml(it.name)}</div>
+                        <div class="text-xs text-slate-300">x${game.player.inv[k]}</div>
+                      </div>
+                      <div class="mt-1 text-xs text-slate-300">${escapeHtml(it.desc)}</div>
+                    </button>`;
+                  }).join('') : `<div class="col-span-2 text-sm text-slate-400">No items left…</div>`}
+                </div>
+
+                <div class="mt-3 flex items-center justify-between">
+                  <div class="text-xs text-slate-400">Combo <span class="text-amber-200 font-semibold">x${game.combo}</span></div>
+                  <button id="battlePass" class="btn px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 text-sm">Use Hall Pass</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <div class="text-xs text-slate-400">${ctx.turn==='player'?'Your turn':'Enemy turn'}${game.player.buffs.stunTurns>0?' • <span class="text-rose-200">Stunned</span>':''}</div>
+              <div class="flex gap-2">
+                <button id="battleSkip" class="btn px-4 py-3 rounded-xl bg-emerald-500/12 hover:bg-emerald-500/18 border border-emerald-400/20 text-emerald-50 font-semibold">Skip Turn (+Stamina) <span class="text-emerald-200/70 mono">(0)</span></button>
+                <button id="battleFlee" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Try Escape</button>
+                <button id="battleEnd" class="btn px-4 py-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/20 border border-rose-400/20 text-rose-50 font-semibold">Give Up</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+
+      overlay.querySelectorAll('[data-skill]').forEach(btn=>{
+        btn.onclick = ()=>{
+          const idx = +btn.getAttribute('data-skill');
+          performSkill(idx);
+        };
+      });
+      overlay.querySelectorAll('[data-item]').forEach(btn=>{
+        btn.onclick = ()=>{
+          if(ctx.done) return;
+          if(ctx.turn!=='player') return;
+          const k = btn.getAttribute('data-item');
+          if(game.player.inv[k]<=0) return;
+          game.player.inv[k]--;
+          ITEM_DB[k].use(game);
+          ctx.log.push(`Used ${ITEM_DB[k].name}.`);
+          // using items consumes turn
+          ctx.turn='enemy';
+          tickBattle();
+        };
+      });
+      $('battleEnd').onclick = ()=>{ endBattle(false, 'You gave up.'); };
+      $('battleFlee').onclick = ()=>{ performSkill(3); };
+      $('battleSkip').onclick = ()=>{ skipTurnRecover(); };
+      $('battlePass').onclick = ()=>{
+        if((game.player.hallPass||0)<=0) return toast('No Hall Pass left.');
+        game.player.hallPass--;
+        ctx.fled = true;
+        ctx.log.push('Hall Pass! You slip away.');
+        blip('sine', 880, .06, .06);
+        endBattle(true, 'Escaped with a Hall Pass.');
+      };
+    }
+
+    function endBattle(win, reason){
+      if(ctx.done) return;
+      ctx.done=true;
+      ctx.log.push(reason);
+      render();
+
+      // add a small grace period after any battle
+      game.encounterCd = Math.max(game.encounterCd || 0, ctx.enemy?.boss ? 10.0 : 7.5);
+
+      setTimeout(()=>{
+        if(win){
+          // rewards
+          const xp = Math.floor(ctx.enemy.xp * DIFFICULTIES[game.difficulty].xpMult);
+          const foc = ctx.enemy.focus;
+          game.player.xp += xp;
+          game.player.focus += foc;
+          game.score += Math.floor(40 + xp*1.4 + foc*1.1) * game.combo;
+          game.combo = Math.min(12, game.combo + 1);
+          game.comboBest = Math.max(game.comboBest, game.combo);
+          storage.set('comboBest', game.comboBest);
+
+          toast(`Victory! +${xp} XP, +${foc} Focus`);
+          // chance for item drop
+          if(game.rng() < (ctx.enemy.boss?0.85:0.35)) grantItemDrop();
+
+          // level ups
+          while(game.player.xp >= xpToNext(game.player.level)){
+            game.player.xp -= xpToNext(game.player.level);
+            game.player.level++;
+            game.player.maxHP += 8;
+            game.player.maxSta += 5;
+            game.player.atk += 2;
+            game.player.def += 1;
+            game.player.spd += 1;
+            game.player.hp = Math.min(game.player.maxHP, game.player.hp + 18);
+            game.player.sta = Math.min(game.player.maxSta, game.player.sta + 14);
+            toast(`Level up! Now Lv ${game.player.level}`);
+            blip('sine', 980, .09, .06);
+          }
+
+          ctx.onWin?.();
+          game.battle = null;
+          setState('playing');
+        } else {
+          // defeat
+          game.combo = 1;
+          ctx.onLose?.();
+          game.battle = null;
+          gameOver('Overwhelmed', 'You ran out of stamina and hope.');
+        }
+      }, 380);
+    }
+
+    function tickBattle(){
+      // Player buffs decay at start of enemy turn
+      const p = game.player;
+      if(ctx.done) return;
+
+      // If stunned, skip player turn
+      if(ctx.turn==='player' && p.buffs.stunTurns>0){
+        ctx.log.push('You are stunned and lose your turn!');
+        p.buffs.stunTurns = Math.max(0, p.buffs.stunTurns-1);
+        ctx.turn='enemy';
+      }
+
+      if(ctx.turn==='enemy'){
+        // enemy acts with dodge/shield
+        // shield blocks hits
+        const dodgeChance = clamp(p.buffs.dodge||0, 0, 0.55);
+        const dodged = game.rng() < dodgeChance;
+
+        if(p.buffs.shieldTurns>0) p.buffs.shieldTurns--;
+        if(p.buffs.atkTurns>0){ p.buffs.atkTurns--; if(p.buffs.atkTurns<=0) p.buffs.atk=0; }
+        if(p.buffs.dashTurns>0){ p.buffs.dashTurns--; if(p.buffs.dashTurns<=0){ p.buffs.dodge = Math.max(0, p.buffs.dodge-0.25); } }
+        if(p.buffs.rumorTurns>0) p.buffs.rumorTurns--;
+
+        // enemy tries to hit
+        if(dodged){
+          ctx.log.push('You dodged!');
+          blip('sine', 920, .04, .04);
+        } else if(p.buffs.shieldHits>0){
+          p.buffs.shieldHits--;
+          ctx.log.push('Study Shield absorbs the hit!');
+          blip('triangle', 380, .05, .05);
+        } else {
+          // Temporarily apply rumor debuff
+          const oldDef = p.def;
+          if(p.buffs.rumorTurns>0) p.def = Math.max(0, p.def-2);
+          enemyMove(game, ctx);
+          p.def = oldDef;
+        }
+
+        if(p.hp<=0){
+          endBattle(false, 'You collapsed.');
+          return;
+        }
+        ctx.turn='player';
+      }
+
+      render();
+
+      // Flee success ends immediately
+      if(ctx.fled){
+        endBattle(true, 'You slipped away.');
+        return;
+      }
+    }
+
+    function performSkill(idx){
+      if(ctx.done) return;
+      if(ctx.turn!=='player') return;
+      const skills = [SKILL_DB.strike, SKILL_DB.shield, SKILL_DB.dash, SKILL_DB.escape];
+      const s = skills[idx];
+      if(!s) return;
+      if(game.player.buffs.stunTurns>0) return;
+      if(game.player.sta < s.sta){ toast('Not enough stamina.'); blip('square', 110, .06, .04); return; }
+      s.act(game, ctx);
+      // resolve immediate effects
+      if(ctx.enemy.hp<=0){
+        endBattle(true, `${ctx.enemy.name} defeated.`);
+        return;
+      }
+      ctx.turn='enemy';
+      tickBattle();
+    }
+
+    // keyboard shortcuts
+    ctx.handleKeys = () => {
+      if(game.state!=='battle') return;
+      const map = { '1':0, '2':1, '3':2, '4':3 };
+      for(const k of Object.keys(map)){
+        if(justPressed.has(k)) performSkill(map[k]);
+      }
+      // Skip / recover stamina
+      if(justPressed.has('0')) skipTurnRecover();
+    };
+
+    // initial log
+    ctx.log.push(`The air warps… ${enemy.name} appears.`);
+    render();
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#39;');
+  }
+
+  // --- Teacher chase and detention ---
+  function teacherUpdate(dt){
+    if(game.state!=='playing') return;
+
+    // Teacher speed ramps with time + credits + detentions
+    const d = DIFFICULTIES[game.difficulty];
+    const ramp = (game.elapsed/120) + game.player.credits*0.65 + game.player.detentions*0.75 + (game.flags.teacherEnraged?1.2:0);
+    game.teacher.speed = d.teacherBase + ramp*d.teacherGrow;
+
+    // If player in library, teacher can't enter; path to closest library door neighbor outside
+    const pCell = worldToCell(game.player.pos);
+    const tCell = worldToCell(game.teacher.pos);
+
+    let goal = pCell;
+    if(game.curZone===Z.LIB){
+      // choose a door-adjacent outside tile
+      let best=null, bestDist=Infinity;
+      const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+      for(const door of game.map.libDoors){
+        for(const [dx,dy] of dirs){
+          const nx=door.x+dx, ny=door.y+dy;
+          if(!inBounds(nx,ny)) continue;
+          if(game.map.grid[ny][nx]!==WALK) continue;
+          if(game.map.zone[ny][nx]===Z.LIB) continue;
+          const d2 = Math.abs(nx-tCell.x)+Math.abs(ny-tCell.y);
+          if(d2<bestDist){ bestDist=d2; best={x:nx,y:ny}; }
+        }
+      }
+      if(best) goal = best;
+    }
+
+    game.teacher.repathT -= dt;
+    if(game.teacher.repathT<=0 || !game.teacher.path || game.teacher.pathIdx>=game.teacher.path.length){
+      game.teacher.repathT = 0.45;
+      const path = astar(game.map, tCell, goal);
+      game.teacher.path = path;
+      game.teacher.pathIdx = 0;
+    }
+
+    // Follow path
+    if(game.teacher.path && game.teacher.path.length>1){
+      const idx = Math.min(game.teacher.pathIdx+1, game.teacher.path.length-1);
+      const node = game.teacher.path[idx];
+      const nodePos = cellToWorld(node.x,node.y);
+      const dir = nodePos.clone().sub(game.teacher.pos);
+      dir.y = 0;
+      const dist = dir.length();
+      if(dist<0.05){
+        game.teacher.pathIdx = idx;
+      } else {
+        dir.normalize();
+        const speed = game.teacher.speed;
+        game.teacher.pos.addScaledVector(dir, speed*dt);
+        // Keep out of library zone just in case
+        const tC2 = worldToCell(game.teacher.pos);
+        if(inBounds(tC2.x,tC2.y) && game.map.zone[tC2.y][tC2.x]===Z.LIB){
+          // push back
+          game.teacher.pos.addScaledVector(dir, -0.25);
+        }
+      }
+    }
+
+    // Catch check
+    const dx = game.teacher.pos.x - game.player.pos.x;
+    const dz = game.teacher.pos.z - game.player.pos.z;
+    const dist = Math.sqrt(dx*dx+dz*dz);
+
+    const pressure = clamp(1 - dist/12, 0, 1);
+    vignette.style.opacity = String( clamp(pressure*0.9, 0, 0.85) );
+    if(pressure>0.35 && game.curZone!==Z.LIB) game.teacher.lastSeen += dt;
+
+    if(dist < 1.05 && game.curZone!==Z.LIB){
+      // Try auto hall pass if available
+      if((game.player.hallPass||0) > 0){
+        game.player.hallPass--;
+        toast('Hall Pass! You slip away from detention.');
+        blip('sine', 920, .08, .06);
+        // Teleport teacher slightly away
+        game.teacher.pos.add(new THREE.Vector3((game.rng()-0.5)*4,0,(game.rng()-0.5)*4));
+        return;
+      }
+      startDetention();
+    }
+  }
+
+  function startDetention(){
+    setState('detention');
+    game.player.detentions++;
+    game.combo = 1;
+    // time penalty
+    game.timeLeft = Math.max(0, game.timeLeft - 35);
+    // steal one item sometimes
+    const stealables = Object.keys(game.player.inv).filter(k=>game.player.inv[k]>0);
+    if(stealables.length && game.rng()<0.65){
+      const k = stealables[Math.floor(game.rng()*stealables.length)];
+      game.player.inv[k]--;
+      toast(`Detention: lost 1 ${ITEM_DB[k]?.name || k}`);
+    } else {
+      toast('Detention: time lost.');
+    }
+    blip('square', 90, .10, .05);
+
+    startDialogue([
+      { speaker:'The Teacher', text:'Detention. You thought you could run forever?' },
+      { speaker:'Narrator', text:'You lose time and momentum. The school feels tighter.' }
+    ], [
+      { label:'Back to the Library', act:()=>{
+        // teleport to library
+        const start = cellToWorld(game.map.rooms.library.x+2, game.map.rooms.library.y+2);
+        game.player.pos.copy(start);
+        // move teacher away
+        game.teacher.pos.copy(cellToWorld(Math.floor(GRID_W/2), Math.floor(GRID_H/2)));
+        setState('playing');
+      } }
+    ]);
+  }
+
+  function gameOver(title, subtitle){
+    setState('gameover');
+    vignette.style.opacity = '0';
+    const score = Math.floor(game.score);
+    const best = Math.max(game.bestScore, score);
+    game.bestScore = best;
+    storage.set('bestScore', best);
+
+    openOverlay(`
+      <div class="panel-glass rounded-2xl p-6 w-[min(920px,96vw)]">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="text-rose-200 text-sm">Game Over</div>
+            <div class="text-white text-3xl font-extrabold">${escapeHtml(title)}</div>
+            <div class="mt-1 text-slate-300">${escapeHtml(subtitle)}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-slate-300 text-sm">Score</div>
+            <div class="text-white text-3xl font-extrabold">${score}</div>
+            <div class="text-slate-400 text-xs">Best: ${best}</div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid md:grid-cols-3 gap-3">
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <div class="text-white font-semibold">Run stats</div>
+            <div class="mt-2 text-sm text-slate-300">Level: <span class="text-white font-semibold">${game.player.level}</span></div>
+            <div class="text-sm text-slate-300">Credits: <span class="text-white font-semibold">${game.player.credits}</span>/3</div>
+            <div class="text-sm text-slate-300">Knowledge: <span class="text-white font-semibold">${game.player.knowledge}</span></div>
+            <div class="text-sm text-slate-300">Detentions: <span class="text-white font-semibold">${game.player.detentions}</span></div>
+            <div class="text-sm text-slate-300">Combo best: <span class="text-amber-200 font-semibold">x${game.comboBest}</span></div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <div class="text-white font-semibold">One more try</div>
+            <div class="mt-2 text-sm text-slate-300">Your layout changes every run. Learn safe routes, farm Focus, then push the objective.</div>
+            <div class="mt-2 text-xs text-slate-400">Tip: Library is a safe zone. Teacher cannot enter.</div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <div class="text-white font-semibold">Actions</div>
+            <div class="mt-2 grid grid-cols-2 gap-2">
+              <button id="goRetry" class="btn px-4 py-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/25 border border-emerald-400/25 text-emerald-50 font-semibold">Retry (R)</button>
+              <button id="goTitle" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Title</button>
+              <button id="goHard" class="btn px-4 py-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/20 border border-rose-400/20 text-rose-50 font-semibold">Try Hard</button>
+              <button id="goSeed" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">New Seed</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+    $('goRetry').onclick = ()=>{ resetRun(game.map.seed); setState('playing'); };
+    $('goTitle').onclick = ()=>{ setState('menu'); showTitle(); };
+    $('goHard').onclick = ()=>{ game.difficulty='hard'; resetRun(); setState('playing'); };
+    $('goSeed').onclick = ()=>{ resetRun(); setState('playing'); };
+  }
+
+  function finishRun(){
+    // Determine ending based on knowledge and detentions
+    game.flags.ended = true;
+    const p = game.player;
+    const timeBonus = Math.floor(game.timeLeft*2);
+    const baseScore = Math.floor(game.score + timeBonus + p.knowledge*120 - p.detentions*90);
+    game.score = baseScore;
+
+    let ending = 'Barely Survived';
+    let detail = 'You made it out… but your grade is a coin flip.';
+
+    const knowledgeNeed = 6 + Math.floor(p.detentions*1.5);
+    if(game.timeLeft<=0){
+      ending = 'Failed Completely';
+      detail = 'The final exam started without you. The bell echoes forever.';
+    } else if(p.knowledge >= knowledgeNeed && p.detentions<=2){
+      ending = 'Passed the Class';
+      detail = 'Against the nightmare, you proved you learned. The school releases you.';
+    } else if(p.knowledge >= knowledgeNeed-2){
+      ending = 'Barely Passed';
+      detail = 'You scrape through with a shaky grade… and a new fear of hallways.';
+    } else {
+      ending = 'Failed Completely';
+      detail = 'You survived the monsters, but not the material.';
+    }
+
+    // Persist best
+    const best = Math.max(storage.get('bestScore', 0), Math.floor(game.score));
+    storage.set('bestScore', best);
+    const bestEnding = storage.get('bestEnding', null);
+    const rank = { 'Passed the Class':3, 'Barely Passed':2, 'Barely Survived':1, 'Failed Completely':0 };
+    if(bestEnding==null || rank[ending] > (rank[bestEnding]??-1)) storage.set('bestEnding', ending);
+
+    setState('victory');
+    vignette.style.opacity = '0';
+
+    openOverlay(`
+      <div class="panel-glass rounded-2xl p-6 w-[min(980px,96vw)]">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="text-emerald-200 text-sm">Ending</div>
+            <div class="text-white text-3xl font-extrabold">${escapeHtml(ending)}</div>
+            <div class="mt-1 text-slate-300">${escapeHtml(detail)}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-slate-300 text-sm">Final Score</div>
+            <div class="text-white text-3xl font-extrabold">${Math.floor(game.score)}</div>
+            <div class="text-slate-400 text-xs">Time bonus: +${timeBonus}</div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid md:grid-cols-3 gap-3">
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <div class="text-white font-semibold">Report</div>
+            <div class="mt-2 text-sm text-slate-300">Level: <span class="text-white font-semibold">${p.level}</span></div>
+            <div class="text-sm text-slate-300">Knowledge: <span class="text-white font-semibold">${p.knowledge}</span> <span class="text-slate-400">(needed ~${6+Math.floor(p.detentions*1.5)})</span></div>
+            <div class="text-sm text-slate-300">Detentions: <span class="text-white font-semibold">${p.detentions}</span></div>
+            <div class="text-sm text-slate-300">Credits: <span class="text-white font-semibold">${p.credits}</span>/3</div>
+            <div class="text-sm text-slate-300">Focus earned: <span class="text-white font-semibold">${p.focus}</span></div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <div class="text-white font-semibold">Replay hooks</div>
+            <div class="mt-2 text-sm text-slate-300">Try new routes, aim for higher combo, avoid detentions, and stack Knowledge for a clean pass.</div>
+            <div class="mt-2 text-xs text-slate-400">Hard mode is shorter and more aggressive.</div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+            <div class="text-white font-semibold">Actions</div>
+            <div class="mt-2 grid grid-cols-2 gap-2">
+              <button id="vRetry" class="btn px-4 py-3 rounded-xl bg-sky-500/20 hover:bg-sky-500/25 border border-sky-400/25 text-white font-semibold">New Run</button>
+              <button id="vSame" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Same Seed</button>
+              <button id="vHard" class="btn px-4 py-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/20 border border-rose-400/20 text-rose-50 font-semibold">Hard Mode</button>
+              <button id="vTitle" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Title</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+
+    $('vRetry').onclick = ()=>{ resetRun(); setState('playing'); };
+    $('vSame').onclick = ()=>{ resetRun(game.map.seed); setState('playing'); };
+    $('vHard').onclick = ()=>{ game.difficulty='hard'; resetRun(); setState('playing'); };
+    $('vTitle').onclick = ()=>{ setState('menu'); showTitle(); };
+  }
+
+  // --- Library shop ---
+  function tryInteract(){
+    if(game.state!=='playing') return;
+    if(game.curZone!==Z.LIB) return toast('Nothing to interact with here.');
+    // Shop
+    setState('shop');
+    const p = game.player;
+
+    const shopItems = [
+      { key:'energy', price: 18 },
+      { key:'pencil', price: 14 },
+      { key:'notebook', price: 22 },
+      { key:'guide', price: 30 },
+    ];
+
+    const render = () => {
+      openOverlay(`
+        <div class="panel-glass rounded-2xl p-6 w-[min(980px,96vw)]">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="text-emerald-200 text-sm">Safe Zone</div>
+              <div class="text-white text-3xl font-extrabold">Library</div>
+              <div class="mt-1 text-slate-300">Recover HP/stamina and spend Focus on study supplies.</div>
+            </div>
+            <div class="text-right">
+              <div class="text-slate-300 text-sm">Your Focus</div>
+              <div class="text-white text-3xl font-extrabold">${p.focus}</div>
+              <div class="text-slate-400 text-xs">Knowledge: ${p.knowledge} • Hall Pass: ${p.hallPass||0}</div>
+            </div>
+          </div>
+
+          <div class="mt-5 grid md:grid-cols-3 gap-3">
+            <div class="rounded-xl bg-white/5 border border-white/10 p-4 md:col-span-2">
+              <div class="text-white font-semibold">Shop</div>
+              <div class="mt-2 grid sm:grid-cols-2 gap-2">
+                ${shopItems.map(s=>{
+                  const it = ITEM_DB[s.key];
+                  const can = p.focus >= s.price;
+                  return `<button data-buy="${s.key}" class="btn px-4 py-4 rounded-xl border ${can?'bg-sky-500/12 hover:bg-sky-500/18 border-sky-400/20 text-white':'bg-white/5 border-white/10 text-slate-500'}">
+                    <div class="flex items-center justify-between">
+                      <div class="font-semibold">${escapeHtml(it.name)}</div>
+                      <div class="text-sm">${s.price} <span class="text-slate-400">Focus</span></div>
+                    </div>
+                    <div class="mt-1 text-xs ${can?'text-slate-200':'text-slate-500'}">${escapeHtml(it.desc)}</div>
+                  </button>`;
+                }).join('')}
+              </div>
+
+              <div class="mt-3 flex gap-2">
+                <button id="buyPass" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Buy Hall Pass (28 Focus)</button>
+                <button id="buyHeal" class="btn px-4 py-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/20 border border-emerald-400/20 text-emerald-50 font-semibold">Rest (Free)</button>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-white/5 border border-white/10 p-4">
+              <div class="text-white font-semibold">Inventory</div>
+              <div class="mt-2 text-sm text-slate-300 space-y-1">
+                ${Object.keys(p.inv).map(k=>`<div class="flex justify-between"><span>${escapeHtml(ITEM_DB[k].name)}</span><span class="text-slate-200 font-semibold">x${p.inv[k]}</span></div>`).join('')}
+              </div>
+              <div class="mt-3 text-xs text-slate-400">Press <span class="mono">E</span> again to exit.</div>
+
+              <div class="mt-3 rounded-lg bg-black/30 border border-white/10 p-3">
+                <div class="text-xs text-slate-400">Hint</div>
+                <div class="text-sm text-slate-200">Notebooks and Study Guides raise Knowledge, improving your ending.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 flex items-center justify-between">
+            <div class="text-xs text-slate-400">Teacher cannot enter the Library. Use it to reset pressure.</div>
+            <button id="shopExit" class="btn px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-100 font-semibold">Exit</button>
+          </div>
+        </div>
+      `);
+
+      overlay.querySelectorAll('[data-buy]').forEach(btn => {
+        btn.onclick = () => {
+          const k = btn.getAttribute('data-buy');
+          const price = shopItems.find(s=>s.key===k)?.price ?? 999;
+          if(p.focus < price) { toast('Not enough Focus.'); blip('square', 120, .06, .04); return; }
+          p.focus -= price;
+          if(k==='hallpass') p.hallPass = (p.hallPass||0)+1;
+          else p.inv[k] = (p.inv[k]||0)+1;
+          toast(`Bought: ${ITEM_DB[k].name}`);
+          blip('sine', 720, .05, .05);
+          render();
+        };
+      });
+
+      $('buyPass').onclick = () => {
+        if(p.focus < 28) return toast('Not enough Focus.');
+        p.focus -= 28;
+        p.hallPass = (p.hallPass||0) + 1;
+        toast('Bought: Hall Pass');
+        blip('triangle', 820, .06, .05);
+        render();
+      };
+      $('buyHeal').onclick = () => {
+        p.hp = p.maxHP;
+        p.sta = p.maxSta;
+        toast('Recovered to full.');
+        blip('sine', 640, .06, .04);
+        render();
+      };
+      $('shopExit').onclick = () => { setState('playing'); };
+    };
+
+    render();
+  }
+
+  // --- HUD updates ---
+  function updateHUD(){
+    const p = game.player;
+    if(!p) return;
+
+    $('zoneLabel').textContent = game.curZone;
+    $('objectiveLabel').textContent = game.objective;
+
+    $('hpText').textContent = Math.floor(p.hp);
+    $('hpMaxText').textContent = p.maxHP;
+    $('hpBar').style.width = `${Math.round((p.hp/p.maxHP)*100)}%`;
+    $('staText').textContent = Math.floor(p.sta);
+    $('staMaxText').textContent = p.maxSta;
+    $('staBar').style.width = `${Math.round((p.sta/p.maxSta)*100)}%`;
+
+    $('lvlText').textContent = p.level;
+    $('xpText').textContent = Math.floor(p.xp);
+    $('xpNextText').textContent = xpToNext(p.level);
+    $('atkText').textContent = p.atk;
+    $('defText').textContent = p.def;
+    $('spdText').textContent = p.spd;
+
+    $('timerText').textContent = fmtTime(game.timeLeft);
+    $('creditsText').textContent = p.credits;
+    $('focusText').textContent = p.focus;
+    $('detentionText').textContent = p.detentions;
+
+    const dx = game.teacher.pos.x - p.pos.x;
+    const dz = game.teacher.pos.z - p.pos.z;
+    const dist = Math.sqrt(dx*dx+dz*dz);
+    const pressure = clamp(1 - dist/12, 0, 1);
+    $('pressureText').textContent = game.curZone===Z.LIB ? 'Safe' : `${Math.round(pressure*100)}%`;
+
+    $('comboText').textContent = `x${game.combo}`;
+    $('scoreText').textContent = Math.floor(game.score);
+    $('bestText').textContent = game.bestScore;
+
+    // minimap
+    drawMinimap();
+  }
+
+  function drawMinimap(){
+    const canvas = $('minimap');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+
+    const scale = Math.min(w/GRID_W, h/GRID_H);
+    const ox = (w - GRID_W*scale)/2;
+    const oy = (h - GRID_H*scale)/2;
+
+    const explored = game.map.explored;
+    for(let y=0;y<GRID_H;y++) for(let x=0;x<GRID_W;x++){
+      if(!explored[y][x]) continue;
+      const cell = game.map.grid[y][x];
+      if(cell===WALL){
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      } else {
+        const z = game.map.zone[y][x];
+        const col = ZCOL[z] ?? ZCOL[Z.HALL];
+        const r = (col>>16)&255, g=(col>>8)&255, b=col&255;
+        ctx.fillStyle = `rgba(${r},${g},${b},0.22)`;
+      }
+      ctx.fillRect(ox + x*scale, oy + y*scale, scale, scale);
+    }
+
+    // player
+    const pc = worldToCell(game.player.pos);
+    ctx.fillStyle = 'rgba(56,189,248,0.95)';
+    ctx.fillRect(ox + pc.x*scale, oy + pc.y*scale, scale, scale);
+
+    // teacher (only if explored nearby)
+    const tc = worldToCell(game.teacher.pos);
+    ctx.fillStyle = 'rgba(255,77,109,0.9)';
+    ctx.fillRect(ox + tc.x*scale, oy + tc.y*scale, scale, scale);
+
+    // border
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeRect(ox, oy, GRID_W*scale, GRID_H*scale);
+  }
+
+  // --- Pickups update ---
+  function updatePickups(dt){
+    // float animation
+    pickupsGroup.children.forEach(o => {
+      o.userData.t = (o.userData.t ?? 0) + dt*2.2;
+      o.position.y = 0.30 + Math.sin(o.userData.t)*0.06;
+      o.rotation.y += dt*1.5;
+    });
+
+    // collect
+    const pC = worldToCell(game.player.pos);
+    for(const p of game.pickups){
+      if(p.taken) continue;
+      if(p.x===pC.x && p.y===pC.y){
+        p.taken=true;
+        // remove mesh
+        const mesh = pickupsGroup.children.find(m => m.userData?.cell?.x===p.x && m.userData?.cell?.y===p.y);
+        if(mesh) pickupsGroup.remove(mesh);
+        if(p.item==='hallpass') game.player.hallPass = (game.player.hallPass||0)+1;
+        else game.player.inv[p.item] = (game.player.inv[p.item]||0) + 1;
+        toast(`Picked up: ${ITEM_DB[p.item]?.name || p.item}`);
+        blip('sine', 760, .06, .05);
+        game.score += 45;
+      }
+    }
+  }
+
+  // --- Main update loop ---
+  let last = performance.now();
+  function tick(now){
+    const dt = Math.min(0.033, (now-last)/1000);
+    last = now;
+
+    // toast timer
+    if(toastTimer>0){
+      toastTimer -= dt*1000;
+      if(toastTimer<=0){ toastInner.classList.add('hidden'); }
+    }
+
+    // key processing
+    if(game.state==='battle' && game.battle?.handleKeys) game.battle.handleKeys();
+
+    // Global shortcuts
+    if(justPressed.has('Escape')){
+      if(game.state==='playing') setState('paused');
+      else if(game.state==='paused') setState('playing');
+    }
+    if(justPressed.has('r') || justPressed.has('R')){
+      resetRun();
+      setState('playing');
+    }
+
+    if(game.state==='menu'){
+      // no updates
+    } else if(game.state==='minigame'){
+      game.battle?.step?.(dt);
+    } else if(game.state==='playing'){
+      game.elapsed += dt;
+      game.timeLeft -= dt;
+      if(game.timeLeft<=0){
+        // if not at ending, fail
+        game.timeLeft = 0;
+        if(!game.flags.ended) gameOver('Failed Completely', 'Time is up. The exam starts without you.');
+      }
+
+      // stamina regen
+      game.player.sta = Math.min(game.player.maxSta, game.player.sta + dt*6.0);
+
+      // movement
+      const dir2 = new THREE.Vector3();
+      const up = keys.has('w') || keys.has('W') || keys.has('ArrowUp');
+      const down = keys.has('s') || keys.has('S') || keys.has('ArrowDown');
+      const left = keys.has('a') || keys.has('A') || keys.has('ArrowLeft');
+      const right = keys.has('d') || keys.has('D') || keys.has('ArrowRight');
+      if(up) dir2.z -= 1;
+      if(down) dir2.z += 1;
+      if(left) dir2.x -= 1;
+      if(right) dir2.x += 1;
+
+      const dash = keys.has('Shift') && game.player.sta>2;
+      const speed = (game.player.spd * 0.42) * (dash?1.55:1.0);
+      if(dash){
+        game.player.sta = Math.max(0, game.player.sta - dt*16);
+      }
+
+      if(dir2.lengthSq()>0){
+        dir2.normalize();
+        const step = dir2.clone().multiplyScalar(speed*dt);
+        const next = game.player.pos.clone().add(step);
+        resolveCollision(next);
+        game.player.pos.copy(next);
+        // face movement
+        const targetRot = Math.atan2(dir2.x, dir2.z);
+        playerMesh.rotation.y += (targetRot - playerMesh.rotation.y) * 0.15;
+      }
+
+      // Interact
+      if(justPressed.has('e') || justPressed.has('E')) tryInteract();
+
+      updateZoneAndTriggers();
+      updatePickups(dt);
+      teacherUpdate(dt);
+
+      // passive score for survival and exploration
+      game.score += dt * (3 + game.combo*0.5);
+
+      // handle low HP feedback
+      const low = game.player.hp / game.player.maxHP;
+      if(low<0.28 && game.curZone!==Z.LIB){ vignette.style.opacity = String(Math.max(parseFloat(vignette.style.opacity||'0'), 0.65)); }
+
+      // teacher pressure drains stamina slightly
+      const dx = game.teacher.pos.x - game.player.pos.x;
+      const dz = game.teacher.pos.z - game.player.pos.z;
+      const dist = Math.sqrt(dx*dx+dz*dz);
+      if(dist<6.5 && game.curZone!==Z.LIB){
+        game.player.sta = Math.max(0, game.player.sta - dt*(3.8 + game.player.detentions*0.5));
+      }
+
+      // If stamina hits 0 near teacher, small HP drain
+      if(game.player.sta<=0 && dist<7 && game.curZone!==Z.LIB){
+        game.player.hp = Math.max(0, game.player.hp - dt*2.5);
+        if(game.player.hp<=0){
+          gameOver('Overwhelmed', 'You collapse under pressure.');
+        }
+      }
+
+      // update meshes
+      playerMesh.position.copy(game.player.pos).add(new THREE.Vector3(0,0.55,0));
+      playerLight.position.copy(game.player.pos).add(new THREE.Vector3(0,1.6,0));
+
+      teacherMesh.position.copy(game.teacher.pos).add(new THREE.Vector3(0,0.6,0));
+      teacherLight.position.copy(game.teacher.pos).add(new THREE.Vector3(0,1.55,0));
+      teacherAura.rotation.x += dt*1.0;
+      teacherAura.rotation.y += dt*1.6;
+
+      // camera follow
+      const camTarget = game.player.pos.clone().add(new THREE.Vector3(0, 7.2, 8.2));
+      camera.position.lerp(camTarget, 0.08);
+      const lookAt = game.player.pos.clone().add(new THREE.Vector3(0, 0.7, 0));
+      camera.lookAt(lookAt);
+
+    } else if(game.state==='battle'){
+      // keep camera framed
+      const camTarget = game.player.pos.clone().add(new THREE.Vector3(0, 8.2, 9.0));
+      camera.position.lerp(camTarget, 0.06);
+      camera.lookAt(game.player.pos.clone().add(new THREE.Vector3(0,0.7,0)));
+    }
+
+    updateHUD();
+
+    // Render
+    renderer.render(scene, camera);
+
+    justPressed.clear();
+    requestAnimationFrame(tick);
+  }
+
+  // Buttons
+  $('btnPause').onclick = () => {
+    if(game.state==='playing') setState('paused');
+    else if(game.state==='paused') setState('playing');
+  };
+  $('btnRestart').onclick = () => {
+    resetRun();
+    setState('playing');
+  };
+
+  // Bootstrap
+  function boot(){
+    resetRun();
+    setState('menu');
+    showTitle();
+    requestAnimationFrame(tick);
+    toast(`Best score loaded: ${game.bestScore}`);
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eric m failing class - RPG Adventure</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
+    
+    <!-- Game Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Main Game Container -->
+    <div id="game-container">
+        <!-- Header UI -->
+        <header id="game-header">
+            <div class="header-left">
+                <h1 class="game-title">Eric m failing class</h1>
+                <div class="week-indicator">Week <span id="current-week">1</span> of 10</div>
+            </div>
+            <div class="header-right">
+                <button id="save-btn" class="ui-button">Save</button>
+                <button id="load-btn" class="ui-button">Load</button>
+                <button id="settings-btn" class="ui-button">Settings</button>
+            </div>
+        </header>
+
+        <!-- Main Game Canvas -->
+        <div id="game-canvas-container">
+            <canvas id="game-canvas"></canvas>
+            <div id="loading-screen">
+                <div class="loading-content">
+                    <h2>Loading School...</h2>
+                    <div class="loading-bar">
+                        <div class="loading-progress" id="loading-progress"></div>
+                    </div>
+                    <p id="loading-text">Initializing game engine...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player HUD -->
+        <div id="player-hud" class="hud-panel">
+            <div class="stat-group">
+                <div class="stat">
+                    <label>Health</label>
+                    <div class="stat-bar">
+                        <div class="stat-fill health-fill" id="health-fill"></div>
+                    </div>
+                    <span class="stat-text" id="health-text">100/100</span>
+                </div>
+                <div class="stat">
+                    <label>Stress</label>
+                    <div class="stat-bar">
+                        <div class="stat-fill stress-fill" id="stress-fill"></div>
+                    </div>
+                    <span class="stat-text" id="stress-text">0/100</span>
+                </div>
+            </div>
+            <div class="stat-group">
+                <div class="stat">
+                    <label>Knowledge</label>
+                    <span class="stat-text" id="knowledge-text">50</span>
+                </div>
+                <div class="stat">
+                    <label>Level</label>
+                    <span class="stat-text" id="level-text">1</span>
+                </div>
+                <div class="stat">
+                    <label>EXP</label>
+                    <span class="stat-text" id="exp-text">0/100</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Panel -->
+        <div id="inventory-panel" class="side-panel">
+            <div class="panel-header">
+                <h3>Inventory</h3>
+                <button class="panel-toggle" id="inventory-toggle">×</button>
+            </div>
+            <div class="panel-content">
+                <div class="inventory-grid" id="inventory-grid">
+                    <!-- Items will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Dialogue System -->
+        <div id="dialogue-container" class="dialogue-hidden">
+            <div class="dialogue-box">
+                <div class="character-portrait" id="dialogue-portrait"></div>
+                <div class="dialogue-content">
+                    <div class="character-name" id="dialogue-name"></div>
+                    <div class="dialogue-text" id="dialogue-text"></div>
+                    <div class="dialogue-choices" id="dialogue-choices"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battle Interface -->
+        <div id="battle-interface" class="battle-hidden">
+            <div class="battle-container">
+                <div class="battle-area">
+                    <div class="enemy-section">
+                        <div class="character-card enemy-card">
+                            <div class="character-name" id="enemy-name">Unknown</div>
+                            <div class="character-portrait enemy-portrait" id="enemy-portrait"></div>
+                            <div class="health-bar">
+                                <div class="health-fill" id="enemy-health-fill"></div>
+                            </div>
+                            <div class="health-text" id="enemy-health-text">100/100</div>
+                        </div>
+                    </div>
+                    <div class="player-section">
+                        <div class="character-card player-card">
+                            <div class="character-name" id="player-name">Eric M.</div>
+                            <div class="character-portrait player-portrait" id="player-portrait"></div>
+                            <div class="health-bar">
+                                <div class="health-fill" id="player-health-fill"></div>
+                            </div>
+                            <div class="health-text" id="player-health-text">100/100</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="battle-actions">
+                    <button class="battle-action-btn" id="attack-btn">Attack</button>
+                    <button class="battle-action-btn" id="defend-btn">Defend</button>
+                    <button class="battle-action-btn" id="item-btn">Item</button>
+                    <button class="battle-action-btn" id="special-btn">Special</button>
+                </div>
+                <div class="battle-log" id="battle-log"></div>
+            </div>
+        </div>
+
+        <!-- School Map -->
+        <div id="school-map" class="map-hidden">
+            <div class="map-container">
+                <div class="map-header">
+                    <h3>School Navigation</h3>
+                    <button class="map-close" id="map-close">×</button>
+                </div>
+                <div class="map-content">
+                    <div class="map-grid">
+                        <div class="map-area" data-area="classroom1">
+                            <span>Math Class</span>
+                            <div class="area-status"></div>
+                        </div>
+                        <div class="map-area" data-area="classroom2">
+                            <span>Science Lab</span>
+                            <div class="area-status"></div>
+                        </div>
+                        <div class="map-area locked" data-area="classroom3">
+                            <span>History Room</span>
+                            <div class="area-status"></div>
+                        </div>
+                        <div class="map-area" data-area="library">
+                            <span>Library</span>
+                            <div class="area-status safe"></div>
+                        </div>
+                        <div class="map-area" data-area="cafeteria">
+                            <span>Cafeteria</span>
+                            <div class="area-status danger"></div>
+                        </div>
+                        <div class="map-area locked" data-area="gym">
+                            <span>Gymnasium</span>
+                            <div class="area-status"></div>
+                        </div>
+                        <div class="map-area" data-area="hallway1">
+                            <span>Main Hallway</span>
+                            <div class="area-status"></div>
+                        </div>
+                        <div class="map-area" data-area="hallway2">
+                            <span>East Wing</span>
+                            <div class="area-status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="menu-visible">
+            <div class="menu-content">
+                <h1 class="main-title">Eric m failing class</h1>
+                <p class="subtitle">A Story-Driven RPG Adventure</p>
+                <div class="menu-buttons">
+                    <button class="menu-button primary" id="new-game-btn">New Game</button>
+                    <button class="menu-button" id="continue-btn">Continue</button>
+                    <button class="menu-button" id="help-btn">How to Play</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="panel-hidden">
+            <div class="panel-header">
+                <h3>Settings</h3>
+                <button class="panel-toggle" id="settings-close">×</button>
+            </div>
+            <div class="panel-content">
+                <div class="setting-group">
+                    <label>Master Volume</label>
+                    <input type="range" id="master-volume" min="0" max="100" value="75">
+                </div>
+                <div class="setting-group">
+                    <label>Music Volume</label>
+                    <input type="range" id="music-volume" min="0" max="100" value="80">
+                </div>
+                <div class="setting-group">
+                    <label>SFX Volume</label>
+                    <input type="range" id="sfx-volume" min="0" max="100" value="90">
+                </div>
+                <div class="setting-group">
+                    <label>Text Speed</label>
+                    <select id="text-speed">
+                        <option value="slow">Slow</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="fast">Fast</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Panel -->
+        <div id="help-panel" class="panel-hidden">
+            <div class="panel-header">
+                <h3>How to Play</h3>
+                <button class="panel-toggle" id="help-close">×</button>
+            </div>
+            <div class="panel-content">
+                <div class="help-section">
+                    <h4>Movement</h4>
+                    <p>Use WASD keys or arrow keys to move Eric around the school.</p>
+                </div>
+                <div class="help-section">
+                    <h4>Combat</h4>
+                    <p>When encountering enemies, battle is turn-based. Choose your actions wisely!</p>
+                </div>
+                <div class="help-section">
+                    <h4>Inventory</h4>
+                    <p>Collect items like notebooks, pencils, and energy drinks to help you survive.</p>
+                </div>
+                <div class="help-section">
+                    <h4>Teacher</h4>
+                    <p>Stay away from the teacher! If caught, you'll lose progress and go to detention.</p>
+                </div>
+                <div class="help-section">
+                    <h4>Goal</h4>
+                    <p>Survive 10 weeks of school, defeat rivals, and pass the final exam!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save/Load Panel -->
+        <div id="save-load-panel" class="panel-hidden">
+            <div class="panel-header">
+                <h3 id="save-load-title">Save Game</h3>
+                <button class="panel-toggle" id="save-load-close">×</button>
+            </div>
+            <div class="panel-content">
+                <div class="save-slots" id="save-slots">
+                    <!-- Save slots will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Engine -->
+    <script src="game-engine.js"></script>
+</body>
+</html>

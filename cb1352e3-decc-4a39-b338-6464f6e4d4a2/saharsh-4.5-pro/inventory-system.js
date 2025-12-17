@@ -241,6 +241,15 @@ class InventorySystem {
             },
 
             // Special Items
+            'level_67_scroll': {
+                name: 'Ancient Scroll of Mastery',
+                type: 'quest',
+                icon: '📜',
+                description: 'Legendary scroll from level 67. Grants immense knowledge.',
+                effect: { intelligence: 25, luck: 15, knowledge: 100 },
+                value: 1000,
+                rarity: 'legendary'
+            },
             'hall_pass': {
                 name: 'Hall Pass',
                 type: 'quest',

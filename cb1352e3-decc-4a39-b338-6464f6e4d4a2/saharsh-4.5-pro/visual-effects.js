@@ -16,7 +16,7 @@ class VisualEffects {
         this.screenShake = { intensity: 0, duration: 0, x: 0, y: 0 };
         this.transitions = [];
         this.particlePool = [];
-        this.maxParticles = GameData.ui.particleMaxCount;
+        this.maxParticles = GameData?.ui?.particleMaxCount || 100;
         
         // Particle effect configurations
         this.particleConfigs = {
@@ -523,6 +523,13 @@ class VisualEffects {
      * Render all visual effects
      */
     render() {
+        // Ensure canvas and context are available
+        if (!this.ctx || !this.canvas) {
+            this.canvas = this.engine.canvas;
+            this.ctx = this.engine.ctx;
+            if (!this.ctx || !this.canvas) return;
+        }
+        
         this.ctx.save();
         
         // Apply screen shake
@@ -557,7 +564,7 @@ class VisualEffects {
             if (particle.text) {
                 // Render text particle
                 this.ctx.fillStyle = particle.color;
-                this.ctx.font = `${particle.size}px ${GameData.ui.fonts.primary}`;
+                this.ctx.font = `${particle.size}px ${GameData?.ui?.fonts?.primary || 'Segoe UI'}`;
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText(particle.text, particle.x, particle.y);
             } else {
@@ -623,46 +630,6 @@ class VisualEffects {
             particlePoolAvailable: this.particlePool.length,
             screenShakeActive: this.screenShake.duration > 0
         };
-    }
-
-    /**
-     * Save visual effects state
-     */
-    save() {
-        const storageKey = location.pathname + "visual_effects_data";
-        try {
-            const effectData = {
-                screenShake: this.screenShake,
-                activeEffects: this.particles.map(p => ({
-                    type: p.type,
-                    x: p.x,
-                    y: p.y,
-                    lifespan: p.lifespan,
-                    maxLifespan: p.maxLifespan
-                }))
-            };
-            localStorage.setItem(storageKey, JSON.stringify(effectData));
-        } catch (error) {
-            console.error('Failed to save visual effects data:', error);
-        }
-    }
-
-    /**
-     * Load visual effects state
-     */
-    load() {
-        const storageKey = location.pathname + "visual_effects_data";
-        try {
-            const saved = localStorage.getItem(storageKey);
-            if (saved) {
-                const effectData = JSON.parse(saved);
-                this.screenShake = effectData.screenShake || this.screenShake;
-                return true;
-            }
-        } catch (error) {
-            console.error('Failed to load visual effects data:', error);
-        }
-        return false;
     }
 }
 

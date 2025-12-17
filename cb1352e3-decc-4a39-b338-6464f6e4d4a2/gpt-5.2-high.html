@@ -1,0 +1,166 @@
+# Eric m failing class — Secure Centrix81
+
+A fast, replayable **3D school-dungeon RPG** where you play as Eric M., a student trapped in a nightmare version of school. Stress becomes monsters, homework becomes hazards, and **The Teacher** is always hunting you.
+
+Built as a single-page web game using **Three.js** (3D) and **Tailwind** (UI).
+
+---
+
+## Quick Start
+
+1. Download/open the project.
+2. Open `index.html` in a modern desktop browser (Chrome/Edge/Firefox recommended).
+3. Click **Start Run**.
+
+No build step required.
+
+---
+
+## Core Gameplay Loop (One More Try)
+
+1. **Explore** a procedurally generated school (maze-like hallways + fixed major rooms).
+2. **Earn Credits (0–3)** by dealing with rivals in classrooms.
+3. Use the **Library (safe zone)** to recover and spend **Focus** on supplies.
+4. After 3 credits: **defeat the Gym boss**.
+5. Then push to the **Exam Wing** and face **The Teacher**.
+6. Your **ending** depends on Knowledge, detentions, and remaining time.
+
+Sessions are designed to be short and replayable with persistent best score.
+
+---
+
+## Controls
+
+### Desktop
+- **Move:** WASD or Arrow Keys
+- **Dash/Sprint:** Hold **Shift** (uses stamina)
+- **Interact:** **E** (Library shop)
+- **Battle skills:** **1–4**
+- **Pause:** **Esc**
+- **Restart run:** **R**
+
+### Mobile / Touch
+On small screens or coarse pointers, on-screen controls appear:
+- D-pad for movement
+- Buttons for Dash / Interact / Confirm
+
+---
+
+## Zones
+
+- **Library (Safe Zone):** Teacher cannot enter. Passive HP/Stamina recovery. Contains the Shop.
+- **Hallways:** Main traversal routes. Random encounters can occur (low chance, cooldown-limited).
+- **Classrooms:** Rival encounters (Anbu / Saharsh / Calvin).
+- **Cafeteria:** Higher monster pressure.
+- **Gym:** Boss fight (Finals Golem).
+- **Exam Wing:** Final battle (The Teacher).
+
+---
+
+## Teacher Pressure & Detention
+
+- The Teacher patrols and pathfinds toward you.
+- Pressure increases as the Teacher gets close.
+- If caught outside the Library:
+  - You get sent to **Detention**
+  - Lose time
+  - Often lose an item
+  - The Teacher becomes more dangerous over the run
+
+A **Hall Pass** can auto-save you from being caught.
+
+---
+
+## Battles (Turn-Based)
+
+When an encounter triggers, the game enters a turn-based battle overlay.
+
+### Player Stats
+- **HP** (health)
+- **Stamina** (skills + dash)
+- **ATK / DEF / SPD**
+- **Level / XP** (leveling improves stats)
+
+### Skills
+- **1 — Homework Strike:** solid damage; scales with combo
+- **2 — Study Shield:** blocks the next hits
+- **3 — Speed Dash:** adds dodge/initiative style buffs
+- **4 — Excuse Escape:** attempt to flee (chance depends on SPD + zone)
+
+### Items
+- **Energy Drink:** restore HP + stamina
+- **Notebook:** +Knowledge and +XP (instant)
+- **Study Guide:** +DEF and +Knowledge (instant)
+- **Pencil:** temporary ATK buff
+- **Hall Pass:** free escape from chase/battles
+
+### Combo & Score
+Winning fights increases combo (up to a cap). Higher combo means more score and stronger momentum.
+
+---
+
+## Outsmart Mini-Games
+
+Some rivals/bosses can be approached via mini-games instead of direct fighting.
+
+- **Reaction timing:** hit Space when the marker is in the success zone.
+- **Focus memory:** memorize and click the flashing sequence in order.
+
+Failing can still lead to battle or consequences, keeping the pace high.
+
+---
+
+## Win / Loss Conditions
+
+### You win by:
+- Earning **3 credits**
+- Clearing the **Gym boss**
+- Reaching the **Exam Wing** and defeating **The Teacher** before time runs out
+
+### You lose if:
+- **Time reaches 0** before finishing
+- **HP reaches 0** from pressure/encounters
+
+---
+
+## Endings
+
+Endings depend on:
+- **Knowledge** (from Notebooks/Study Guides)
+- **Detentions** (penalties)
+- **Time remaining**
+
+Possible outcomes include:
+- Passed the Class
+- Barely Passed
+- Barely Survived
+- Failed Completely
+
+---
+
+## Tech Notes
+
+- **Rendering:** Three.js (WebGL)
+- **UI:** Tailwind via CDN
+- **Persistence:** `localStorage` with namespaced keys using `location.pathname` to avoid conflicts
+- **Map:** Procedural maze + fixed rooms with connectors
+- **AI:** Grid A* pathfinding for the Teacher (cannot enter Library)
+
+---
+
+## Tips
+
+- The **Library is your reset button**: recover, shop, breathe.
+- Sprinting is powerful, but stamina is life—avoid running empty near the Teacher.
+- Use **Skip Turn / stamina recovery** in battle when low.
+- Stack Knowledge early if you want the best ending.
+
+---
+
+## Credits
+
+Created for **Secure Centrix81**.
+
+Libraries:
+- Three.js
+- Tailwind CSS

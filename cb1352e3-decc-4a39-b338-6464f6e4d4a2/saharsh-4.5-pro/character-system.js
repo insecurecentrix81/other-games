@@ -250,6 +250,13 @@ class CharacterSystem {
             this.unlockRandomAbility();
         }
         
+        // Special milestone achievement at level 67
+        if (this.data.level === 67) {
+            this.addAchievement('Academic Mastery - Level 67');
+            this.data.stats.intelligence += 10;
+            this.data.stats.luck += 5;
+        }
+        
         // Award achievement
         this.addAchievement(`Level ${this.data.level} Reached`);
     }

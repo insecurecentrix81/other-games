@@ -70,7 +70,7 @@ class GameEngine {
     }
 
     setupCanvas() {
-        // Set canvas size
+        // Set canvas size with error handling
         this.resizeCanvas();
         
         // Setup 2D context
@@ -85,14 +85,18 @@ class GameEngine {
         if (!this.canvas) return;
         
         const container = document.getElementById('game-canvas-container');
-        const rect = container.getBoundingClientRect();
+        if (!container) {
+            console.warn('Game canvas container not found');
+            return;
+        }
         
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
+        const rect = container.getBoundingClientRect();
+        this.canvas.width = Math.max(800, rect.width); // Minimum width
+        this.canvas.height = Math.max(600, rect.height); // Minimum height
     }
 
     initUI() {
-        // Store UI element references
+        // Store UI element references with error checking
         this.ui = {
             // Main menu
             mainMenu: document.getElementById('main-menu'),

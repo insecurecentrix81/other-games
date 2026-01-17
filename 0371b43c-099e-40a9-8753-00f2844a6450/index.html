@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Taker v7.0</title>
+    <style>
+      body {
+        overflow: hidden;
+      }
+      .note-container {
+        background-color: #999;
+        width: 300px;
+        height: 200px;
+        display: flex;
+        position: absolute;
+        flex-direction: column;
+        border: 1px solid #000000;
+        overflow: hidden;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      }
+      .header-container {
+        display: flex;
+        flex: 0;
+        cursor: move;
+      }
+      .header-container .button {
+        display: flex;
+        flex: 0;
+        cursor: pointer;
+        border: 0;
+        outline: 0;
+        padding: 10px;
+        color: #ffffff;
+        width: 20px;
+        height: 20px;
+        text-align: center;
+        justify-content: center;
+        align-items: center;
+      }
+      .header-container .close {
+        background-color: #ff0000;
+      }
+      .header-container .close:hover {
+        background-color: #dd0000;
+        color: #ddd;
+      }
+      .header-container .close:active {
+        background-color: #bb0000;
+        color: #bbb;
+      }
+
+      .header-container .minimize {
+        background-color: #ff9900;
+      }
+      .header-container .minimize:hover {
+        background-color: #dd7700;
+        color: #ddd;
+      }
+      .header-container .minimize:active {
+        background-color: #bb5500;
+        color: #bbb;
+      }
+
+      .header-container .fullscreen {
+        background-color: #00ff00;
+      }
+      .header-container .fullscreen:hover {
+        background-color: #00dd00;
+        color: #ddd;
+      }
+      .header-container .fullscreen:active {
+        background-color: #00bb00;
+        color: #bbb;
+      }
+
+
+      .text-container {
+        display: flex;
+        flex: 1;
+      }
+      .text-container textarea {
+        resize: none;
+        width: 100%;
+        height: calc(100% - 10px);
+        outline: 0;
+        padding: 5px;
+        margin: 0;
+        overflow: scroll-y;
+        border: 0;
+        border-top: 1px solid #000000;
+      }
+      .drag-area {
+        background-color: #fe9;
+        width: 100%;
+      }
+      .resize-area {
+        background-color: #000;
+        width: 10px;
+        height: 10px;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        cursor: se-resize;
+      }
+
+      #context-menu {
+        display: flex;
+        position: absolute;
+        z-index: 2147483647;
+        background-color: #aaa;
+        flex-direction: column;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        padding: 2.5px 0;
+      }
+      #context-menu .option {
+        margin: 0px 0;
+        padding: 7.5px 10px;
+        color: #000;
+        text-align: center;
+      }
+      #context-menu .option:hover {
+        background-color: #bbb;
+        cursor: pointer;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="context-menu" class="hidden">
+      <div class="option" data-action="create">Create new note</div>
+      <div class="option" data-action="delete-all">Delete all notes</div>
+    </div>
+    <script>
+      let has_alerted = false
+      addEventListener("error",(e)=>{
+        if (!has_alerted) {
+          has_alerted = true
+          alert(e.message + e.lineno)
+        }
+      })
+    </script>
+    <script>
+      let contextMenu = document.getElementById("context-menu")
+      let notes = {}
+      class Note {
+        constructor(content="",x=0,y=0,width=300,height=200) {
+          this.content = content
+          this.x = x
+          this.y = y
+          this.width = width
+          this.height = height
+          this.ID = Math.random().toString().slice(2,10)
+
+          /*
+            <div class="note-container">
+              <div class="header-container">
+                <button class="button close">X</button>
+                <button class="button minimize">-</button>
+                <button class="button fullscreen">+</button>
+                <div class="drag-area"></div>
+      </div>
+              <div class="text-container">
+                <textarea></textarea>
+                <div class="resize-area"></div>
+      </div>
+      </div>
+          */
+
+          this.createNoteElement()
+
+          document.body.appendChild(this.noteElement)
+          this.updatePosition()
+          return this
+        }
+        createNoteElement() {
+          let noteContainer = document.createElement("div")
+          noteContainer.classList.add("note-container")
+          noteContainer.setAttribute("data-ID", this.ID)
+
+          let headerContainer = document.createElement("div")
+          headerContainer.classList.add("header-container")
+          noteContainer.appendChild(headerContainer)
+
+          let buttonClose = document.createElement("button")
+          buttonClose.classList.add("button")
+          buttonClose.classList.add("close")
+          buttonClose.textContent = "X"
+          headerContainer.appendChild(buttonClose)
+
+          let buttonMinimize = document.createElement("button")
+          buttonMinimize.classList.add("button")
+          buttonMinimize.classList.add("minimize")
+          buttonMinimize.textContent = "-"
+          headerContainer.appendChild(buttonMinimize)
+
+          let buttonFullscreen = document.createElement("button")
+          buttonFullscreen.classList.add("button")
+          buttonFullscreen.classList.add("fullscreen")
+          buttonFullscreen.textContent = "+"
+          headerContainer.appendChild(buttonFullscreen)
+
+          let dragArea = document.createElement("div")
+          dragArea.classList.add("drag-area")
+          headerContainer.appendChild(dragArea)
+
+          let textContainer = document.createElement("div")
+          textContainer.classList.add("text-container")
+          noteContainer.appendChild(textContainer)
+
+          let textarea = document.createElement("textarea")
+          textarea.value = this.content
+          textContainer.appendChild(textarea)
+
+          this.textAreaElement = textarea
+
+          let resizeArea = document.createElement("div")
+          resizeArea.classList.add("resize-area")
+          textContainer.appendChild(resizeArea)
+
+          this.noteElement = noteContainer
+          return this.noteElement
+        }
+        updatePosition() {
+          if (this.width < 20) this.width = 20
+          if (this.height < 20) this.height = 20
+          this.noteElement.style.width = this.width + "px"
+          this.noteElement.style.height = this.height + "px"
+
+          this.noteElement.style.left = this.x + "px"
+          this.noteElement.style.top = this.y + "px"
+
+          this.noteElement.style["z-index"] = maxIndex
+          
+          ++maxIndex
+        }
+        export() {
+          return {
+            x: this.x,
+            y: this.y,
+            w: this.width,
+            h: this.height,
+            c: this.textAreaElement.value,
+            i: this.noteElement.style["z-index"]
+          }
+        }
+        import(json) {
+          this.x = json.x
+          this.y = json.y
+          this.width = json.w
+          this.height = json.h
+          this.textAreaElement.value = json.c
+          this.noteElement.style["z-index"] = json.i
+          this.updatePosition()
+        }
+      }
+      function exportNotes() {
+        let json = {
+          maxIndex: maxIndex,
+          notes: []
+        }
+        for (let note in notes) {
+          json.notes.push(notes[note].export())
+        }
+        return JSON.stringify(json)
+      }
+      function importNotes(json) {
+        json = JSON.parse(json)
+        maxIndex = json.maxIndex
+        for (let importedNote of json.notes) {
+          let note = new Note()
+          note.import(importedNote)
+          notes[note.ID] = note
+        }
+      }
+
+      let maxIndex = 10
+
+      let mouse = {
+        down: false,
+        downX: 0,
+        downY: 0,
+        x: 0,
+        y: 0,
+        noteID: 0,
+        action: "none",
+        noteStart: {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0
+        }
+      }
+      addEventListener("mousedown", (e) => {
+        mouse.down = true
+        mouse.x = e.clientX
+        mouse.y = e.clientY
+        mouse.downX = e.clientX
+        mouse.downY = e.clientY
+        mouse.noteID = 0
+        mouse.action = "none"
+        if (e.target.parentElement?.id === "context-menu") {
+          if (e.target.closest("[data-action]")) {
+            let action = e.target.closest("[data-action]").getAttribute("data-action")
+            switch (action) {
+              case "create":
+                let note = new Note()
+                note.x = e.clientX
+                note.y = e.clientY
+                note.updatePosition()
+                notes[note.ID] = note
+                contextMenu.classList.add("hidden")
+                break
+              case "delete-all":
+                if (prompt("Are you sure you want to delete everything? Type \"Delete All\" to confirm") === "Delete All") {
+                  for (let id in notes) {
+                    notes[id].noteElement.remove()
+                  }
+                  notes = {}
+                }
+                break
+            }
+          }
+        } else {
+            contextMenu.classList.add("hidden")
+          }
+        if (e.target.closest("[data-ID]")) {
+          let noteID = e.target.closest("[data-ID]").getAttribute("data-ID")
+          mouse.noteID = noteID
+          let note = notes[noteID]
+          mouse.noteStart = {
+            x: note.x,
+            y: note.y,
+            width: note.width,
+            height: note.height,
+          }
+          let classList = e.target.classList
+          if (classList.contains("button")) {
+            if (classList.contains("close")) {
+              note.noteElement.remove()
+              delete note
+              return
+            }
+            if (classList.contains("minimize")) {
+              note.width = 0
+              note.height = 0
+            }
+            if (classList.contains("fullscreen")) {
+              note.width = window.innerWidth
+              note.height = window.innerHeight
+              note.x = 0
+              note.y = 0
+            }
+          }
+          if (classList.contains("drag-area")) {
+            mouse.action = "drag"
+          }
+          if (classList.contains("resize-area")) {
+            mouse.action = "resize"
+          }
+          note.updatePosition()
+        }
+      })
+      addEventListener("mouseup", (e) => {
+        mouse.down = false
+        mouse.noteID = 0
+        mouse.action = "none"
+      })
+      addEventListener("mousemove", (e) => {
+        mouse.x = e.clientX
+        mouse.y = e.clientY
+        if (mouse.noteID) {
+          let note = notes[mouse.noteID]
+          if (mouse.action === "drag") {
+            note.x = mouse.noteStart.x + mouse.x - mouse.downX
+            note.y = mouse.noteStart.y + mouse.y - mouse.downY
+            note.updatePosition()
+            e.preventDefault()
+          } else if (mouse.action === "resize") {
+            note.width = mouse.noteStart.width + mouse.x - mouse.downX
+            note.height = mouse.noteStart.height + mouse.y - mouse.downY
+            note.updatePosition()
+            e.preventDefault()
+          }
+        }
+      })
+      addEventListener("contextmenu", (e) => {
+        if (e.target.type === "textarea") {
+          return
+        }
+        e.preventDefault()
+        contextMenu.classList.remove("hidden")
+        contextMenu.style.left = e.clientX + "px"
+        contextMenu.style.top = e.clientY + "px"
+        /*
+        let note = new Note()
+        note.x = e.clientX
+        note.y = e.clientY
+        note.updatePosition()
+        notes[note.ID] = note*/
+      })
+      setInterval(() => {
+        localStorage.setItem("noteData-v7.0.0", exportNotes())
+      },100)
+      if (localStorage.getItem("noteData-v7.0.0")) {
+        importNotes(localStorage.getItem("noteData-v7.0.0"))
+      }
+    </script>
+  </body>
+</html>

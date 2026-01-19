@@ -153,6 +153,8 @@
           this.width = width
           this.height = height
           this.ID = Math.random().toString().slice(2,10)
+          this.isMinimized = false
+          this.isFullscreen = false
 
           /*
             <div class="note-container">
@@ -177,46 +179,54 @@
         }
         createNoteElement() {
           let noteContainer = document.createElement("div")
+          this.noteContainer = noteContainer
           noteContainer.classList.add("note-container")
           noteContainer.setAttribute("data-ID", this.ID)
 
           let headerContainer = document.createElement("div")
+          this.headerContainer = headerContainer
           headerContainer.classList.add("header-container")
           noteContainer.appendChild(headerContainer)
 
           let buttonClose = document.createElement("button")
+          this.buttonClose = buttonClose
           buttonClose.classList.add("button")
           buttonClose.classList.add("close")
           buttonClose.textContent = "X"
           headerContainer.appendChild(buttonClose)
 
           let buttonMinimize = document.createElement("button")
+          this.buttonMinimize = buttonMinimize
           buttonMinimize.classList.add("button")
           buttonMinimize.classList.add("minimize")
           buttonMinimize.textContent = "-"
           headerContainer.appendChild(buttonMinimize)
 
           let buttonFullscreen = document.createElement("button")
+          this.buttonFullscreen = buttonFullscreen
           buttonFullscreen.classList.add("button")
           buttonFullscreen.classList.add("fullscreen")
           buttonFullscreen.textContent = "+"
           headerContainer.appendChild(buttonFullscreen)
 
           let dragArea = document.createElement("div")
+          this.dragArea = dragArea
           dragArea.classList.add("drag-area")
           headerContainer.appendChild(dragArea)
 
           let textContainer = document.createElement("div")
+          this.textContainer = textContainer
           textContainer.classList.add("text-container")
           noteContainer.appendChild(textContainer)
 
           let textarea = document.createElement("textarea")
+          this.textarea = textarea
+          this.textAreaElement = textarea
           textarea.value = this.content
           textContainer.appendChild(textarea)
 
-          this.textAreaElement = textarea
-
           let resizeArea = document.createElement("div")
+          this.resizeArea = resizeArea
           resizeArea.classList.add("resize-area")
           textContainer.appendChild(resizeArea)
 
@@ -224,36 +234,75 @@
           return this.noteElement
         }
         updatePosition() {
-          if (this.width < 20) this.width = 20
-          if (this.height < 20) this.height = 20
-          this.noteElement.style.width = this.width + "px"
-          this.noteElement.style.height = this.height + "px"
+          let minWidth = 80
+          let minHeight = 40
+          if (this.width < minWidth) this.width = minWidth
+          if (this.height < minHeight) this.height = minHeight
+          if (this.x < 0) this.x = 0
+          if (this.y < 0) this.y = 0
+          if (this.x+this.width > window.innerWidth) this.x = window.innerWidth - this.width
+          if (this.y+this.height > window.innerHeight) this.y = window.innerHeight - this.height
+          
+          let width = this.width
+          let height = this.height
+          let x = this.x
+          let y = this.y
+          
+          if (this.isMinimized) {
+            width = 40
+            height = 20
+            this.buttonClose.style.display = "none"
+            this.buttonMinimize.style.display = "none"
+            this.resizeArea.style.display = "none"
+            this.buttonFullscreen.style.display = ""
+          } else if (this.isFullscreen) {
+            x = 0
+            y = 0
+            width = window.innerWidth-1
+            height = window.innerHeight-1
+            this.buttonClose.style.display = ""
+            this.buttonFullscreen.style.display = "none"
+            this.buttonMinimize.style.display = ""
+            this.resizeArea.style.display = "none"
+          } else {
+            this.buttonClose.style.display = ""
+            this.buttonMinimize.style.display = ""
+            this.buttonFullscreen.style.display = ""
+            this.resizeArea.style.display = ""
+          }
+          this.noteElement.style.width = width + "px"
+          this.noteElement.style.height = height + "px"
 
-          this.noteElement.style.left = this.x + "px"
-          this.noteElement.style.top = this.y + "px"
+          this.noteElement.style.left = x + "px"
+          this.noteElement.style.top = y + "px"
 
           this.noteElement.style["z-index"] = maxIndex
           
           ++maxIndex
         }
         export() {
-          return {
-            x: this.x,
-            y: this.y,
-            w: this.width,
-            h: this.height,
-            c: this.textAreaElement.value,
-            i: this.noteElement.style["z-index"]
-          }
+          return [
+            this.x,
+            this.y,
+            this.width,
+            this.height,
+            this.textAreaElement.value,
+            this.noteElement.style["z-index"],
+            this.isMinimized,
+            this.isFullscreen
+          ]
         }
         import(json) {
-          this.x = json.x
-          this.y = json.y
-          this.width = json.w
-          this.height = json.h
-          this.textAreaElement.value = json.c
-          this.noteElement.style["z-index"] = json.i
+          this.x = json[0]
+          this.y = json[1]
+          this.width = json[2]
+          this.height = json[3]
+          this.textAreaElement.value = json[4]
+          this.isMinimized = json[6]
+          this.isFullscreen = json[7]
           this.updatePosition()
+          this.noteElement.style["z-index"] = json[5]
+          
         }
       }
       function exportNotes() {
@@ -338,20 +387,24 @@
           }
           let classList = e.target.classList
           if (classList.contains("button")) {
-            if (classList.contains("close")) {
+            if (classList.contains("close") && confirm("Are you sure you want to delete this note?")) {
               note.noteElement.remove()
               delete note
               return
             }
             if (classList.contains("minimize")) {
-              note.width = 0
-              note.height = 0
+              if (note.isFullscreen) {
+                note.isFullscreen = false
+              } else {
+                note.isMinimized = !note.isMinimized
+              }
             }
             if (classList.contains("fullscreen")) {
-              note.width = window.innerWidth
-              note.height = window.innerHeight
-              note.x = 0
-              note.y = 0
+              if (note.isMinimized) {
+                note.isMinimized = false 
+              } else {
+                note.isFullscreen = !note.isFullscreen
+              }
             }
           }
           if (classList.contains("drag-area")) {
@@ -394,12 +447,6 @@
         contextMenu.classList.remove("hidden")
         contextMenu.style.left = e.clientX + "px"
         contextMenu.style.top = e.clientY + "px"
-        /*
-        let note = new Note()
-        note.x = e.clientX
-        note.y = e.clientY
-        note.updatePosition()
-        notes[note.ID] = note*/
       })
       setInterval(() => {
         localStorage.setItem("noteData-v7.0.0", exportNotes())

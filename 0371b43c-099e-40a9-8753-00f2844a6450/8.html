@@ -226,17 +226,27 @@
   <body>
     <div id="contextMenu" class="context-menu hidden">
       <div id="noteContextOptions" class="hidden">
-        <div class="context-menu__item" data-action="rename">📝 Rename Note</div>
-        <div class="context-menu__item hidden" data-action="lock-note">🔒 Lock note</div>
-        <div class="context-menu__item" data-action="encrypt">🔒 Encrypt Note</div>
-        <div class="context-menu__item hidden" data-action="change-password">🔑 Change Password</div>
-        <div class="context-menu__item hidden" data-action="remove-encryption">🔓 Remove Encryption</div>
+        <div class="context-menu__item" data-action="rename">Rename Note</div>
+        <div class="context-menu__item hidden" data-action="lock-note">Lock note</div>
+        <div class="context-menu__item" data-action="encrypt">Encrypt Note</div>
+        <div class="context-menu__item hidden" data-action="change-password">Change Password</div>
+        <div class="context-menu__item hidden" data-action="remove-encryption">Remove Encryption</div>
         <div class="context-menu__separator"></div>
       </div>
-      <div class="context-menu__item" data-action="create">➕ Create New Note</div>
-      <div class="context-menu__item" data-action="delete-all">🗑️ Delete All Notes</div>
+      <div class="context-menu__item" data-action="create">Create New Note</div>
+      <div class="context-menu__item" data-action="clamp-position">Clamp Note Positions</div>
+      <div class="context-menu__item" data-action="delete-all">Delete All Notes</div>
     </div>
-
+    <script>
+      // ============ Error Handler ============
+      let errorShown = false;
+      window.addEventListener("error", (e) => {
+        if (!errorShown) {
+          errorShown = true;
+          alert(`Error: ${e.message} at line ${e.lineno}`);
+        }
+      });
+    </script>
     <script>
       (function() {
         // ============ Crypto Utilities ============
@@ -561,6 +571,14 @@
             }
           }
 
+          clampPosition() {
+            // Clamp position to viewport
+            this.x = Math.max(0, this.x);
+            this.y = Math.max(0, this.y);
+            this.x = Math.min(window.innerWidth - this.width, this.x);
+            this.y = Math.min(window.innerHeight - this.height, this.y);
+            this.updateLayout()
+          }
           updateLayout() {
             const MIN_WIDTH = 120;
             const MIN_HEIGHT = 80;
@@ -568,10 +586,9 @@
             // Clamp dimensions
             this.width = Math.max(this.width, MIN_WIDTH);
             this.height = Math.max(this.height, MIN_HEIGHT);
-
-            // Clamp position to viewport
-            this.x = Math.max(0, Math.min(this.x, window.innerWidth - 50));
-            this.y = Math.max(0, Math.min(this.y, window.innerHeight - 50));
+            
+            this.x = Math.max(0, this.x);
+            this.y = Math.max(0, this.y);
 
             // Reset visibility
             this.closeBtnEl.style.display = "";
@@ -846,6 +863,11 @@
               break;
             case "lock-note":
               note.lock()
+              break;
+            case "clamp-position":
+              for (const id in notes) {
+                notes[id].clampPosition()
+              }
               break
                         }
         }
@@ -986,13 +1008,6 @@
           showContextMenu(e.clientX, e.clientY, noteId);
         });
 
-        // Handle window resize
-        window.addEventListener("resize", () => {
-          for (const id in notes) {
-            notes[id].updateLayout();
-          }
-        });
-
         // ============ Auto-save ============
         let saveTimeout = null;
 
@@ -1022,15 +1037,6 @@
         if (savedData) {
           importAllNotes(savedData);
         }
-
-        // ============ Error Handler ============
-        let errorShown = false;
-        window.addEventListener("error", (e) => {
-          if (!errorShown) {
-            errorShown = true;
-            console.error(`Error: ${e.message} at line ${e.lineno}`);
-          }
-        });
       })()
     </script>
   </body>

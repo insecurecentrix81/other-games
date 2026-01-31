@@ -1,5 +1,5 @@
 // ==================== SIMPLEX NOISE ====================
-class SimplexNoise {
+export class SimplexNoise {
   constructor(seed = Math.random() * 10000) {
     this.seed = seed;
     this.p = new Uint8Array(256);

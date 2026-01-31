@@ -84,6 +84,17 @@
       #gamemode-indicator.creative { background: rgba(100, 200, 100, 0.5); }
       #gamemode-indicator.survival { background: rgba(200, 100, 100, 0.5); }
 
+      /* Autosave indicator */
+      #autosave-indicator {
+        position: fixed; top: 50px; right: 10px;
+        color: #4ade80; font-size: 12px; z-index: 100;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        background: rgba(0,0,0,0.5);
+        padding: 5px 10px; border-radius: 3px;
+        opacity: 0; transition: opacity 0.3s;
+      }
+      #autosave-indicator.visible { opacity: 1; }
+
       /* Health Bar */
       #health-bar {
         position: fixed; bottom: 75px; left: 50%;
@@ -115,6 +126,8 @@
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         z-index: 200;
+        overflow-y: auto;
+        padding: 20px;
       }
       #menu.hidden { display: none; }
 
@@ -124,12 +137,12 @@
         margin-bottom: 10px; letter-spacing: 4px;
       }
       #menu .subtitle {
-        color: #888; font-size: 18px; margin-bottom: 40px;
+        color: #888; font-size: 18px; margin-bottom: 20px;
       }
       #menu .controls {
         background: rgba(255,255,255,0.05);
         padding: 25px 40px; border-radius: 10px;
-        margin-bottom: 30px; text-align: left;
+        margin-bottom: 20px; text-align: left;
       }
       #menu .controls p {
         color: #ccc; margin: 8px 0; font-size: 15px;
@@ -166,6 +179,115 @@
       }
       #menu button.secondary:hover {
         box-shadow: 0 6px 0 #222, 0 8px 15px rgba(0,0,0,0.3);
+      }
+      #menu button.danger {
+        background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+        box-shadow: 0 4px 0 #922b21, 0 6px 10px rgba(0,0,0,0.3);
+      }
+      #menu button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* World selection */
+      .world-slots {
+        display: flex; gap: 10px;
+        margin: 15px 0;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .world-slot {
+        background: rgba(255,255,255,0.1);
+        border: 2px solid #444;
+        border-radius: 8px;
+        padding: 15px 20px;
+        min-width: 200px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .world-slot:hover {
+        border-color: #4ade80;
+        background: rgba(255,255,255,0.15);
+      }
+      .world-slot.selected {
+        border-color: #4ade80;
+        background: rgba(74, 222, 128, 0.2);
+      }
+      .world-slot.empty {
+        border-style: dashed;
+        opacity: 0.7;
+      }
+      .world-slot h3 {
+        color: #fff;
+        margin-bottom: 5px;
+        font-size: 16px;
+      }
+      .world-slot p {
+        color: #aaa;
+        font-size: 12px;
+        margin: 2px 0;
+      }
+      .world-slot .delete-btn {
+        background: #e74c3c;
+        border: none;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 10px;
+        cursor: pointer;
+        margin-top: 5px;
+      }
+      .world-slot .delete-btn:hover {
+        background: #c0392b;
+      }
+
+      /* New world dialog */
+      .new-world-form {
+        background: rgba(0,0,0,0.5);
+        padding: 20px;
+        border-radius: 10px;
+        margin: 15px 0;
+        display: none;
+      }
+      .new-world-form.visible { display: block; }
+      .new-world-form label {
+        color: #fff;
+        display: block;
+        margin-bottom: 5px;
+      }
+      .new-world-form input {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #444;
+        border-radius: 5px;
+        background: #222;
+        color: #fff;
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+      .new-world-form input:focus {
+        border-color: #4ade80;
+        outline: none;
+      }
+      .form-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      /* File import/export */
+      .file-buttons {
+        display: flex;
+        gap: 10px;
+        margin: 10px 0;
+      }
+      .file-buttons button {
+        padding: 10px 20px;
+        font-size: 14px;
+      }
+      #file-import {
+        display: none;
       }
 
       /* Settings Menu */
@@ -308,6 +430,7 @@
         transform: translate(-50%, -50%);
         color: white; font-size: 24px;
         z-index: 300; display: none;
+        text-align: center;
       }
       #loading.show { display: block; }
       .spinner {
@@ -386,15 +509,18 @@
         <div id="position">XYZ: 0 / 0 / 0</div>
         <div id="fps">FPS: 0</div>
         <div id="chunk-info">Chunks: 0</div>
+        <div id="world-info">World: -</div>
       </div>
       <div id="gamemode-indicator" class="survival">Survival</div>
+      <div id="autosave-indicator">💾 Saving...</div>
       <div id="break-indicator"><div id="break-indicator-inner"></div></div>
       <div id="break-progress-bar"><div id="break-progress-fill"></div></div>
 
       <div id="menu">
         <h1>⛏ MINECRAFT</h1>
         <p class="subtitle">A Voxel Sandbox Adventure</p>
-        <div class="controls">
+        
+        <div class="controls" id="controls-panel">
           <p><span class="key">W A S D</span> Move around</p>
           <p><span class="key">SPACE</span> Jump / Fly up</p>
           <p><span class="key">SHIFT</span> Sprint / Fly down</p>
@@ -405,10 +531,36 @@
           <p><span class="key">SCROLL</span> Cycle blocks</p>
           <p><span class="key">E</span> Open Inventory</p>
           <p><span class="key">C</span> Toggle Creative/Survival</p>
-          <p><span class="key">ESC</span> Settings</p>
+          <p><span class="key">F5</span> Quick Save</p>
+          <p><span class="key">ESC</span> Settings / Menu</p>
         </div>
-        <button id="start-btn">Play World</button>
-        <button id="settings-btn" class="secondary">Settings</button>
+
+        <!-- World Selection -->
+        <h3 style="color: #fff; margin-bottom: 10px;">Select World</h3>
+        <div class="world-slots" id="world-slots"></div>
+
+        <!-- New World Form -->
+        <div class="new-world-form" id="new-world-form">
+          <label for="world-name">World Name:</label>
+          <input type="text" id="world-name" placeholder="My World" maxlength="20">
+          <label for="world-seed">Seed (optional):</label>
+          <input type="text" id="world-seed" placeholder="Leave empty for random">
+          <div class="form-buttons">
+            <button id="create-world-btn">Create World</button>
+            <button id="cancel-new-world-btn" class="secondary">Cancel</button>
+          </div>
+        </div>
+
+        <button id="start-btn">Play Selected World</button>
+        <button id="new-world-btn" class="secondary">New World</button>
+        
+        <div class="file-buttons">
+          <button id="export-btn" class="secondary">📤 Export World</button>
+          <button id="import-btn" class="secondary">📥 Import World</button>
+          <input type="file" id="file-import" accept=".json">
+        </div>
+        
+        <button id="settings-btn" class="secondary">⚙ Settings</button>
       </div>
 
       <div id="settings-panel">
@@ -437,6 +589,10 @@
             <label>Mouse Sensitivity</label>
             <input type="range" id="setting-sensitivity" min="0.5" max="3" step="0.1" value="1">
             <span class="setting-value" id="sensitivity-value">1.0</span>
+          </div>
+          <div class="setting-row">
+            <label>Autosave (30s)</label>
+            <input type="checkbox" id="setting-autosave" checked>
           </div>
           <div class="setting-row">
             <label>Fullscreen</label>
@@ -472,7 +628,7 @@
 
       <div id="loading">
         <div class="spinner"></div>
-        Generating World...
+        <span id="loading-text">Generating World...</span>
       </div>
     </div>
 
@@ -493,6 +649,9 @@
       const PLACE_COOLDOWN = 0.3;
       const MAX_HEALTH = 20;
       const MAX_STACK_SIZE = 64;
+      const SAVE_VERSION = 1;
+      const MAX_SAVE_SLOTS = 3;
+      const AUTOSAVE_INTERVAL = 30000; // 30 seconds
 
       // Block types
       const BLOCK = {
@@ -504,40 +663,14 @@
 
       // Item types (tools, materials, etc.)
       const ITEM = {
-        // Raw materials (100-199)
-        COAL: 100,
-        IRON_INGOT: 101,
-        GOLD_INGOT: 102,
-        DIAMOND: 103,
-        STICK: 104,
-        
-        // Pickaxes (200-209)
-        WOODEN_PICKAXE: 200,
-        STONE_PICKAXE: 201,
-        IRON_PICKAXE: 202,
-        DIAMOND_PICKAXE: 203,
-        GOLD_PICKAXE: 204,
-        
-        // Axes (210-219)
-        WOODEN_AXE: 210,
-        STONE_AXE: 211,
-        IRON_AXE: 212,
-        DIAMOND_AXE: 213,
-        
-        // Shovels (220-229)
-        WOODEN_SHOVEL: 220,
-        STONE_SHOVEL: 221,
-        IRON_SHOVEL: 222,
-        DIAMOND_SHOVEL: 223,
-        
-        // Swords (230-239)
-        WOODEN_SWORD: 230,
-        STONE_SWORD: 231,
-        IRON_SWORD: 232,
-        DIAMOND_SWORD: 233
+        COAL: 100, IRON_INGOT: 101, GOLD_INGOT: 102, DIAMOND: 103, STICK: 104,
+        WOODEN_PICKAXE: 200, STONE_PICKAXE: 201, IRON_PICKAXE: 202, DIAMOND_PICKAXE: 203, GOLD_PICKAXE: 204,
+        WOODEN_AXE: 210, STONE_AXE: 211, IRON_AXE: 212, DIAMOND_AXE: 213,
+        WOODEN_SHOVEL: 220, STONE_SHOVEL: 221, IRON_SHOVEL: 222, DIAMOND_SHOVEL: 223,
+        WOODEN_SWORD: 230, STONE_SWORD: 231, IRON_SWORD: 232, DIAMOND_SWORD: 233
       };
 
-      // Block data with hardness (time to break in seconds with hand)
+      // Block data with hardness
       const BLOCK_DATA = {
         [BLOCK.GRASS]:    { name: 'Grass',       hardness: 0.9,  top: 0x7cba3d, side: 0x8b6914, bottom: 0x6b4423, solid: true, toolType: 'shovel' },
         [BLOCK.DIRT]:     { name: 'Dirt',        hardness: 0.75, top: 0x8b6914, side: 0x8b6914, bottom: 0x8b6914, solid: true, toolType: 'shovel' },
@@ -566,64 +699,47 @@
         [ITEM.GOLD_INGOT]: { name: 'Gold Ingot', color: 0xfcee4b, stackable: true },
         [ITEM.DIAMOND]:    { name: 'Diamond',    color: 0x4aedd9, stackable: true },
         [ITEM.STICK]:      { name: 'Stick',      color: 0x8b6914, stackable: true },
-        
         [ITEM.WOODEN_PICKAXE]:  { name: 'Wooden Pickaxe',  color: 0x8b6914, durability: 60,  miningSpeed: 2, toolType: 'pickaxe', toolTier: 'wooden', isTool: true },
         [ITEM.STONE_PICKAXE]:   { name: 'Stone Pickaxe',   color: 0x7f7f7f, durability: 132, miningSpeed: 4, toolType: 'pickaxe', toolTier: 'stone', isTool: true },
         [ITEM.IRON_PICKAXE]:    { name: 'Iron Pickaxe',    color: 0xd8d8d8, durability: 251, miningSpeed: 6, toolType: 'pickaxe', toolTier: 'iron', isTool: true },
         [ITEM.DIAMOND_PICKAXE]: { name: 'Diamond Pickaxe', color: 0x4aedd9, durability: 1562, miningSpeed: 8, toolType: 'pickaxe', toolTier: 'diamond', isTool: true },
         [ITEM.GOLD_PICKAXE]:    { name: 'Gold Pickaxe',    color: 0xfcee4b, durability: 33,  miningSpeed: 12, toolType: 'pickaxe', toolTier: 'gold', isTool: true },
-        
         [ITEM.WOODEN_AXE]:  { name: 'Wooden Axe',  color: 0x8b6914, durability: 60,  miningSpeed: 2, toolType: 'axe', toolTier: 'wooden', isTool: true },
         [ITEM.STONE_AXE]:   { name: 'Stone Axe',   color: 0x7f7f7f, durability: 132, miningSpeed: 4, toolType: 'axe', toolTier: 'stone', isTool: true },
         [ITEM.IRON_AXE]:    { name: 'Iron Axe',    color: 0xd8d8d8, durability: 251, miningSpeed: 6, toolType: 'axe', toolTier: 'iron', isTool: true },
         [ITEM.DIAMOND_AXE]: { name: 'Diamond Axe', color: 0x4aedd9, durability: 1562, miningSpeed: 8, toolType: 'axe', toolTier: 'diamond', isTool: true },
-        
         [ITEM.WOODEN_SHOVEL]:  { name: 'Wooden Shovel',  color: 0x8b6914, durability: 60,  miningSpeed: 2, toolType: 'shovel', toolTier: 'wooden', isTool: true },
         [ITEM.STONE_SHOVEL]:   { name: 'Stone Shovel',   color: 0x7f7f7f, durability: 132, miningSpeed: 4, toolType: 'shovel', toolTier: 'stone', isTool: true },
         [ITEM.IRON_SHOVEL]:    { name: 'Iron Shovel',    color: 0xd8d8d8, durability: 251, miningSpeed: 6, toolType: 'shovel', toolTier: 'iron', isTool: true },
         [ITEM.DIAMOND_SHOVEL]: { name: 'Diamond Shovel', color: 0x4aedd9, durability: 1562, miningSpeed: 8, toolType: 'shovel', toolTier: 'diamond', isTool: true },
-        
         [ITEM.WOODEN_SWORD]: { name: 'Wooden Sword', color: 0x8b6914, durability: 60,  damage: 4, isTool: true },
         [ITEM.STONE_SWORD]:  { name: 'Stone Sword',  color: 0x7f7f7f, durability: 132, damage: 5, isTool: true },
         [ITEM.IRON_SWORD]:   { name: 'Iron Sword',   color: 0xd8d8d8, durability: 251, damage: 6, isTool: true },
         [ITEM.DIAMOND_SWORD]:{ name: 'Diamond Sword',color: 0x4aedd9, durability: 1562, damage: 7, isTool: true }
       };
 
-      // Tool tier hierarchy for mining requirements
       const TOOL_TIERS = ['wooden', 'stone', 'iron', 'diamond', 'gold'];
 
-      // Crafting recipes
       const RECIPES = [
-        // Basic items
         { result: BLOCK.PLANKS, resultCount: 4, ingredients: [{ item: BLOCK.WOOD, count: 1 }], name: 'Oak Planks' },
         { result: ITEM.STICK, resultCount: 4, ingredients: [{ item: BLOCK.PLANKS, count: 2 }], name: 'Sticks' },
         { result: BLOCK.CRAFTING_TABLE, resultCount: 1, ingredients: [{ item: BLOCK.PLANKS, count: 4 }], name: 'Crafting Table' },
-        
-        // Wooden tools
         { result: ITEM.WOODEN_PICKAXE, resultCount: 1, ingredients: [{ item: BLOCK.PLANKS, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Wooden Pickaxe' },
         { result: ITEM.WOODEN_AXE, resultCount: 1, ingredients: [{ item: BLOCK.PLANKS, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Wooden Axe' },
         { result: ITEM.WOODEN_SHOVEL, resultCount: 1, ingredients: [{ item: BLOCK.PLANKS, count: 1 }, { item: ITEM.STICK, count: 2 }], name: 'Wooden Shovel' },
         { result: ITEM.WOODEN_SWORD, resultCount: 1, ingredients: [{ item: BLOCK.PLANKS, count: 2 }, { item: ITEM.STICK, count: 1 }], name: 'Wooden Sword' },
-        
-        // Stone tools
         { result: ITEM.STONE_PICKAXE, resultCount: 1, ingredients: [{ item: BLOCK.COBBLE, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Stone Pickaxe' },
         { result: ITEM.STONE_AXE, resultCount: 1, ingredients: [{ item: BLOCK.COBBLE, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Stone Axe' },
         { result: ITEM.STONE_SHOVEL, resultCount: 1, ingredients: [{ item: BLOCK.COBBLE, count: 1 }, { item: ITEM.STICK, count: 2 }], name: 'Stone Shovel' },
         { result: ITEM.STONE_SWORD, resultCount: 1, ingredients: [{ item: BLOCK.COBBLE, count: 2 }, { item: ITEM.STICK, count: 1 }], name: 'Stone Sword' },
-        
-        // Iron tools
         { result: ITEM.IRON_PICKAXE, resultCount: 1, ingredients: [{ item: ITEM.IRON_INGOT, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Iron Pickaxe' },
         { result: ITEM.IRON_AXE, resultCount: 1, ingredients: [{ item: ITEM.IRON_INGOT, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Iron Axe' },
         { result: ITEM.IRON_SHOVEL, resultCount: 1, ingredients: [{ item: ITEM.IRON_INGOT, count: 1 }, { item: ITEM.STICK, count: 2 }], name: 'Iron Shovel' },
         { result: ITEM.IRON_SWORD, resultCount: 1, ingredients: [{ item: ITEM.IRON_INGOT, count: 2 }, { item: ITEM.STICK, count: 1 }], name: 'Iron Sword' },
-        
-        // Diamond tools
         { result: ITEM.DIAMOND_PICKAXE, resultCount: 1, ingredients: [{ item: ITEM.DIAMOND, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Diamond Pickaxe' },
         { result: ITEM.DIAMOND_AXE, resultCount: 1, ingredients: [{ item: ITEM.DIAMOND, count: 3 }, { item: ITEM.STICK, count: 2 }], name: 'Diamond Axe' },
         { result: ITEM.DIAMOND_SHOVEL, resultCount: 1, ingredients: [{ item: ITEM.DIAMOND, count: 1 }, { item: ITEM.STICK, count: 2 }], name: 'Diamond Shovel' },
         { result: ITEM.DIAMOND_SWORD, resultCount: 1, ingredients: [{ item: ITEM.DIAMOND, count: 2 }, { item: ITEM.STICK, count: 1 }], name: 'Diamond Sword' },
-        
-        // Smelting (simplified)
         { result: ITEM.IRON_INGOT, resultCount: 1, ingredients: [{ item: BLOCK.IRON_ORE, count: 1 }, { item: ITEM.COAL, count: 1 }], name: 'Smelt Iron' },
         { result: ITEM.GOLD_INGOT, resultCount: 1, ingredients: [{ item: BLOCK.GOLD_ORE, count: 1 }, { item: ITEM.COAL, count: 1 }], name: 'Smelt Gold' },
         { result: BLOCK.GLASS, resultCount: 1, ingredients: [{ item: BLOCK.SAND, count: 1 }, { item: ITEM.COAL, count: 1 }], name: 'Smelt Glass' },
@@ -642,6 +758,7 @@
       // ==================== SIMPLEX NOISE ====================
       class SimplexNoise {
         constructor(seed = Math.random() * 10000) {
+          this.seed = seed;
           this.p = new Uint8Array(256);
           for (let i = 0; i < 256; i++) this.p[i] = i;
           let n = seed;
@@ -662,7 +779,6 @@
           const F2 = 0.5 * (Math.sqrt(3) - 1);
           const G2 = (3 - Math.sqrt(3)) / 6;
           const grad3 = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
-
           let s = (x + y) * F2;
           let i = Math.floor(x + s);
           let j = Math.floor(y + s);
@@ -674,7 +790,6 @@
           let x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
           let x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
           let ii = i & 255, jj = j & 255;
-
           let n0 = 0, n1 = 0, n2 = 0;
           let t0 = 0.5 - x0*x0 - y0*y0;
           if (t0 >= 0) {
@@ -706,17 +821,103 @@
         }
       }
 
+      // ==================== SAVE MANAGER ====================
+      class SaveManager {
+        constructor() {
+          this.storageKey = 'minecraft_saves';
+        }
+
+        getAllSaves() {
+          try {
+            const data = localStorage.getItem(this.storageKey);
+            return data ? JSON.parse(data) : {};
+          } catch (e) {
+            console.error('Failed to load saves:', e);
+            return {};
+          }
+        }
+
+        getSave(slotId) {
+          const saves = this.getAllSaves();
+          return saves[slotId] || null;
+        }
+
+        saveGame(slotId, saveData) {
+          try {
+            const saves = this.getAllSaves();
+            saves[slotId] = {
+              ...saveData,
+              savedAt: Date.now()
+            };
+            localStorage.setItem(this.storageKey, JSON.stringify(saves));
+            return true;
+          } catch (e) {
+            console.error('Failed to save game:', e);
+            if (e.name === 'QuotaExceededError') {
+              alert('Storage full! Consider exporting and deleting old worlds.');
+            }
+            return false;
+          }
+        }
+
+        deleteSave(slotId) {
+          try {
+            const saves = this.getAllSaves();
+            delete saves[slotId];
+            localStorage.setItem(this.storageKey, JSON.stringify(saves));
+            return true;
+          } catch (e) {
+            console.error('Failed to delete save:', e);
+            return false;
+          }
+        }
+
+        exportSave(slotId) {
+          const save = this.getSave(slotId);
+          if (!save) return null;
+          return JSON.stringify(save, null, 2);
+        }
+
+        importSave(jsonString, slotId) {
+          try {
+            const saveData = JSON.parse(jsonString);
+            if (!saveData.version || !saveData.worldName) {
+              throw new Error('Invalid save file format');
+            }
+            return this.saveGame(slotId, saveData);
+          } catch (e) {
+            console.error('Failed to import save:', e);
+            alert('Invalid save file!');
+            return false;
+          }
+        }
+
+        getStorageUsage() {
+          try {
+            const data = localStorage.getItem(this.storageKey) || '';
+            return (data.length * 2) / 1024 / 1024; // Approximate MB
+          } catch (e) {
+            return 0;
+          }
+        }
+      }
+
       // ==================== GAME CLASS ====================
       class MinecraftGame {
         constructor() {
-          // Settings
+          this.saveManager = new SaveManager();
+          this.currentSlot = null;
+          this.worldSeed = 42;
+          this.worldName = 'World';
+          
           this.settings = {
             renderDistance: 2,
             shadowsEnabled: false,
             shadowDistance: 200,
             fov: 80,
             sensitivity: 1.0,
-            fullscreen: false
+            fullscreen: false,
+            autosave: true
           };
           
           this.scene = new THREE.Scene();
@@ -727,8 +928,8 @@
           this.renderer.setClearColor(0x87ceeb);
           document.getElementById('game-container').prepend(this.renderer.domElement);
 
-          this.noise = new SimplexNoise(42);
-          this.noiseDetail = new SimplexNoise(123);
+          this.noise = null;
+          this.noiseDetail = null;
           this.chunks = new Map();
           this.chunkMeshes = new Map();
           this.modifiedBlocks = new Map();
@@ -748,8 +949,6 @@
 
           this.keys = {};
           this.selectedSlot = 0;
-          
-          // Inventory system: each slot has { id, count, durability? }
           this.hotbarSlots = new Array(9).fill(null);
           this.inventorySlots = new Array(27).fill(null);
           this.inventoryOpen = false;
@@ -776,6 +975,9 @@
           this.isFlying = false;
           this.lastSpacePress = 0;
 
+          this.autosaveTimer = null;
+          this.lastAutosave = 0;
+
           this.init();
         }
 
@@ -787,7 +989,353 @@
           this.setupEventListeners();
           this.setupSettingsUI();
           this.setupInventoryUI();
+          this.setupSaveUI();
+          this.loadSettings();
+          this.updateWorldSlots();
         }
+
+        // ==================== SAVE/LOAD SYSTEM ====================
+
+        setupSaveUI() {
+          // New world button
+          document.getElementById('new-world-btn').onclick = () => {
+            document.getElementById('new-world-form').classList.add('visible');
+          };
+
+          // Cancel new world
+          document.getElementById('cancel-new-world-btn').onclick = () => {
+            document.getElementById('new-world-form').classList.remove('visible');
+          };
+
+          // Create world
+          document.getElementById('create-world-btn').onclick = () => {
+            const name = document.getElementById('world-name').value.trim() || 'My World';
+            const seedInput = document.getElementById('world-seed').value.trim();
+            const seed = seedInput ? this.hashString(seedInput) : Math.floor(Math.random() * 1000000);
+            
+            // Find first empty slot
+            const saves = this.saveManager.getAllSaves();
+            let slotId = null;
+            for (let i = 1; i <= MAX_SAVE_SLOTS; i++) {
+              if (!saves[`slot${i}`]) {
+                slotId = `slot${i}`;
+                break;
+              }
+            }
+            
+            if (!slotId) {
+              alert('All save slots are full! Delete a world first.');
+              return;
+            }
+            
+            this.currentSlot = slotId;
+            this.worldName = name;
+            this.worldSeed = seed;
+            
+            document.getElementById('new-world-form').classList.remove('visible');
+            document.getElementById('world-name').value = '';
+            document.getElementById('world-seed').value = '';
+            
+            this.startGame(true);
+          };
+
+          // Export button
+          document.getElementById('export-btn').onclick = () => {
+            if (!this.currentSlot) {
+              alert('Select a world first!');
+              return;
+            }
+            this.exportWorld();
+          };
+
+          // Import button
+          document.getElementById('import-btn').onclick = () => {
+            document.getElementById('file-import').click();
+          };
+
+          // File input
+          document.getElementById('file-import').onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              this.importWorld(file);
+            }
+            e.target.value = '';
+          };
+        }
+
+        hashString(str) {
+          let hash = 0;
+          for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+          }
+          return Math.abs(hash);
+        }
+
+        updateWorldSlots() {
+          const container = document.getElementById('world-slots');
+          container.innerHTML = '';
+          
+          const saves = this.saveManager.getAllSaves();
+          
+          for (let i = 1; i <= MAX_SAVE_SLOTS; i++) {
+            const slotId = `slot${i}`;
+            const save = saves[slotId];
+            
+            const slot = document.createElement('div');
+            slot.className = 'world-slot' + (save ? '' : ' empty') + 
+                           (this.currentSlot === slotId ? ' selected' : '');
+            
+            if (save) {
+              const date = new Date(save.savedAt);
+              const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+              const blocksChanged = save.modifiedBlocks ? save.modifiedBlocks.length : 0;
+              
+              slot.innerHTML = `
+                <h3>📁 ${save.worldName || 'World ' + i}</h3>
+                <p>Seed: ${save.seed}</p>
+                <p>Last played: ${timeStr}</p>
+                <p>Blocks modified: ${blocksChanged}</p>
+                <button class="delete-btn" data-slot="${slotId}">🗑️ Delete</button>
+              `;
+              
+              slot.onclick = (e) => {
+                if (e.target.classList.contains('delete-btn')) return;
+                this.currentSlot = slotId;
+                this.updateWorldSlots();
+              };
+              
+              slot.querySelector('.delete-btn').onclick = (e) => {
+                e.stopPropagation();
+                if (confirm(`Delete "${save.worldName}"? This cannot be undone!`)) {
+                  this.saveManager.deleteSave(slotId);
+                  if (this.currentSlot === slotId) {
+                    this.currentSlot = null;
+                  }
+                  this.updateWorldSlots();
+                }
+              };
+            } else {
+              slot.innerHTML = `
+                <h3>Empty Slot ${i}</h3>
+                <p>Click "New World" to create</p>
+              `;
+              slot.onclick = () => {
+                this.currentSlot = slotId;
+                this.updateWorldSlots();
+                document.getElementById('new-world-form').classList.add('visible');
+              };
+            }
+            
+            container.appendChild(slot);
+          }
+          
+          // Update start button state
+          const startBtn = document.getElementById('start-btn');
+          const exportBtn = document.getElementById('export-btn');
+          
+          if (this.currentSlot && saves[this.currentSlot]) {
+            startBtn.disabled = false;
+            startBtn.textContent = 'Play Selected World';
+            exportBtn.disabled = false;
+          } else {
+            startBtn.disabled = true;
+            startBtn.textContent = 'Select a World';
+            exportBtn.disabled = true;
+          }
+        }
+
+        createSaveData() {
+          return {
+            version: SAVE_VERSION,
+            worldName: this.worldName,
+            seed: this.worldSeed,
+            player: {
+              position: {
+                x: this.player.position.x,
+                y: this.player.position.y,
+                z: this.player.position.z
+              },
+              yaw: this.player.yaw,
+              pitch: this.player.pitch,
+              health: this.player.health,
+              gameMode: this.gameMode,
+              isFlying: this.isFlying
+            },
+            hotbar: this.hotbarSlots.map(slot => slot ? {...slot} : null),
+            inventory: this.inventorySlots.map(slot => slot ? {...slot} : null),
+            selectedSlot: this.selectedSlot,
+            modifiedBlocks: Array.from(this.modifiedBlocks.entries())
+          };
+        }
+
+        saveGame(showIndicator = true) {
+          if (!this.currentSlot || !this.isPlaying) return false;
+          
+          const saveData = this.createSaveData();
+          const success = this.saveManager.saveGame(this.currentSlot, saveData);
+          
+          if (success && showIndicator) {
+            this.showAutosaveIndicator();
+          }
+          
+          return success;
+        }
+
+        loadGame(slotId) {
+          const save = this.saveManager.getSave(slotId);
+          if (!save) return false;
+          
+          this.worldName = save.worldName || 'World';
+          this.worldSeed = save.seed;
+          
+          // Restore player state
+          if (save.player) {
+            this.player.position.set(
+              save.player.position.x,
+              save.player.position.y,
+              save.player.position.z
+            );
+            this.player.yaw = save.player.yaw || 0;
+            this.player.pitch = save.player.pitch || 0;
+            this.player.health = save.player.health || MAX_HEALTH;
+            this.gameMode = save.player.gameMode || 'survival';
+            this.isFlying = save.player.isFlying || false;
+          }
+          
+          // Restore inventory
+          this.hotbarSlots = save.hotbar ? save.hotbar.map(s => s ? {...s} : null) : new Array(9).fill(null);
+          this.inventorySlots = save.inventory ? save.inventory.map(s => s ? {...s} : null) : new Array(27).fill(null);
+          this.selectedSlot = save.selectedSlot || 0;
+          
+          // Restore modified blocks
+          this.modifiedBlocks.clear();
+          if (save.modifiedBlocks) {
+            for (const [key, value] of save.modifiedBlocks) {
+              this.modifiedBlocks.set(key, value);
+            }
+          }
+          
+          return true;
+        }
+
+        showAutosaveIndicator() {
+          const indicator = document.getElementById('autosave-indicator');
+          indicator.classList.add('visible');
+          setTimeout(() => {
+            indicator.classList.remove('visible');
+          }, 2000);
+        }
+
+        startAutosave() {
+          if (this.autosaveTimer) {
+            clearInterval(this.autosaveTimer);
+          }
+          
+          if (this.settings.autosave) {
+            this.autosaveTimer = setInterval(() => {
+              if (this.isPlaying && !this.isPaused && !this.player.isDead) {
+                this.saveGame(true);
+              }
+            }, AUTOSAVE_INTERVAL);
+          }
+        }
+
+        stopAutosave() {
+          if (this.autosaveTimer) {
+            clearInterval(this.autosaveTimer);
+            this.autosaveTimer = null;
+          }
+        }
+
+        exportWorld() {
+          if (!this.currentSlot) return;
+          
+          // Save current state first
+          if (this.isPlaying) {
+            this.saveGame(false);
+          }
+          
+          const saveData = this.saveManager.getSave(this.currentSlot);
+          if (!saveData) return;
+          
+          const json = JSON.stringify(saveData, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${saveData.worldName || 'world'}_${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+
+        importWorld(file) {
+          const reader = new FileReader();
+          
+          reader.onload = (e) => {
+            try {
+              const saveData = JSON.parse(e.target.result);
+              
+              if (!saveData.version || !saveData.seed) {
+                throw new Error('Invalid save file');
+              }
+              
+              // Find empty slot
+              const saves = this.saveManager.getAllSaves();
+              let slotId = null;
+              for (let i = 1; i <= MAX_SAVE_SLOTS; i++) {
+                if (!saves[`slot${i}`]) {
+                  slotId = `slot${i}`;
+                  break;
+                }
+              }
+              
+              if (!slotId) {
+                alert('All save slots are full! Delete a world first.');
+                return;
+              }
+              
+              // Import
+              saveData.worldName = saveData.worldName || file.name.replace('.json', '');
+              this.saveManager.saveGame(slotId, saveData);
+              this.currentSlot = slotId;
+              this.updateWorldSlots();
+              
+              alert(`World "${saveData.worldName}" imported successfully!`);
+            } catch (err) {
+              console.error('Import failed:', err);
+              alert('Failed to import world. Invalid file format.');
+            }
+          };
+          
+          reader.readAsText(file);
+        }
+
+        loadSettings() {
+          try {
+            const saved = localStorage.getItem('minecraft_settings');
+            if (saved) {
+              const settings = JSON.parse(saved);
+              Object.assign(this.settings, settings);
+            }
+          } catch (e) {
+            console.error('Failed to load settings:', e);
+          }
+        }
+
+        saveSettings() {
+          try {
+            localStorage.setItem('minecraft_settings', JSON.stringify(this.settings));
+          } catch (e) {
+            console.error('Failed to save settings:', e);
+          }
+        }
+
+        // ==================== LIGHTING & SETUP ====================
 
         setupLighting() {
           const ambient = new THREE.AmbientLight(0xffffff, 0.7);
@@ -825,7 +1373,6 @@
             this.sun.shadow.normalBias = 0;
             this.sun.shadow.camera.updateProjectionMatrix();
             
-            // Update existing meshes
             this.chunkMeshes.forEach((group) => {
               group.children.forEach(mesh => {
                 mesh.castShadow = true;
@@ -890,7 +1437,6 @@
             }
           }
           
-          // Hide health bar in creative mode
           document.getElementById('health-bar').style.display = 
             this.gameMode === 'creative' ? 'none' : 'flex';
         }
@@ -898,16 +1444,15 @@
         setupSettingsUI() {
           const panel = document.getElementById('settings-panel');
           
-          // Render distance
           const rdSlider = document.getElementById('setting-render-distance');
           rdSlider.value = this.settings.renderDistance;
           document.getElementById('render-distance-value').textContent = this.settings.renderDistance;
           rdSlider.oninput = () => {
             this.settings.renderDistance = parseInt(rdSlider.value);
             document.getElementById('render-distance-value').textContent = this.settings.renderDistance;
+            this.saveSettings();
           };
           
-          // Shadows
           const shadowCheck = document.getElementById('setting-shadows');
           shadowCheck.checked = this.settings.shadowsEnabled;
           document.getElementById('shadow-distance-row').style.display = 
@@ -917,9 +1462,9 @@
             document.getElementById('shadow-distance-row').style.display = 
               shadowCheck.checked ? 'flex' : 'none';
             if (this.isPlaying) this.updateShadows();
+            this.saveSettings();
           };
           
-          // Shadow distance
           const sdSlider = document.getElementById('setting-shadow-distance');
           sdSlider.value = this.settings.shadowDistance;
           document.getElementById('shadow-distance-value').textContent = this.settings.shadowDistance;
@@ -927,9 +1472,9 @@
             this.settings.shadowDistance = parseInt(sdSlider.value);
             document.getElementById('shadow-distance-value').textContent = this.settings.shadowDistance;
             if (this.isPlaying && this.settings.shadowsEnabled) this.updateShadows();
+            this.saveSettings();
           };
           
-          // FOV
           const fovSlider = document.getElementById('setting-fov');
           fovSlider.value = this.settings.fov;
           document.getElementById('fov-value').textContent = this.settings.fov;
@@ -938,18 +1483,32 @@
             document.getElementById('fov-value').textContent = this.settings.fov;
             this.camera.fov = this.settings.fov;
             this.camera.updateProjectionMatrix();
+            this.saveSettings();
           };
           
-          // Sensitivity
           const sensSlider = document.getElementById('setting-sensitivity');
           sensSlider.value = this.settings.sensitivity;
           document.getElementById('sensitivity-value').textContent = this.settings.sensitivity.toFixed(1);
           sensSlider.oninput = () => {
             this.settings.sensitivity = parseFloat(sensSlider.value);
             document.getElementById('sensitivity-value').textContent = this.settings.sensitivity.toFixed(1);
+            this.saveSettings();
           };
           
-          // Fullscreen
+          const autosaveCheck = document.getElementById('setting-autosave');
+          autosaveCheck.checked = this.settings.autosave;
+          autosaveCheck.onchange = () => {
+            this.settings.autosave = autosaveCheck.checked;
+            if (this.isPlaying) {
+              if (this.settings.autosave) {
+                this.startAutosave();
+              } else {
+                this.stopAutosave();
+              }
+            }
+            this.saveSettings();
+          };
+          
           const fsCheck = document.getElementById('setting-fullscreen');
           fsCheck.checked = this.settings.fullscreen;
           fsCheck.onchange = () => {
@@ -959,9 +1518,9 @@
             } else {
               document.exitFullscreen?.();
             }
+            this.saveSettings();
           };
           
-          // Settings buttons
           document.getElementById('settings-btn').onclick = () => {
             panel.classList.add('visible');
           };
@@ -985,34 +1544,27 @@
           hotbarInv.innerHTML = '';
           recipeList.innerHTML = '';
           
-          // Main inventory slots
           for (let i = 0; i < 27; i++) {
             const slot = this.createInventorySlot(this.inventorySlots[i], 'inventory', i);
             mainInv.appendChild(slot);
           }
           
-          // Hotbar slots in inventory
           for (let i = 0; i < 9; i++) {
             const slot = this.createInventorySlot(this.hotbarSlots[i], 'hotbar', i);
             hotbarInv.appendChild(slot);
           }
           
-          // Recipes
           const recipes = this.gameMode === 'creative' ? this.getCreativeItems() : RECIPES;
           
           if (this.gameMode === 'creative') {
-            // Show all blocks and items for creative mode
             recipes.forEach(item => {
               const recipeEl = document.createElement('div');
               recipeEl.className = 'recipe-item can-craft';
-              recipeEl.innerHTML = `
-                <span class="recipe-result">${item.name}</span>
-              `;
+              recipeEl.innerHTML = `<span class="recipe-result">${item.name}</span>`;
               recipeEl.onclick = () => this.giveItem(item.id, 64);
               recipeList.appendChild(recipeEl);
             });
           } else {
-            // Show actual recipes for survival
             RECIPES.forEach(recipe => {
               const canCraft = this.canCraftRecipe(recipe);
               const recipeEl = document.createElement('div');
@@ -1041,17 +1593,12 @@
 
         getCreativeItems() {
           const items = [];
-          
-          // Add all blocks
           for (const [id, data] of Object.entries(BLOCK_DATA)) {
             items.push({ id: parseInt(id), name: data.name });
           }
-          
-          // Add all items
           for (const [id, data] of Object.entries(ITEM_DATA)) {
             items.push({ id: parseInt(id), name: data.name });
           }
-          
           return items;
         }
 
@@ -1073,7 +1620,6 @@
               slot.appendChild(count);
             }
             
-            // Durability bar for tools
             const itemData = ITEM_DATA[slotData.id];
             if (itemData?.durability && slotData.durability !== undefined) {
               const durBar = document.createElement('div');
@@ -1100,13 +1646,7 @@
 
         handleInventoryClick(type, index) {
           if (this.gameMode === 'creative') return;
-          
-          // Simple swap logic
-          const slots = type === 'hotbar' ? this.hotbarSlots : this.inventorySlots;
-          const item = slots[index];
-          
-          // For now, just log - could implement drag/drop
-          console.log('Clicked', type, index, item);
+          console.log('Clicked', type, index);
         }
 
         setupHotbar() {
@@ -1117,7 +1657,6 @@
           const ctx = canvas.getContext('2d');
           ctx.clearRect(0, 0, 32, 32);
           
-          // Check if it's a block or item
           if (BLOCK_DATA[itemId]) {
             this.drawBlockIcon(canvas, itemId);
           } else if (ITEM_DATA[itemId]) {
@@ -1158,30 +1697,24 @@
           if (!data) return;
           
           const toRGB = hex => `rgb(${(hex>>16)&255},${(hex>>8)&255},${hex&255})`;
-          
           ctx.fillStyle = toRGB(data.color);
           
           if (data.toolType === 'pickaxe') {
-            // Pickaxe shape
             ctx.fillRect(14, 2, 4, 4);
             ctx.fillRect(10, 6, 12, 4);
             ctx.fillRect(14, 10, 4, 18);
           } else if (data.toolType === 'axe') {
-            // Axe shape
             ctx.fillRect(18, 2, 8, 8);
             ctx.fillRect(14, 6, 4, 4);
             ctx.fillRect(14, 10, 4, 18);
           } else if (data.toolType === 'shovel') {
-            // Shovel shape
             ctx.fillRect(12, 2, 8, 10);
             ctx.fillRect(14, 12, 4, 16);
           } else if (data.name?.includes('Sword')) {
-            // Sword shape
             ctx.fillRect(14, 2, 4, 20);
             ctx.fillRect(10, 22, 12, 4);
             ctx.fillRect(14, 26, 4, 4);
           } else {
-            // Generic item (diamond, coal, etc)
             ctx.beginPath();
             ctx.arc(16, 16, 10, 0, Math.PI * 2);
             ctx.fill();
@@ -1216,7 +1749,6 @@
               name.textContent = this.getItemName(slotData.id);
               slot.appendChild(name);
               
-              // Durability bar
               const itemData = ITEM_DATA[slotData.id];
               if (itemData?.durability && slotData.durability !== undefined) {
                 const durBar = document.createElement('div');
@@ -1258,17 +1790,13 @@
           return null;
         }
 
-        // Inventory management
         addToInventory(itemId, count = 1, durability = undefined) {
-          // Check if item is stackable
           const itemData = ITEM_DATA[itemId];
-          const blockData = BLOCK_DATA[itemId];
           const isStackable = itemData?.stackable !== false && !itemData?.isTool;
           
           let remaining = count;
           
           if (isStackable) {
-            // Try to stack in hotbar first
             for (let i = 0; i < this.hotbarSlots.length && remaining > 0; i++) {
               const slot = this.hotbarSlots[i];
               if (slot && slot.id === itemId && slot.count < MAX_STACK_SIZE) {
@@ -1278,7 +1806,6 @@
               }
             }
             
-            // Then inventory
             for (let i = 0; i < this.inventorySlots.length && remaining > 0; i++) {
               const slot = this.inventorySlots[i];
               if (slot && slot.id === itemId && slot.count < MAX_STACK_SIZE) {
@@ -1289,12 +1816,10 @@
             }
           }
           
-          // Find empty slots for remaining items
           while (remaining > 0) {
             const addCount = isStackable ? Math.min(remaining, MAX_STACK_SIZE) : 1;
             let added = false;
             
-            // Try hotbar first
             for (let i = 0; i < this.hotbarSlots.length; i++) {
               if (!this.hotbarSlots[i]) {
                 this.hotbarSlots[i] = { 
@@ -1308,7 +1833,6 @@
               }
             }
             
-            // Then inventory
             if (!added) {
               for (let i = 0; i < this.inventorySlots.length; i++) {
                 if (!this.inventorySlots[i]) {
@@ -1324,7 +1848,7 @@
               }
             }
             
-            if (!added) break; // Inventory full
+            if (!added) break;
           }
           
           this.updateHotbar();
@@ -1336,7 +1860,6 @@
         removeFromInventory(itemId, count = 1) {
           let remaining = count;
           
-          // Remove from hotbar first
           for (let i = 0; i < this.hotbarSlots.length && remaining > 0; i++) {
             const slot = this.hotbarSlots[i];
             if (slot && slot.id === itemId) {
@@ -1347,7 +1870,6 @@
             }
           }
           
-          // Then from inventory
           for (let i = 0; i < this.inventorySlots.length && remaining > 0; i++) {
             const slot = this.inventorySlots[i];
             if (slot && slot.id === itemId) {
@@ -1366,15 +1888,12 @@
 
         countItem(itemId) {
           let count = 0;
-          
           for (const slot of this.hotbarSlots) {
             if (slot && slot.id === itemId) count += slot.count;
           }
-          
           for (const slot of this.inventorySlots) {
             if (slot && slot.id === itemId) count += slot.count;
           }
-          
           return count;
         }
 
@@ -1393,12 +1912,10 @@
         craftRecipe(recipe) {
           if (!this.canCraftRecipe(recipe)) return false;
           
-          // Remove ingredients
           for (const ing of recipe.ingredients) {
             this.removeFromInventory(ing.item, ing.count);
           }
           
-          // Add result
           const resultData = ITEM_DATA[recipe.result];
           this.addToInventory(recipe.result, recipe.resultCount, resultData?.durability);
           
@@ -1466,7 +1983,12 @@
           document.getElementById('start-btn').onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.startGame();
+            if (this.currentSlot) {
+              const saves = this.saveManager.getAllSaves();
+              if (saves[this.currentSlot]) {
+                this.startGame(false);
+              }
+            }
           };
 
           document.getElementById('respawn-btn').onclick = () => {
@@ -1476,6 +1998,13 @@
           document.addEventListener('keydown', e => {
             if (this.keys[e.code]) return;
             this.keys[e.code] = true;
+            
+            // Quick save with F5
+            if (e.code === 'F5' && this.isPlaying && !this.isPaused) {
+              e.preventDefault();
+              this.saveGame(true);
+              return;
+            }
             
             if (e.code === 'KeyE' && this.isPlaying && !this.isPaused && !this.player.isDead) {
               this.toggleInventory();
@@ -1508,6 +2037,8 @@
             }
             
             if (e.code === 'Escape' && this.isPlaying && !this.inventoryOpen) {
+              // Save before showing menu
+              this.saveGame(false);
               document.getElementById('settings-panel').classList.add('visible');
               document.exitPointerLock();
             }
@@ -1563,12 +2094,14 @@
 
           document.addEventListener('pointerlockchange', () => {
             if (!document.pointerLockElement && this.isPlaying && !this.isPaused && !this.inventoryOpen) {
-              // Check if settings panel is open
               if (!document.getElementById('settings-panel').classList.contains('visible')) {
                 this.isPaused = true;
+                this.saveGame(false); // Save when pausing
                 document.getElementById('menu').classList.remove('hidden');
                 document.getElementById('menu').querySelector('h1').textContent = '⏸ PAUSED';
-                document.getElementById('menu').querySelector('button').textContent = 'Resume';
+                document.getElementById('start-btn').textContent = 'Resume';
+                document.getElementById('start-btn').disabled = false;
+                this.updateWorldSlots();
               }
             }
           });
@@ -1577,6 +2110,13 @@
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(window.innerWidth, window.innerHeight);
+          });
+          
+          // Save before closing
+          window.addEventListener('beforeunload', () => {
+            if (this.isPlaying) {
+              this.saveGame(false);
+            }
           });
         }
 
@@ -1605,22 +2145,84 @@
           }
         }
 
-        async startGame() {
+        resetWorld() {
+          // Clear existing world data
+          this.chunks.clear();
+          this.chunkMeshes.forEach((group) => {
+            this.scene.remove(group);
+            group.children.forEach(child => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) child.material.dispose();
+            });
+          });
+          this.chunkMeshes.clear();
+          this.modifiedBlocks.clear();
+          
+          // Clear particles
+          this.particleSystem.forEach(p => {
+            this.scene.remove(p);
+            p.geometry.dispose();
+            p.material.dispose();
+          });
+          this.particleSystem = [];
+          
+          // Reset player
+          this.player.position.set(8, 50, 8);
+          this.player.velocity.set(0, 0, 0);
+          this.player.yaw = 0;
+          this.player.pitch = 0;
+          this.player.health = MAX_HEALTH;
+          this.player.onGround = false;
+          this.player.inWater = false;
+          this.player.fallStartY = null;
+          this.player.isDead = false;
+          
+          // Reset inventory
+          this.hotbarSlots = new Array(9).fill(null);
+          this.inventorySlots = new Array(27).fill(null);
+          this.selectedSlot = 0;
+          
+          // Reset game state
+          this.gameMode = 'survival';
+          this.isFlying = false;
+        }
+
+        async startGame(isNewWorld = false) {
           const menu = document.getElementById('menu');
           const menuTitle = menu.querySelector('h1');
-          const menuButton = menu.querySelector('button');
+          const menuButton = document.getElementById('start-btn');
 
           menu.classList.add('hidden');
           document.getElementById('settings-panel').classList.remove('visible');
+          document.getElementById('new-world-form').classList.remove('visible');
 
-          if (!this.isPlaying) {
+          if (!this.isPlaying || isNewWorld) {
             document.getElementById('loading').classList.add('show');
+            document.getElementById('loading-text').textContent = 
+              isNewWorld ? 'Creating New World...' : 'Loading World...';
             await new Promise(r => setTimeout(r, 50));
 
+            if (isNewWorld) {
+              this.resetWorld();
+            } else {
+              // Load existing save
+              this.resetWorld();
+              this.loadGame(this.currentSlot);
+            }
+
+            // Initialize noise with seed
+            this.noise = new SimplexNoise(this.worldSeed);
+            this.noiseDetail = new SimplexNoise(this.worldSeed + 1000);
+
             this.generateInitialChunks();
-            this.findSpawnPoint();
+            
+            if (isNewWorld) {
+              this.findSpawnPoint();
+            }
+            
             this.isPlaying = true;
             this.updateShadows();
+            this.startAutosave();
 
             document.getElementById('loading').classList.remove('show');
             this.lastTime = performance.now();
@@ -1629,8 +2231,13 @@
 
           this.isPaused = false;
           menuTitle.textContent = '⛏ MINECRAFT';
-          menuButton.textContent = 'Play World';
+          menuButton.textContent = 'Play Selected World';
           this.updateGameModeIndicator();
+          this.updateHotbar();
+          this.updateHealthBar();
+          
+          // Update world info display
+          document.getElementById('world-info').textContent = `World: ${this.worldName} (Seed: ${this.worldSeed})`;
 
           await new Promise(r => setTimeout(r, 50));
 
@@ -1695,7 +2302,7 @@
                   else chunk[idx] = BLOCK.STONE;
                 } else if (y < height - 1) {
                   chunk[idx] = biome === 'desert' ? BLOCK.SAND : BLOCK.DIRT;
-                } else if (y < height) {
+                                } else if (y < height) {
                   if (biome === 'desert') chunk[idx] = BLOCK.SAND;
                   else if (biome === 'snow') chunk[idx] = BLOCK.SNOW;
                   else if (height <= WATER_LEVEL + 2) chunk[idx] = BLOCK.SAND;
@@ -2070,15 +2677,11 @@
         applyFallDamage(fallDistance) {
           if (this.gameMode === 'creative') return;
           
-          // Minecraft fall damage: damage = floor(fallDistance) - 3
-          // You take damage after falling more than 3 blocks
           const damage = Math.floor(fallDistance) - 3;
           
           if (damage > 0) {
             this.player.health -= damage;
             this.updateHealthBar();
-            
-            // Screen shake effect could be added here
             
             if (this.player.health <= 0) {
               this.playerDie();
@@ -2091,9 +2694,6 @@
           this.player.health = 0;
           this.updateHealthBar();
           
-          // Drop all items (simplified - just clear inventory)
-          // In a full implementation, items would drop as entities
-          
           document.getElementById('death-screen').classList.add('visible');
           document.exitPointerLock();
         }
@@ -2104,10 +2704,9 @@
           this.player.fallStartY = null;
           this.player.velocity.set(0, 0, 0);
           
-          // Find new spawn point
           this.findSpawnPoint();
           
-          // Clear inventory on death (Minecraft behavior)
+          // Clear inventory on death
           this.hotbarSlots.fill(null);
           this.inventorySlots.fill(null);
           
@@ -2115,6 +2714,9 @@
           this.updateHotbar();
           
           document.getElementById('death-screen').classList.remove('visible');
+          
+          // Save after respawn
+          this.saveGame(false);
           
           setTimeout(() => {
             this.renderer.domElement.requestPointerLock();
@@ -2223,7 +2825,6 @@
         getMiningSpeed(blockData, tool) {
           if (!tool) return 1;
           
-          // Check if this is the right tool type
           if (tool.toolType === blockData.toolType) {
             return tool.miningSpeed;
           }
@@ -2243,26 +2844,21 @@
 
           const tool = this.getHeldTool();
           
-          // Check if we can mine this block
           if (!this.canMineBlock(blockData, tool)) {
-            // Can't mine, don't drop anything
             this.setBlock(x, y, z, BLOCK.AIR);
             this.spawnParticles(x + 0.5, y + 0.5, z + 0.5, blockData.side);
             return;
           }
 
-          // Damage tool
           if (tool && this.gameMode === 'survival') {
             this.damageTool(tool.slotIndex);
           }
 
-          // Determine what to drop
           let dropItem = block;
           let dropCount = 1;
           
           if (blockData.drops !== undefined) {
             if (blockData.drops === null) {
-              // No drop (like glass)
               dropItem = null;
             } else {
               dropItem = blockData.drops;
@@ -2274,7 +2870,6 @@
           this.spawnParticles(x + 0.5, y + 0.5, z + 0.5, blockData.side);
           this.setBlock(x, y, z, BLOCK.AIR);
           
-          // Add to inventory in survival mode
           if (this.gameMode === 'survival' && dropItem !== null) {
             this.addToInventory(dropItem, dropCount);
           }
@@ -2290,7 +2885,6 @@
           const heldItem = this.getHeldItem();
           if (!heldItem) return;
           
-          // Check if held item is a placeable block
           if (!BLOCK_DATA[heldItem.id]) return;
 
           const { x, y, z } = this.placementBlock;
@@ -2305,7 +2899,6 @@
             return;
           }
 
-          // Remove from inventory in survival
           if (this.gameMode === 'survival') {
             if (heldItem.count <= 1) {
               this.hotbarSlots[this.selectedSlot] = null;
@@ -2505,7 +3098,7 @@
         }
       }
 
-      // Start
+      // Start the game
       const game = new MinecraftGame();
     </script>
   </body>

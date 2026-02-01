@@ -135,20 +135,18 @@ function generateChunkData(cx, cz, seed) {
 // ==================== MESH GEOMETRY BUILDING ====================
 
 function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
-  const opaque = { pos: [], col: [] };
-  const trans = { pos: [], col: [] };
+  const opaque = { pos: [], col: [], norm: [] };  // Added norm array
+  const trans = { pos: [], col: [], norm: [] };   // Added norm array
 
   // Helper to get block at world position
   const getBlock = (wx, y, wz) => {
     if (y < 0 || y >= WORLD_HEIGHT) return BLOCK.AIR;
     
-    // Check modified blocks first
     const modKey = `${wx},${y},${wz}`;
     if (modifiedBlocks && modifiedBlocks[modKey] !== undefined) {
       return modifiedBlocks[modKey];
     }
     
-    // Calculate which chunk this position is in
     const targetCx = Math.floor(wx / CHUNK_SIZE);
     const targetCz = Math.floor(wz / CHUNK_SIZE);
     const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
@@ -158,7 +156,6 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
       return chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT];
     }
     
-    // Check neighbor chunks
     const nkey = `${targetCx},${targetCz}`;
     if (neighbors[nkey]) {
       return neighbors[nkey][lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT];
@@ -175,14 +172,24 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
   const vertexAO = (s1, s2, c) => (s1 && s2) ? 0 : 3 - (s1 + s2 + c);
   const aoLevels = [0.5, 0.7, 0.85, 1.0];
 
+  // Face normals - pre-defined for each direction
+  const FACE_NORMALS = {
+    top:    [0, 1, 0],
+    bottom: [0, -1, 0],
+    front:  [0, 0, 1],
+    back:   [0, 0, -1],
+    right:  [1, 0, 0],
+    left:   [-1, 0, 0]
+  };
+
   const addFace = (wx, y, wz, dir, color, target) => {
     const r = ((color >> 16) & 255) / 255;
     const g = ((color >> 8) & 255) / 255;
     const b = (color & 255) / 255;
 
     const face = FACE_DATA[dir];
+    const normal = FACE_NORMALS[dir];
 
-    // Calculate ambient occlusion for each corner
     const ao = face.corners.map(c => {
       const n = c.neighbors;
       const s1 = isOccluder(wx + n[0][0], y + n[0][1], wz + n[0][2]) ? 1 : 0;
@@ -191,11 +198,9 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
       return vertexAO(s1, s2, corner);
     });
 
-    // Flip quad diagonal for better AO interpolation
     const flip = ao[0] + ao[2] < ao[1] + ao[3];
     const indices = flip ? [1, 2, 3, 1, 3, 0] : [0, 1, 2, 0, 2, 3];
 
-    // Add subtle variation to prevent flat look
     const noise = (Math.sin(wx * 12.9898 + wz * 78.233) * 43758.5453) % 1;
     const v = 1 - (Math.abs(noise) * 0.08);
 
@@ -204,17 +209,19 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
       target.pos.push(wx + corner.pos[0], y + corner.pos[1], wz + corner.pos[2]);
       const m = aoLevels[ao[i]] * face.shade * v;
       target.col.push(r * m, g * m, b * m);
+      // Add pre-computed normal for this vertex
+      target.norm.push(normal[0], normal[1], normal[2]);
     });
   };
 
-  // Iterate through all blocks in chunk
+  // ... rest of the iteration logic stays the same ...
+
   for (let lx = 0; lx < CHUNK_SIZE; lx++) {
     for (let y = 0; y < WORLD_HEIGHT; y++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         const wx = cx * CHUNK_SIZE + lx;
         const wz = cz * CHUNK_SIZE + lz;
         
-        // Check modified blocks first
         const modKey = `${wx},${y},${wz}`;
         let block;
         if (modifiedBlocks && modifiedBlocks[modKey] !== undefined) {
@@ -231,7 +238,6 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
 
         const target = data.transparent ? trans : opaque;
 
-        // Check if face should be rendered
         const shouldRender = (nx, ny, nz) => {
           const neighbor = getBlock(nx, ny, nz);
           if (neighbor === BLOCK.AIR) return true;
@@ -255,17 +261,18 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
   return {
     opaque: {
       positions: new Float32Array(opaque.pos),
-      colors: new Float32Array(opaque.col)
+      colors: new Float32Array(opaque.col),
+      normals: new Float32Array(opaque.norm)  // Added normals
     },
     transparent: {
       positions: new Float32Array(trans.pos),
-      colors: new Float32Array(trans.col)
+      colors: new Float32Array(trans.col),
+      normals: new Float32Array(trans.norm)   // Added normals
     }
   };
 }
 
-// ==================== MESSAGE HANDLER ====================
-
+// Update message handler to transfer normals
 self.onmessage = function(e) {
   const { type, cx, cz, seed, id } = e.data;
 
@@ -276,7 +283,6 @@ self.onmessage = function(e) {
     self.postMessage({ type: 'ready' });
   }
   else if (type === 'generate') {
-    // Generate chunk data only
     const chunkData = generateChunkData(cx, cz, seed);
     self.postMessage({
       type: 'chunk',
@@ -285,10 +291,8 @@ self.onmessage = function(e) {
     }, [chunkData.buffer]);
   }
   else if (type === 'generateAndBuild') {
-    // Generate chunk AND build mesh in one go
     const { neighbors, modifiedBlocks } = e.data;
     
-    // Convert neighbor ArrayBuffers to Uint8Arrays
     const neighborArrays = {};
     if (neighbors) {
       for (const [key, buf] of Object.entries(neighbors)) {
@@ -296,19 +300,18 @@ self.onmessage = function(e) {
       }
     }
     
-    // Generate chunk
     const chunkData = generateChunkData(cx, cz, seed);
-    
-    // Build mesh geometry
     const geometry = buildMeshGeometry(cx, cz, chunkData, neighborArrays, modifiedBlocks || {});
     
-    // Transfer all buffers
+    // Transfer all buffers including normals
     const transferList = [
       chunkData.buffer,
       geometry.opaque.positions.buffer,
       geometry.opaque.colors.buffer,
+      geometry.opaque.normals.buffer,
       geometry.transparent.positions.buffer,
-      geometry.transparent.colors.buffer
+      geometry.transparent.colors.buffer,
+      geometry.transparent.normals.buffer
     ];
     
     self.postMessage({
@@ -319,7 +322,6 @@ self.onmessage = function(e) {
     }, transferList);
   }
   else if (type === 'buildMesh') {
-    // Build mesh for existing chunk data
     const { chunk, neighbors, modifiedBlocks } = e.data;
     
     const chunkArray = new Uint8Array(chunk);
@@ -332,11 +334,14 @@ self.onmessage = function(e) {
     
     const geometry = buildMeshGeometry(cx, cz, chunkArray, neighborArrays, modifiedBlocks || {});
     
+    // Transfer all buffers including normals
     const transferList = [
       geometry.opaque.positions.buffer,
       geometry.opaque.colors.buffer,
+      geometry.opaque.normals.buffer,
       geometry.transparent.positions.buffer,
-      geometry.transparent.colors.buffer
+      geometry.transparent.colors.buffer,
+      geometry.transparent.normals.buffer
     ];
     
     self.postMessage({
@@ -345,4 +350,5 @@ self.onmessage = function(e) {
       geometry
     }, transferList);
   }
+};
 };

@@ -545,7 +545,9 @@ class MinecraftGame {
 
   updateFog() {
     const viewDistance = CHUNK_SIZE * this.settings.renderDistance;
-    this.scene.fog = new THREE.Fog(0x87ceeb, viewDistance * 0.5, viewDistance * 0.9);
+    // Exponential fog - density controls how quickly it fades
+    const density = 0.015 / this.settings.renderDistance;
+    this.scene.fog = new THREE.FogExp2(0x87ceeb, density);
   }
 
   setupHighlight() {
@@ -1466,12 +1468,13 @@ class MinecraftGame {
     if (this.meshBuildQueue.length === 0) return;
     if (!this.chunkWorker) {
       // Fallback: process on main thread with time budget
-      //this.processMeshQueueMainThread();
-      //return;
+      alert("fallback: process on main thread")
+      this.processMeshQueueMainThread();
+      return;
     }
     
     // Send up to 2 mesh build requests per frame
-    const maxPerFrame = 2;
+    const maxPerFrame = 1;
     let processed = 0;
     
     while (this.meshBuildQueue.length > 0 && processed < maxPerFrame) {
@@ -1566,7 +1569,14 @@ class MinecraftGame {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
       geo.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
-      geo.computeVertexNormals();
+      
+      // Use pre-computed normals instead of computing them!
+      if (data.normals && data.normals.length > 0) {
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(data.normals, 3));
+      } else {
+        // Fallback only if normals not provided
+        geo.computeVertexNormals();
+      }
       
       const mat = new THREE.MeshStandardMaterial({
         vertexColors: true,
@@ -2370,7 +2380,7 @@ class MinecraftGame {
 
     // Sort by distance and limit chunks per frame
     chunksNeeded.sort((a, b) => a.dist - b.dist);
-    const maxChunksPerFrame = 2;
+    const maxChunksPerFrame = 1;
     for (let i = 0; i < Math.min(chunksNeeded.length, maxChunksPerFrame); i++) {
       this.generateChunk(chunksNeeded[i].cx, chunksNeeded[i].cz);
     }

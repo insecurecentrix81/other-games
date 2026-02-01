@@ -351,4 +351,3 @@ self.onmessage = function(e) {
     }, transferList);
   }
 };
-};

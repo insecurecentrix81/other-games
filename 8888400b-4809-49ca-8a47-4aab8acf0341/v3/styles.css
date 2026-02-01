@@ -494,3 +494,15 @@ canvas { display: block; }
   border: none; border-radius: 5px;
   cursor: pointer; font-weight: bold;
 }
+.inv-slot.can-place {
+  border-color: #5f5;
+}
+
+.inv-slot:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#held-item-cursor {
+  opacity: 0.9;
+}

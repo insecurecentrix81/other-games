@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Editor</title>
+    <title>Sophisticated Project Editor</title>
     <style>
         :root {
             --bg-dark: #1e1e1e;
@@ -40,107 +40,131 @@
         .file-item.active { background: #37373d; color: white; border-left: 2px solid var(--accent); }
         .file-item .del-btn { margin-left: auto; color: #aaa; cursor: pointer; font-size: 16px; display: none; }
         .file-item:hover .del-btn { display: block; }
-        .folder-label { padding: 5px 10px; font-weight: bold; color: #888; font-size: 12px; text-transform: uppercase; margin-top: 5px;}
         
-        /* Tree View Styles */
+        /* TREE VIEW */
         ul.tree-root, ul.nested-group { list-style: none; padding: 0; margin: 0; }
-        ul.nested-group { padding-left: 15px; display: none; } /* Hidden by default */
-        ul.nested-group.expanded { display: block; } /* Show when expanded */
-
+        ul.nested-group { padding-left: 15px; display: none; }
+        ul.nested-group.expanded { display: block; }
         .folder-item { cursor: pointer; padding: 5px 10px; color: #aaa; font-size: 13px; font-weight: bold; display: flex; align-items: center; user-select: none; }
         .folder-item:hover { color: #fff; }
         .folder-icon { display: inline-block; width: 15px; font-size: 10px; transition: transform 0.2s; }
         .folder-item.open .folder-icon { transform: rotate(90deg); }
-
-        .file-item { padding-left: 24px; } /* Align files with folder text */
+        .file-item { padding-left: 24px; }
 
         /* EDITOR AREA */
         .editor-container { flex: 1; position: relative; }
         #monaco-root { width: 100%; height: 100%; }
+        
+        /* LOADING OVERLAY */
+        #loader { position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10; display: none;}
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* PREVIEW AREA */
         .preview-container { width: 40%; background: white; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-        .preview-header { padding: 5px 10px; background: #eee; color: #333; font-size: 12px; border-bottom: 1px solid #ccc; font-weight: bold; }
+        .preview-header { padding: 5px 10px; background: #eee; color: #333; font-size: 12px; border-bottom: 1px solid #ccc; font-weight: bold; display: flex; justify-content: space-between; }
+        .preview-status { font-size: 10px; color: #666; }
         iframe { flex: 1; border: none; width: 100%; height: 100%; background: #fff; }
 
         /* CONTEXT MENU */
-        #context-menu {
-            position: fixed;
-            z-index: 10000;
-            width: 150px;
-            background: var(--menu-bg);
-            border: 1px solid var(--border);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            display: none;
-            padding: 5px 0;
-            border-radius: 4px;
-        }
-        .context-menu-item {
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 13px;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-        }
-        .context-menu-item:hover {
-            background: var(--menu-hover);
-            color: #fff;
-        }
-
+        #context-menu { position: fixed; z-index: 10000; width: 150px; background: var(--menu-bg); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.5); display: none; padding: 5px 0; border-radius: 4px; }
+        .context-menu-item { padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text); display: flex; align-items: center; }
+        .context-menu-item:hover { background: var(--menu-hover); color: #fff; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Project Editor</h1>
+    <h1>Project Editor (Worker Mode)</h1>
     <div class="toolbar" style="display: flex; align-items: center; gap: 10px;">
         <div class="project-selector" style="display: flex; align-items: center; gap: 5px; background: #444; padding: 2px 8px; border-radius: 4px;">
-            <span style="font-size: 12px; color: #aaa;">Project:</span>
-            <select id="projectSelect" onchange="editorApp.switchProject(this.value)" style="background: transparent; color: white; border: none; font-size: 13px; outline: none; cursor: pointer;">
-            </select>
-            <button class="secondary" onclick="editorApp.createNewProject()" style="background: none; border: none; padding: 0 5px; margin: 0; font-size: 16px;" title="New Project">+</button>
-            <button class="secondary" onclick="editorApp.deleteCurrentProject()" style="background: none; border: none; padding: 0 5px; margin: 0; font-size: 12px; color: #f44336;" title="Delete Project">🗑</button>
+            <select id="projectSelect" onchange="editorApp.switchProject(this.value)" style="background: transparent; color: white; border: none; font-size: 13px; outline: none; cursor: pointer;"></select>
+            <button class="secondary" onclick="editorApp.createNewProject()" title="New">+</button>
+            <button class="secondary" onclick="editorApp.deleteCurrentProject()" style="color: #f44336;" title="Delete">🗑</button>
         </div>
-        <button class="secondary" onclick="editorApp.formatCode()">Format Code</button>
+        <button class="secondary" onclick="editorApp.formatCode()">Format</button>
         <button onclick="editorApp.runCode()">▶ Run</button>
     </div>
 </header>
 
 <div class="workspace">
-    <!-- Sidebar -->
     <div class="sidebar">
         <div class="file-controls">
-            <input type="text" id="newFilename" placeholder="New file (e.g. css/style.css)">
+            <input type="text" id="newFilename" placeholder="New file (e.g. js/app.js)">
             <button class="secondary" onclick="editorApp.addFile()">+</button>
         </div>
         <div id="fileList" class="file-list"></div>
     </div>
-
-    <!-- Code Editor -->
     <div class="editor-container">
+        <div id="loader"><div class="spinner"></div></div>
         <div id="monaco-root"></div>
     </div>
-
-    <!-- Output -->
     <div class="preview-container">
-        <div class="preview-header">Output (Click Run)</div>
-        <iframe id="previewFrame" sandbox="allow-scripts allow-modals"></iframe>
+        <div class="preview-header">
+            <span>Output</span>
+            <span id="previewStatus" class="preview-status">Ready</span>
+        </div>
+        <iframe id="previewFrame" sandbox="allow-scripts allow-modals allow-same-origin allow-forms"></iframe>
     </div>
 </div>
 
-<!-- Context Menu -->
 <div id="context-menu">
     <div class="context-menu-item" id="ctx-rename">Rename</div>
     <div class="context-menu-item" id="ctx-delete">Delete</div>
 </div>
 
-<!-- Load Monaco Editor from CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/loader.min.js"></script>
+
+<!-- WORKER SCRIPT DEFINITION -->
+<!-- This worker processes files into Blobs to avoid main thread lag and prepares the import map -->
+<script id="worker-code" type="javascript/worker">
+    self.onmessage = function(e) {
+        const { files, rootFile } = e.data;
+        const fileMap = {};
+        const imports = {};
+
+        // 1. Convert all files to Blob URLs
+        Object.keys(files).forEach(path => {
+            const file = files[path];
+            let mime = 'text/plain';
+            if (path.endsWith('.html')) mime = 'text/html';
+            else if (path.endsWith('.css')) mime = 'text/css';
+            else if (path.endsWith('.js')) mime = 'application/javascript';
+            else if (path.endsWith('.json')) mime = 'application/json';
+
+            const blob = new Blob([file.content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            
+            // Normalize path (remove leading . or /)
+            const cleanPath = path.replace(/^\.?\//, '');
+            fileMap[cleanPath] = url;
+            
+            // Build Import Map entries
+            // We map "./style.css" -> "blob:..." and "style.css" -> "blob:..."
+            imports['./' + cleanPath] = url;
+            imports[cleanPath] = url;
+        });
+
+        // 2. Prepare the Index HTML with the Interceptor
+        if (!files[rootFile]) {
+            self.postMessage({ error: 'Root file not found' });
+            return;
+        }
+
+        const rootContent = files[rootFile].content;
+
+        self.postMessage({ 
+            success: true, 
+            fileMap, 
+            imports,
+            rootContent 
+        });
+    };
+</script>
 
 <script>
 /**
- * APPLICATION LOGIC
+ * APP LOGIC
  */
 const PROJECTS_KEY = 'myCodeEditor_projectList';
 const CURRENT_PROJECT_KEY = 'myCodeEditor_currentProject';
@@ -152,26 +176,47 @@ const defaultFiles = {
         content: `<!DOCTYPE html>
 <html>
 <head>
-    <title>My Page</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <title>Sophisticated Editor</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Hello World</h1>
-    <button id="btn">Click Me</button>
-    <script src="script.js"><\/script>
+    <h1>Worker Interception Demo</h1>
+    <div id="output">Loading...</div>
+    <button id="loadBtn">Fetch Data Dynamically</button>
+    
+    <!-- ES Module Support via Interception -->
+    <script type="module">
+        import { hello } from './utils.js';
+        document.getElementById('output').textContent = hello();
+        
+        // Dynamic fetch interception
+        document.getElementById('loadBtn').onclick = async () => {
+            const res = await fetch('data.json');
+            const data = await res.json();
+            alert(data.message);
+        };
+    <\/script>
 </body>
 </html>`
     },
-    'styles/main.css': {
+    'style.css': {
         language: 'css',
-        content: `body { font-family: sans-serif; background: #f0f0f0; padding: 20px; }
-h1 { color: #333; }`
+        content: `body { font-family: sans-serif; padding: 20px; background: #222; color: #fff; }
+h1 { color: #61dafb; border-bottom: 2px solid #61dafb; display: inline-block; }
+button { padding: 8px 16px; cursor: pointer; background: #61dafb; border: none; font-weight: bold; margin-top: 10px; }
+button:hover { background: #4fa8c7; }`
     },
-    'script.js': {
+    'utils.js': {
         language: 'javascript',
-        content: `document.getElementById('btn').addEventListener('click', () => {
-    alert('JavaScript is working!');
-});`
+        content: `export function hello() {
+    return "Imports are working via Blob Mapping!";
+}`
+    },
+    'data.json': {
+        language: 'json',
+        content: `{
+    "message": "This JSON was fetched via the intercepted Request API!"
+}`
     }
 };
 
@@ -181,34 +226,48 @@ const editorApp = {
     files: {},
     activeFile: null,
     editorInstance: null,
-    expandedFolders: new Set(), 
+    expandedFolders: new Set(),
     contextMenuTarget: null,
+    worker: null,
 
-    // 1. Initialize
     init: function() {
+        this.initWorker();
         this.loadProjects();
         this.initMonaco();
         this.initContextMenu();
     },
 
-    // 2. Project Management
+    // Initialize the Web Worker from the script tag
+    initWorker: function() {
+        const blob = new Blob([document.getElementById('worker-code').textContent], { type: "text/javascript" });
+        this.worker = new Worker(URL.createObjectURL(blob));
+        
+        this.worker.onmessage = (e) => {
+            const loader = document.getElementById('loader');
+            const status = document.getElementById('previewStatus');
+            loader.style.display = 'none';
+
+            if (e.data.error) {
+                alert(e.data.error);
+                status.textContent = "Error";
+                return;
+            }
+
+            if (e.data.success) {
+                status.textContent = "Running";
+                this.renderPreview(e.data.rootContent, e.data.fileMap, e.data.imports);
+            }
+        };
+    },
+
     loadProjects: function() {
         const storedProjects = localStorage.getItem(PROJECTS_KEY);
-        if (storedProjects) {
-            this.projects = JSON.parse(storedProjects);
-        } else {
-            this.projects = ['Default Project'];
-            localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-        }
+        this.projects = storedProjects ? JSON.parse(storedProjects) : ['Default Project'];
+        if (!localStorage.getItem(PROJECTS_KEY)) localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
 
         const storedCurrent = localStorage.getItem(CURRENT_PROJECT_KEY);
-        if (storedCurrent && this.projects.includes(storedCurrent)) {
-            this.currentProject = storedCurrent;
-        } else {
-            this.currentProject = this.projects[0];
-            localStorage.setItem(CURRENT_PROJECT_KEY, this.currentProject);
-        }
-
+        this.currentProject = (storedCurrent && this.projects.includes(storedCurrent)) ? storedCurrent : this.projects[0];
+        
         this.updateProjectSelect();
         this.loadFiles();
     },
@@ -218,84 +277,49 @@ const editorApp = {
         select.innerHTML = '';
         this.projects.forEach(p => {
             const opt = document.createElement('option');
-            opt.value = p;
-            opt.textContent = p;
-            opt.selected = (p === this.currentProject);
+            opt.value = p; opt.textContent = p; opt.selected = (p === this.currentProject);
             select.appendChild(opt);
         });
     },
 
     createNewProject: function() {
-        const name = prompt('Enter new project name:');
-        if (!name) return;
-        if (this.projects.includes(name)) return alert('Project already exists');
-
-        this.saveFiles(); // Save current project first
-
+        const name = prompt('Project name:');
+        if (!name || this.projects.includes(name)) return;
+        this.saveFiles();
         this.projects.push(name);
         localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-        
-        // Initialize with default files
-        const projectFilesKey = FILES_PREFIX + name;
-        localStorage.setItem(projectFilesKey, JSON.stringify(defaultFiles));
-
+        localStorage.setItem(FILES_PREFIX + name, JSON.stringify(defaultFiles));
         this.switchProject(name);
     },
 
     deleteCurrentProject: function() {
-        if (this.projects.length <= 1) return alert('Cannot delete the last project');
-        if (!confirm(`Are you sure you want to delete project "${this.currentProject}"?`)) return;
-
+        if (this.projects.length <= 1) return alert('Cannot delete last project');
+        if (!confirm('Delete ' + this.currentProject + '?')) return;
         localStorage.removeItem(FILES_PREFIX + this.currentProject);
-        
-        const idx = this.projects.indexOf(this.currentProject);
-        this.projects.splice(idx, 1);
+        this.projects.splice(this.projects.indexOf(this.currentProject), 1);
         localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-
         this.switchProject(this.projects[0]);
     },
 
-    switchProject: function(projectName) {
-        if (this.editorInstance) {
-            this.saveFiles();
-        }
-        this.currentProject = projectName;
-        localStorage.setItem(CURRENT_PROJECT_KEY, projectName);
-        this.activeFile = null; // Reset active file
+    switchProject: function(name) {
+        if (this.editorInstance) this.saveFiles();
+        this.currentProject = name;
+        localStorage.setItem(CURRENT_PROJECT_KEY, name);
+        this.activeFile = null;
         this.loadFiles();
         this.updateProjectSelect();
-        
-        if (this.editorInstance) {
-            const file = this.files[this.activeFile];
-            if (file) {
-                const model = this.editorInstance.getModel();
-                monaco.editor.setModelLanguage(model, file.language);
-                this.editorInstance.setValue(file.content);
-            } else {
-                this.editorInstance.setValue('');
-            }
-        }
+        if (this.editorInstance) this.switchFile(this.activeFile);
         this.renderSidebar();
     },
 
-    // 3. Storage Management
     loadFiles: function() {
         const key = FILES_PREFIX + this.currentProject;
         const stored = localStorage.getItem(key);
-        if (stored) {
-            this.files = JSON.parse(stored);
-        } else {
-            // Check for migration from old single project system
-            const oldStored = localStorage.getItem('myCodeEditor_files');
-            if (oldStored && this.currentProject === 'Default Project') {
-                this.files = JSON.parse(oldStored);
-            } else {
-                this.files = JSON.parse(JSON.stringify(defaultFiles));
-            }
-        }
-        
-        if (!this.activeFile || !this.files[this.activeFile]) {
-            this.activeFile = Object.keys(this.files)[0] || 'index.html';
+        this.files = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(defaultFiles));
+        if (!this.activeFile || !this.files[this.activeFile]) this.activeFile = 'index.html';
+        // Ensure index.html exists
+        if (!this.files['index.html']) {
+            this.activeFile = Object.keys(this.files)[0];
         }
     },
 
@@ -303,269 +327,225 @@ const editorApp = {
         if (this.activeFile && this.editorInstance && this.files[this.activeFile]) {
             this.files[this.activeFile].content = this.editorInstance.getValue();
         }
-        const key = FILES_PREFIX + this.currentProject;
-        localStorage.setItem(key, JSON.stringify(this.files));
+        localStorage.setItem(FILES_PREFIX + this.currentProject, JSON.stringify(this.files));
     },
 
-    // 3. Monaco Setup
     initMonaco: function() {
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
-        
         require(['vs/editor/editor.main'], () => {
-            if (!this.files[this.activeFile]) {
-                this.activeFile = Object.keys(this.files)[0];
-            }
-            
             this.editorInstance = monaco.editor.create(document.getElementById('monaco-root'), {
-                value: this.files[this.activeFile] ? this.files[this.activeFile].content : '',
-                language: this.files[this.activeFile] ? this.files[this.activeFile].language : 'plaintext',
+                value: this.files[this.activeFile].content,
+                language: this.files[this.activeFile].language,
                 theme: 'vs-dark',
                 automaticLayout: true,
                 minimap: { enabled: false },
                 fontSize: 14
             });
-
-            // Save on typing
             this.editorInstance.onDidChangeModelContent(() => {
-                if (this.activeFile && this.files[this.activeFile]) {
-                    this.files[this.activeFile].content = this.editorInstance.getValue();
-                    this.saveFiles(); // Auto-save to localstorage
-                }
+                this.files[this.activeFile].content = this.editorInstance.getValue();
+                this.saveFiles();
             });
-
             this.renderSidebar();
         });
     },
 
-    // 4. File Management
     addFile: function() {
-        const input = document.getElementById('newFilename');
-        const name = input.value.trim();
+        const name = document.getElementById('newFilename').value.trim();
+        if (!name || this.files[name]) return;
         
-        if (!name) return alert('Enter a filename');
-        if (this.files[name]) return alert('File already exists');
+        let lang = 'plaintext';
+        if (name.endsWith('.html')) lang = 'html';
+        else if (name.endsWith('.css')) lang = 'css';
+        else if (name.endsWith('.js')) lang = 'javascript';
+        else if (name.endsWith('.json')) lang = 'json';
 
-        this.files[name] = {
-            language: this.getLanguageFromFilename(name),
-            content: ''
-        };
-
-        input.value = '';
+        this.files[name] = { language: lang, content: '' };
+        document.getElementById('newFilename').value = '';
         this.switchFile(name);
         this.renderSidebar();
         this.saveFiles();
     },
 
-    getLanguageFromFilename: function(name) {
-        if (name.endsWith('.html')) return 'html';
-        if (name.endsWith('.css')) return 'css';
-        if (name.endsWith('.js')) return 'javascript';
-        if (name.endsWith('.json')) return 'json';
-        return 'plaintext';
-    },
-
-    deleteFile: function(name) {
-        if(!confirm(`Delete ${name}?`)) return;
-        
-        delete this.files[name];
-        
-        if (this.activeFile === name) {
-            this.activeFile = Object.keys(this.files)[0] || null;
-            if(this.activeFile) this.switchFile(this.activeFile);
-            else if (this.editorInstance) this.editorInstance.setValue('');
-        }
-        
-        this.renderSidebar();
-        this.saveFiles();
-    },
-
-    renameFile: function(oldName) {
-        const newName = prompt(`Rename ${oldName} to:`, oldName);
-        if (!newName || newName === oldName) return;
-        if (this.files[newName]) return alert('File already exists');
-
-        this.files[newName] = this.files[oldName];
-        this.files[newName].language = this.getLanguageFromFilename(newName);
-        delete this.files[oldName];
-
-        if (this.activeFile === oldName) {
-            this.activeFile = newName;
-        }
-
-        this.renderSidebar();
-        this.saveFiles();
-    },
-
-    switchFile: function(filename) {
-        this.activeFile = filename;
-        const file = this.files[filename];
-        
-        // Update Editor
+    switchFile: function(name) {
+        this.activeFile = name;
+        const file = this.files[name];
         if (this.editorInstance && file) {
             const model = this.editorInstance.getModel();
             monaco.editor.setModelLanguage(model, file.language);
             this.editorInstance.setValue(file.content);
         }
-
         this.renderSidebar();
     },
 
-    // 5. Sidebar Rendering
+    deleteFile: function(name) {
+        if (!confirm('Delete ' + name + '?')) return;
+        delete this.files[name];
+        if (this.activeFile === name) this.activeFile = Object.keys(this.files)[0] || '';
+        if (this.activeFile) this.switchFile(this.activeFile);
+        this.renderSidebar();
+        this.saveFiles();
+    },
+
     renderSidebar: function() {
         const list = document.getElementById('fileList');
         list.innerHTML = '';
-
         const tree = {};
+        
         Object.keys(this.files).sort().forEach(path => {
             const parts = path.split('/');
             let current = tree;
             parts.forEach((part, i) => {
-                if (!current[part]) {
-                    current[part] = (i === parts.length - 1) 
-                        ? { __type: 'file', fullPath: path } 
-                        : { __type: 'folder', children: {} };
-                }
+                if (!current[part]) current[part] = (i === parts.length - 1) ? { __type: 'file', fullPath: path } : { __type: 'folder', children: {} };
                 current = current[part].children || current[part];
             });
         });
 
-        const createTreeHTML = (node, container, currentPathString = '') => {
-            const entries = Object.entries(node).sort((a, b) => {
-                if (a[1].__type !== b[1].__type) return a[1].__type === 'folder' ? -1 : 1;
-                return a[0].localeCompare(b[0]);
-            });
-
-            entries.forEach(([name, data]) => {
+        const buildTree = (node, container, pathStr = '') => {
+            Object.entries(node).sort((a,b) => (a[1].__type === 'folder' ? -1 : 1)).forEach(([name, data]) => {
                 if (data.__type === 'folder') {
-                    const folderPath = currentPathString ? `${currentPathString}/${name}` : name;
-                    const isOpen = this.expandedFolders.has(folderPath);
-
+                    const fPath = pathStr ? `${pathStr}/${name}` : name;
+                    const isOpen = this.expandedFolders.has(fPath);
                     const li = document.createElement('li');
-                    const title = document.createElement('div');
-                    title.className = `folder-item ${isOpen ? 'open' : ''}`;
-                    title.innerHTML = `<span class="folder-icon">▶</span> ${name}`;
-                    title.onclick = () => {
-                        if (this.expandedFolders.has(folderPath)) this.expandedFolders.delete(folderPath);
-                        else this.expandedFolders.add(folderPath);
+                    li.innerHTML = `<div class="folder-item ${isOpen?'open':''}"><span class="folder-icon">▶</span> ${name}</div>`;
+                    li.firstChild.onclick = () => {
+                        isOpen ? this.expandedFolders.delete(fPath) : this.expandedFolders.add(fPath);
                         this.renderSidebar();
                     };
-
                     const ul = document.createElement('ul');
-                    ul.className = `nested-group ${isOpen ? 'expanded' : ''}`;
-                    
-                    li.appendChild(title);
+                    ul.className = `nested-group ${isOpen?'expanded':''}`;
                     li.appendChild(ul);
                     container.appendChild(li);
-
-                    createTreeHTML(data.children, ul, folderPath);
-
+                    buildTree(data.children, ul, fPath);
                 } else {
                     const li = document.createElement('li');
                     li.className = `file-item ${data.fullPath === this.activeFile ? 'active' : ''}`;
-                    li.innerHTML = `
-                        <span>${name}</span>
-                        <span class="del-btn">×</span>
-                    `;
+                    li.innerHTML = `<span>${name}</span><span class="del-btn">×</span>`;
                     li.onclick = () => this.switchFile(data.fullPath);
-                    li.querySelector('.del-btn').onclick = (e) => {
-                        e.stopPropagation();
-                        this.deleteFile(data.fullPath);
-                    };
-                    
-                    // Add context menu listener
-                    li.oncontextmenu = (e) => {
-                        e.preventDefault();
-                        this.showContextMenu(e, data.fullPath);
-                    };
-
+                    li.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); this.deleteFile(data.fullPath); };
+                    li.oncontextmenu = (e) => { e.preventDefault(); this.showContextMenu(e, data.fullPath); };
                     container.appendChild(li);
                 }
             });
         };
-
-        const rootUl = document.createElement('ul');
-        rootUl.className = 'tree-root';
-        createTreeHTML(tree, rootUl);
-        list.appendChild(rootUl);
+        const root = document.createElement('ul'); root.className = 'tree-root';
+        buildTree(tree, root);
+        list.appendChild(root);
     },
 
-    // 6. Context Menu Logic
     initContextMenu: function() {
         const menu = document.getElementById('context-menu');
-        
-        window.addEventListener('click', () => {
-            this.hideContextMenu();
-        });
-
+        window.onclick = () => menu.style.display = 'none';
         document.getElementById('ctx-rename').onclick = () => {
-            if (this.contextMenuTarget) {
-                this.renameFile(this.contextMenuTarget);
-            }
+            const old = this.contextMenuTarget;
+            const newName = prompt('Rename to:', old);
+            if (!newName || this.files[newName]) return;
+            this.files[newName] = this.files[old];
+            delete this.files[old];
+            if (this.activeFile === old) this.activeFile = newName;
+            this.renderSidebar(); this.saveFiles();
         };
-
-        document.getElementById('ctx-delete').onclick = () => {
-            if (this.contextMenuTarget) {
-                this.deleteFile(this.contextMenuTarget);
-            }
-        };
+        document.getElementById('ctx-delete').onclick = () => this.deleteFile(this.contextMenuTarget);
     },
 
-    showContextMenu: function(e, filename) {
+    showContextMenu: function(e, file) {
         const menu = document.getElementById('context-menu');
-        this.contextMenuTarget = filename;
+        this.contextMenuTarget = file;
         menu.style.display = 'block';
         menu.style.left = e.pageX + 'px';
         menu.style.top = e.pageY + 'px';
     },
 
-    hideContextMenu: function() {
-        const menu = document.getElementById('context-menu');
-        menu.style.display = 'none';
-    },
+    formatCode: function() { this.editorInstance?.getAction('editor.action.formatDocument').run(); },
 
-    // 7. Formatting Code
-    formatCode: function() {
-        if(this.editorInstance) {
-            this.editorInstance.getAction('editor.action.formatDocument').run();
-        }
-    },
-
-    // 8. RUN LOGIC
+    // RUN: Sends files to Worker
     runCode: function() {
+        this.saveFiles();
+        document.getElementById('loader').style.display = 'flex';
+        document.getElementById('previewStatus').textContent = "Processing...";
+        
+        // Offload blob creation to worker
+        this.worker.postMessage({
+            files: this.files,
+            rootFile: 'index.html'
+        });
+    },
+
+    // RENDER: Injects the sophisticated interceptor
+    renderPreview: function(htmlContent, fileMap, imports) {
         const iframe = document.getElementById('previewFrame');
-        let htmlContent = this.files['index.html'] ? this.files['index.html'].content : '<h1>No index.html found</h1>';
+        
+        // The Magic Interceptor Script
+        // This runs inside the iframe before any other code
+        const interceptorScript = `
+            <script>
+                (function() {
+                    const fileMap = ${JSON.stringify(fileMap)};
+                    
+                    // 1. Intercept Fetch API
+                    const originalFetch = window.fetch;
+                    window.fetch = async function(input, init) {
+                        let url = input;
+                        if (input instanceof Request) url = input.url;
+                        
+                        // Clean URL to handle relative paths
+                        const cleanUrl = url.replace(/^[./]+/, '');
+                        
+                        if (fileMap[cleanUrl]) {
+                            console.log('[Interceptor] Serving fetch for:', cleanUrl);
+                            return originalFetch(fileMap[cleanUrl]);
+                        }
+                        return originalFetch(input, init);
+                    };
 
-        const createBlob = (content, type) => {
-            const blob = new Blob([content], { type });
-            return URL.createObjectURL(blob);
-        };
+                    // 2. Intercept DOM Elements (img, script src, link href)
+                    // We watch for new nodes added to DOM and rewrite their attributes immediately
+                    const observer = new MutationObserver(mutations => {
+                        mutations.forEach(mutation => {
+                            mutation.addedNodes.forEach(node => {
+                                if (node.nodeType === 1) { // Element
+                                    // Handle Images/Scripts
+                                    if ((node.tagName === 'IMG' || node.tagName === 'SCRIPT') && node.getAttribute('src')) {
+                                        const src = node.getAttribute('src').replace(/^[./]+/, '');
+                                        if (fileMap[src]) node.src = fileMap[src];
+                                    }
+                                    // Handle CSS
+                                    if (node.tagName === 'LINK' && node.getAttribute('href')) {
+                                        const href = node.getAttribute('href').replace(/^[./]+/, '');
+                                        if (fileMap[href]) node.href = fileMap[href];
+                                    }
+                                }
+                            });
+                        });
+                    });
+                    
+                    observer.observe(document.documentElement, { childList: true, subtree: true });
+                })();
+            <\/script>
+            <!-- Import Map for ES Modules -->
+            <script type="importmap">
+                { "imports": ${JSON.stringify(imports)} }
+            <\/script>
+        `;
 
-        // Replace CSS Links
-        htmlContent = htmlContent.replace(/<link[^>]+href="([^"]+)"[^>]*>/g, (match, href) => {
-            if (this.files[href]) {
-                const blobUrl = createBlob(this.files[href].content, 'text/css');
-                return match.replace(href, blobUrl);
-            }
-            return match;
+        // Pre-process initial HTML tags to avoid 404s on initial load
+        // (The observer handles dynamic additions, this handles the static HTML)
+        let finalHtml = htmlContent;
+        
+        // Simple regex replace for static tags (Interceptor handles dynamic/js)
+        Object.keys(fileMap).forEach(filename => {
+            const blobUrl = fileMap[filename];
+            const regexSrc = new RegExp(`src=["'](./)?${filename}["']`, 'g');
+            const regexHref = new RegExp(`href=["'](./)?${filename}["']`, 'g');
+            finalHtml = finalHtml.replace(regexSrc, `src="${blobUrl}"`).replace(regexHref, `href="${blobUrl}"`);
         });
 
-        // Replace JS Scripts
-        htmlContent = htmlContent.replace(/<script[^>]+src="([^"]+)"[^>]*><\/script>/g, (match, src) => {
-            if (this.files[src]) {
-                const blobUrl = createBlob(this.files[src].content, 'text/javascript');
-                return match.replace(src, blobUrl);
-            }
-            return match;
-        });
-
-        iframe.srcdoc = htmlContent;
+        // Combine
+        const blob = new Blob([interceptorScript + finalHtml], { type: 'text/html' });
+        iframe.src = URL.createObjectURL(blob);
     }
 };
 
-// Start the app
 editorApp.init();
-
 </script>
-
 </body>
 </html>

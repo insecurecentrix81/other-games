@@ -798,7 +798,7 @@ class MinecraftGame {
       
       document.body.appendChild(cursor);
       
-      this.updateHeldItemCursor(mouse.x,mouse.y) // show item on initial click
+      this.updateHeldItemCursor(this.mouse.x,this.mouse.y) // show item on initial click
       document.addEventListener('mousemove', (e) => { this.updateHeldItemCursor(e.clientX, e.clientY) });
     }
   }

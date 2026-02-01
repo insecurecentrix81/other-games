@@ -29,7 +29,11 @@ class MinecraftGame {
     this.chunks = new Map();
     this.chunkMeshes = new Map();
     this.modifiedBlocks = new Map();
-    this.pendingChunks = new Map(); // Changed to Map to track pending chunk requests
+    this.pendingChunks = new Map();
+    
+    // NEW: Mesh building queue for smooth loading
+    this.meshBuildQueue = [];
+    this.pendingMeshes = new Map();
 
     // Web Worker for chunk generation
     this.chunkWorker = null;
@@ -89,31 +93,42 @@ class MinecraftGame {
       this.chunkWorker = new Worker('js/workers/chunk-worker.js');
       
       this.chunkWorker.onmessage = (e) => {
-        const { type, id, cx, cz, data } = e.data;
+        const { type, id, cx, cz, data, chunkData, geometry } = e.data;
+        const key = `${cx},${cz}`;
         
         if (type === 'chunk') {
-          const key = `${cx},${cz}`;
-          
-          // Convert ArrayBuffer back to Uint8Array
+          // Chunk data only - queue mesh build
           const chunk = new Uint8Array(data);
           this.chunks.set(key, chunk);
-          
-          // Apply any modifications
           this.applyModificationsToChunk(cx, cz);
-          
-          // Build mesh on main thread (requires THREE.js)
-          this.buildChunkMesh(cx, cz);
-          
-          // Remove from pending
           this.pendingChunks.delete(key);
-        } else if (type === 'ready') {
+          
+          // Queue mesh building
+          this.queueMeshBuild(cx, cz);
+        }
+        else if (type === 'chunkWithMesh') {
+          // Chunk data + mesh geometry together
+          const chunk = new Uint8Array(chunkData);
+          this.chunks.set(key, chunk);
+          this.applyModificationsToChunk(cx, cz);
+          this.pendingChunks.delete(key);
+          this.pendingMeshes.delete(key);
+          
+          // Create mesh from geometry (fast - just creating THREE objects)
+          this.createMeshFromGeometry(cx, cz, geometry);
+        }
+        else if (type === 'mesh') {
+          // Mesh geometry only (for rebuild requests)
+          this.pendingMeshes.delete(key);
+          this.createMeshFromGeometry(cx, cz, geometry);
+        }
+        else if (type === 'ready') {
           console.log('Chunk worker ready');
         }
       };
       
       this.chunkWorker.onerror = (e) => {
         console.error('Chunk worker error:', e);
-        // Fallback to main thread generation
         this.chunkWorker = null;
       };
     } catch (e) {
@@ -1425,26 +1440,213 @@ class MinecraftGame {
     return 'plains';
   }
 
+  queueMeshBuild(cx, cz) {
+    const key = `${cx},${cz}`;
+    if (this.pendingMeshes.has(key)) return;
+    if (!this.chunks.has(key)) return;
+    
+    const pcx = Math.floor(this.player.position.x / CHUNK_SIZE);
+    const pcz = Math.floor(this.player.position.z / CHUNK_SIZE);
+    const dist = (cx - pcx) * (cx - pcx) + (cz - pcz) * (cz - pcz);
+    
+    // Check if already in queue
+    const existing = this.meshBuildQueue.findIndex(q => q.cx === cx && q.cz === cz);
+    if (existing !== -1) {
+      this.meshBuildQueue[existing].dist = dist;
+    } else {
+      this.meshBuildQueue.push({ cx, cz, dist });
+    }
+    
+    // Sort by distance (closer chunks first)
+    this.meshBuildQueue.sort((a, b) => a.dist - b.dist);
+  }
+
+  processMeshBuildQueue() {
+    if (this.meshBuildQueue.length === 0) return;
+    if (!this.chunkWorker) {
+      // Fallback: process on main thread with time budget
+      this.processMeshQueueMainThread();
+      return;
+    }
+    
+    // Send up to 2 mesh build requests per frame
+    const maxPerFrame = 2;
+    let processed = 0;
+    
+    while (this.meshBuildQueue.length > 0 && processed < maxPerFrame) {
+      const { cx, cz } = this.meshBuildQueue.shift();
+      const key = `${cx},${cz}`;
+      
+      if (!this.chunks.has(key) || this.pendingMeshes.has(key)) continue;
+      
+      this.pendingMeshes.set(key, true);
+      
+      // Gather neighbor chunks for proper AO at edges
+      const neighbors = {};
+      const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+      
+      for (const [dx, dz] of neighborOffsets) {
+        const nkey = `${cx + dx},${cz + dz}`;
+        if (this.chunks.has(nkey)) {
+          // Copy the buffer so we can transfer it
+          const neighborChunk = this.chunks.get(nkey);
+          neighbors[nkey] = neighborChunk.slice().buffer;
+        }
+      }
+      
+      // Get modifications for this chunk area
+      const modifiedBlocks = {};
+      this.modifiedBlocks.forEach((value, modKey) => {
+        const [mx, my, mz] = modKey.split(',').map(Number);
+        const mcx = Math.floor(mx / CHUNK_SIZE);
+        const mcz = Math.floor(mz / CHUNK_SIZE);
+        // Include if in this chunk or adjacent
+        if (Math.abs(mcx - cx) <= 1 && Math.abs(mcz - cz) <= 1) {
+          modifiedBlocks[modKey] = value;
+        }
+      });
+      
+      const chunk = this.chunks.get(key);
+      const chunkBuffer = chunk.slice().buffer;
+      
+      const transferList = [chunkBuffer];
+      Object.values(neighbors).forEach(buf => transferList.push(buf));
+      
+      this.chunkWorker.postMessage({
+        type: 'buildMesh',
+        id: this.chunkRequestId++,
+        cx, cz,
+        chunk: chunkBuffer,
+        neighbors,
+        modifiedBlocks
+      }, transferList);
+      
+      processed++;
+    }
+  }
+
+  processMeshQueueMainThread() {
+    // Fallback for when worker isn't available
+    const startTime = performance.now();
+    const budgetMs = 8;
+    
+    while (this.meshBuildQueue.length > 0) {
+      if (performance.now() - startTime > budgetMs) break;
+      
+      const { cx, cz } = this.meshBuildQueue.shift();
+      const key = `${cx},${cz}`;
+      
+      if (this.chunks.has(key)) {
+        this.buildChunkMesh(cx, cz);
+      }
+    }
+  }
+
+  createMeshFromGeometry(cx, cz, geometry) {
+    const key = `${cx},${cz}`;
+    
+    // Remove old mesh if exists
+    if (this.chunkMeshes.has(key)) {
+      const oldGroup = this.chunkMeshes.get(key);
+      this.scene.remove(oldGroup);
+      oldGroup.children.forEach(mesh => {
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      });
+    }
+    
+    const group = new THREE.Group();
+    
+    const createMesh = (data, isTrans) => {
+      if (!data.positions || data.positions.length === 0) return;
+      
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
+      geo.computeVertexNormals();
+      
+      const mat = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        transparent: isTrans,
+        opacity: isTrans ? 0.6 : 1.0,
+        depthWrite: !isTrans,
+        roughness: 0.8,
+        side: THREE.FrontSide
+      });
+      
+      const mesh = new THREE.Mesh(geo, mat);
+      if (this.settings.shadowsEnabled && !isTrans) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+      group.add(mesh);
+    };
+    
+    createMesh(geometry.opaque, false);
+    createMesh(geometry.transparent, true);
+    
+    this.scene.add(group);
+    this.chunkMeshes.set(key, group);
+  }
+
   generateChunk(cx, cz) {
     const key = `${cx},${cz}`;
     if (this.chunks.has(key) || this.pendingChunks.has(key)) return;
 
-    // Use web worker if available
     if (this.chunkWorker) {
       this.pendingChunks.set(key, true);
-      this.chunkWorker.postMessage({
-        type: 'generate',
-        id: this.chunkRequestId++,
-        cx: cx,
-        cz: cz,
-        seed: this.worldSeed
+      
+      // Gather existing neighbor chunks for mesh building
+      const neighbors = {};
+      const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+      
+      for (const [dx, dz] of neighborOffsets) {
+        const nkey = `${cx + dx},${cz + dz}`;
+        if (this.chunks.has(nkey)) {
+          neighbors[nkey] = this.chunks.get(nkey).slice().buffer;
+        }
+      }
+      
+      // Get relevant modifications
+      const modifiedBlocks = {};
+      this.modifiedBlocks.forEach((value, modKey) => {
+        const [mx, my, mz] = modKey.split(',').map(Number);
+        const mcx = Math.floor(mx / CHUNK_SIZE);
+        const mcz = Math.floor(mz / CHUNK_SIZE);
+        if (Math.abs(mcx - cx) <= 1 && Math.abs(mcz - cz) <= 1) {
+          modifiedBlocks[modKey] = value;
+        }
       });
+      
+      const transferList = [];
+      Object.values(neighbors).forEach(buf => transferList.push(buf));
+      
+      // Use generateAndBuild if we have neighbors, otherwise just generate
+      const hasNeighbors = Object.keys(neighbors).length >= 4;
+      
+      if (hasNeighbors) {
+        this.pendingMeshes.set(key, true);
+        this.chunkWorker.postMessage({
+          type: 'generateAndBuild',
+          id: this.chunkRequestId++,
+          cx, cz,
+          seed: this.worldSeed,
+          neighbors,
+          modifiedBlocks
+        }, transferList);
+      } else {
+        this.chunkWorker.postMessage({
+          type: 'generate',
+          id: this.chunkRequestId++,
+          cx, cz,
+          seed: this.worldSeed
+        });
+      }
       return;
     }
 
     // Fallback: generate on main thread
     this.generateChunkMainThread(cx, cz);
-    console.error("fallback")
   }
 
   /* Put generateChunkMainThread method here - fallback for when workers aren't available */
@@ -1591,11 +1793,12 @@ class MinecraftGame {
       const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT] = type;
 
-      this.buildChunkMesh(cx, cz);
-      if (lx === 0) this.buildChunkMesh(cx - 1, cz);
-      if (lx === CHUNK_SIZE - 1) this.buildChunkMesh(cx + 1, cz);
-      if (lz === 0) this.buildChunkMesh(cx, cz - 1);
-      if (lz === CHUNK_SIZE - 1) this.buildChunkMesh(cx, cz + 1);
+      // Queue mesh rebuilds for affected chunks
+      this.queueMeshBuild(cx, cz);
+      if (lx === 0) this.queueMeshBuild(cx - 1, cz);
+      if (lx === CHUNK_SIZE - 1) this.queueMeshBuild(cx + 1, cz);
+      if (lz === 0) this.queueMeshBuild(cx, cz - 1);
+      if (lz === CHUNK_SIZE - 1) this.queueMeshBuild(cx, cz + 1);
     }
   }
 
@@ -2140,51 +2343,61 @@ class MinecraftGame {
   // ==================== CHUNK MANAGEMENT ====================
 
   updateChunks() {
-      const pcx = Math.floor(this.player.position.x / CHUNK_SIZE);
-      const pcz = Math.floor(this.player.position.z / CHUNK_SIZE);
-  
-      // Generate chunks beyond view distance to prevent pop-in
-      // They'll be hidden by fog until player gets closer
-      const loadDistance = this.settings.renderDistance + 2;
-  
-      const chunksNeeded = [];
-      for (let dx = -loadDistance; dx <= loadDistance; dx++) {
-        for (let dz = -loadDistance; dz <= loadDistance; dz++) {
-          const distSq = dx*dx + dz*dz;
-          if (distSq <= loadDistance * loadDistance) {
-            const cx = pcx + dx;
-            const cz = pcz + dz;
-            const key = `${cx},${cz}`;
-            if (!this.chunks.has(key) && !this.pendingChunks.has(key)) {
-              chunksNeeded.push({cx, cz, dist: distSq});
-            }
+    const pcx = Math.floor(this.player.position.x / CHUNK_SIZE);
+    const pcz = Math.floor(this.player.position.z / CHUNK_SIZE);
+
+    const loadDistance = this.settings.renderDistance + 2;
+
+    const chunksNeeded = [];
+    for (let dx = -loadDistance; dx <= loadDistance; dx++) {
+      for (let dz = -loadDistance; dz <= loadDistance; dz++) {
+        const distSq = dx * dx + dz * dz;
+        if (distSq <= loadDistance * loadDistance) {
+          const cx = pcx + dx;
+          const cz = pcz + dz;
+          const key = `${cx},${cz}`;
+          if (!this.chunks.has(key) && !this.pendingChunks.has(key)) {
+            chunksNeeded.push({ cx, cz, dist: distSq });
           }
         }
       }
-      
-      chunksNeeded.sort((a, b) => a.dist - b.dist);
-      const maxChunksPerFrame = 2;
-      for (let i = 0; i < Math.min(chunksNeeded.length, maxChunksPerFrame); i++) {
-        this.generateChunk(chunksNeeded[i].cx, chunksNeeded[i].cz);
+    }
+
+    // Sort by distance and limit chunks per frame
+    chunksNeeded.sort((a, b) => a.dist - b.dist);
+    const maxChunksPerFrame = 2;
+    for (let i = 0; i < Math.min(chunksNeeded.length, maxChunksPerFrame); i++) {
+      this.generateChunk(chunksNeeded[i].cx, chunksNeeded[i].cz);
+    }
+
+    // Process mesh build queue
+    this.processMeshBuildQueue();
+
+    // Unload distant chunks
+    const maxDist = loadDistance + 2;
+    this.chunkMeshes.forEach((group, key) => {
+      const [cx, cz] = key.split(',').map(Number);
+      if (Math.abs(cx - pcx) > maxDist || Math.abs(cz - pcz) > maxDist) {
+        this.scene.remove(group);
+        group.children.forEach(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        });
+        this.chunkMeshes.delete(key);
+        this.chunks.delete(key);
+        this.pendingChunks.delete(key);
+        this.pendingMeshes.delete(key);
       }
-  
-      // Unload chunks that are beyond the load distance + buffer
-      const maxDist = loadDistance + 2;
-      this.chunkMeshes.forEach((group, key) => {
-        const [cx, cz] = key.split(',').map(Number);
-        if (Math.abs(cx - pcx) > maxDist || Math.abs(cz - pcz) > maxDist) {
-          this.scene.remove(group);
-          group.children.forEach(child => {
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) child.material.dispose();
-          });
-          this.chunkMeshes.delete(key);
-          this.chunks.delete(key);
-          this.pendingChunks.delete(key);
-        }
-      });
-  
-      document.getElementById('chunk-info').textContent = `Chunks: ${this.chunkMeshes.size}`;
+    });
+
+    // Also remove from mesh queue if chunk is unloaded
+    this.meshBuildQueue = this.meshBuildQueue.filter(item => {
+      const key = `${item.cx},${item.cz}`;
+      return this.chunks.has(key);
+    });
+
+    document.getElementById('chunk-info').textContent = 
+      `Chunks: ${this.chunkMeshes.size} (${this.meshBuildQueue.length} queued)`;
   }
 
   // ==================== GAME LOOP ====================

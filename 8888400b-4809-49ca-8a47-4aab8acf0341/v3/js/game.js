@@ -796,6 +796,7 @@ class MinecraftGame {
       
       document.body.appendChild(cursor);
       
+      document.addEventListener('mousedown', this.updateHeldItemCursor); // show item on inital click
       document.addEventListener('mousemove', this.updateHeldItemCursor);
     }
   }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sophisticated Project Editor</title>
+    <title>Multi-file HTML Editor</title>
     <style>
         :root {
             --bg-dark: #1e1e1e;
@@ -84,6 +84,12 @@
         </div>
         <button class="secondary" onclick="editorApp.formatCode()">Format</button>
         <button onclick="editorApp.runCode()">▶ Run</button>
+        <button onclick="editorApp.openFullscreenPreview()" 
+                style="background: #007acc;" 
+                title="Open preview in new tab (fullscreen)">
+            ⛶ Fullscreen
+        </button>
+</div>
     </div>
 </header>
 
@@ -468,6 +474,33 @@ const editorApp = {
             files: this.files,
             rootFile: 'index.html'
         });
+    },
+    
+    // Open current preview in a clean new tab (true fullscreen)
+    openFullscreenPreview: function() {
+        const iframe = document.getElementById('previewFrame');
+
+        // Auto-run first if the preview is not loaded yet
+        if (!iframe.src || iframe.src === 'about:blank') {
+            this.runCode();
+
+            // Wait for worker + renderPreview to finish
+            setTimeout(() => {
+                this._actuallyOpenFullscreen();
+            }, 900);
+        } else {
+            this._actuallyOpenFullscreen();
+        }
+    },
+
+    // Helper to avoid code duplication
+    _actuallyOpenFullscreen: function() {
+        const iframe = document.getElementById('previewFrame');
+        if (iframe.src && iframe.src !== 'about:blank') {
+            window.open(iframe.src, '_blank');
+        } else {
+            alert("Preview not ready yet. Try clicking Run first.");
+        }
     },
 
     // RENDER: Injects the sophisticated interceptor

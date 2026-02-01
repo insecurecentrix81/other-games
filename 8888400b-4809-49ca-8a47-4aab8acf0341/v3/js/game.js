@@ -324,10 +324,11 @@ class MinecraftGame {
       inventory: this.inventorySlots.map(slot => slot ? {...slot} : null),
       selectedSlot: this.selectedSlot,
       modifiedBlocks: Array.from(this.modifiedBlocks.entries()),
+      // In createSaveData(), change droppedItems to use item.position:
       droppedItems: this.droppedItems.map(item => ({
-        x: item.mesh.position.x,
-        y: item.mesh.position.y,
-        z: item.mesh.position.z,
+        x: item.position.x,
+        y: item.position.y,
+        z: item.position.z,
         itemId: item.itemId,
         count: item.count,
         vx: item.velocity.x,
@@ -2674,6 +2675,7 @@ class MinecraftGame {
   updateDroppedItems(dt) {
     const playerPos = this.player.position;
     const pickupRadius = 1.5;
+    const itemHalfHeight = 0.125;  // Half of 0.25 box size
     
     for (let i = this.droppedItems.length - 1; i >= 0; i--) {
       const item = this.droppedItems[i];
@@ -2691,50 +2693,89 @@ class MinecraftGame {
         continue;
       }
       
-      // Apply gravity
+      // Use separate physics position
+      const pos = item.position;
+      
+      // Apply gravity only when not on ground
       if (!item.onGround) {
         item.velocity.y -= GRAVITY * dt;
+        // Clamp fall speed
+        item.velocity.y = Math.max(item.velocity.y, -20);
       }
       
-      // Move with collision
-      const pos = item.mesh.position;
-      
-      // X movement
-      pos.x += item.velocity.x * dt;
-      if (this.getBlock(Math.floor(pos.x), Math.floor(pos.y), Math.floor(pos.z)) !== BLOCK.AIR) {
-        pos.x -= item.velocity.x * dt;
+      // X movement with collision
+      const newX = pos.x + item.velocity.x * dt;
+      const blockAtNewX = this.getBlock(Math.floor(newX), Math.floor(pos.y), Math.floor(pos.z));
+      if (blockAtNewX !== BLOCK.AIR && BLOCK_DATA[blockAtNewX]?.solid) {
         item.velocity.x *= -0.3;
+      } else {
+        pos.x = newX;
       }
       
-      // Z movement
-      pos.z += item.velocity.z * dt;
-      if (this.getBlock(Math.floor(pos.x), Math.floor(pos.y), Math.floor(pos.z)) !== BLOCK.AIR) {
-        pos.z -= item.velocity.z * dt;
+      // Z movement with collision
+      const newZ = pos.z + item.velocity.z * dt;
+      const blockAtNewZ = this.getBlock(Math.floor(pos.x), Math.floor(pos.y), Math.floor(newZ));
+      if (blockAtNewZ !== BLOCK.AIR && BLOCK_DATA[blockAtNewZ]?.solid) {
         item.velocity.z *= -0.3;
+      } else {
+        pos.z = newZ;
       }
       
       // Y movement
       pos.y += item.velocity.y * dt;
-      const blockBelow = this.getBlock(Math.floor(pos.x), Math.floor(pos.y - 0.125), Math.floor(pos.z));
+      
+      // Ground collision - check block at the bottom of the item
+      const bottomY = pos.y - itemHalfHeight;
+      const groundBlockY = Math.floor(bottomY);
+      const blockBelow = this.getBlock(Math.floor(pos.x), groundBlockY, Math.floor(pos.z));
+      
+      // Check if we've fallen into a solid block
       if (blockBelow !== BLOCK.AIR && BLOCK_DATA[blockBelow]?.solid) {
-        pos.y = Math.floor(pos.y) + 0.25;
-        item.velocity.y = 0;
-        item.velocity.x *= 0.8;  // Friction
-        item.velocity.z *= 0.8;
-        item.onGround = true;
+        if (item.velocity.y <= 0) {
+          // Snap to top of the solid block
+          // Block at groundBlockY has its top surface at groundBlockY + 1
+          // Item center should be at (top of block) + itemHalfHeight
+          pos.y = groundBlockY + 1 + itemHalfHeight;
+          item.velocity.y = 0;
+          
+          // Apply friction
+          item.velocity.x *= 0.85;
+          item.velocity.z *= 0.85;
+          
+          // Stop tiny movements
+          if (Math.abs(item.velocity.x) < 0.01) item.velocity.x = 0;
+          if (Math.abs(item.velocity.z) < 0.01) item.velocity.z = 0;
+          
+          item.onGround = true;
+        }
       } else {
         item.onGround = false;
+      }
+      
+      // Also check if inside a block (can happen on spawn) and push up
+      const blockAtCenter = this.getBlock(Math.floor(pos.x), Math.floor(pos.y), Math.floor(pos.z));
+      if (blockAtCenter !== BLOCK.AIR && BLOCK_DATA[blockAtCenter]?.solid) {
+        pos.y = Math.floor(pos.y) + 1 + itemHalfHeight;
+        item.velocity.y = 0;
+        item.onGround = true;
+      }
+      
+      // Update visual mesh position (separate from physics)
+      item.mesh.position.x = pos.x;
+      item.mesh.position.z = pos.z;
+      
+      // Bobbing only affects visual, not physics
+      if (item.onGround) {
+        const bobOffset = Math.sin(performance.now() * 0.003 + i) * 0.05;
+        item.mesh.position.y = pos.y + bobOffset;
+      } else {
+        item.mesh.position.y = pos.y;
       }
       
       // Rotate for visual effect
       item.mesh.rotation.y += dt * 2;
       
-      // Bob up and down slightly when on ground
-      if (item.onGround) {
-        item.mesh.position.y += Math.sin(performance.now() * 0.003) * 0.002;
-      }
-      
-      // Check pickup
+      // Pickup check using physics position
       if (item.pickupDelay <= 0) {
         const dx = pos.x - playerPos.x;
         const dy = pos.y - (playerPos.y - PLAYER_HEIGHT / 2);
@@ -2742,7 +2783,6 @@ class MinecraftGame {
         const distSq = dx * dx + dy * dy + dz * dz;
         
         if (distSq < pickupRadius * pickupRadius) {
-          // Try to add to inventory
           if (this.addToInventory(item.itemId, item.count)) {
             this.scene.remove(item.mesh);
             item.mesh.geometry.dispose();
@@ -2767,13 +2807,15 @@ class MinecraftGame {
       mesh,
       itemId,
       count,
+      // Separate physics position from visual mesh position
+      position: new THREE.Vector3(x, y, z),
       velocity: velocity ? velocity.clone() : new THREE.Vector3(
         (Math.random() - 0.5) * 2,
         3 + Math.random() * 2,
         (Math.random() - 0.5) * 2
       ),
-      pickupDelay: 0.5,  // seconds before can be picked up
-      lifetime: 300,      // despawn after 5 minutes
+      pickupDelay: 0.5,
+      lifetime: 300,
       onGround: false
     };
     

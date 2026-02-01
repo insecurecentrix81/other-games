@@ -770,15 +770,6 @@ class MinecraftGame {
     // Show held item cursor
     const existingCursor = document.getElementById('held-item-cursor');
     if (existingCursor) existingCursor.remove();
-
-    // Add method to class:
-    updateHeldItemCursor = (e) => {
-      const cursor = document.getElementById('held-item-cursor');
-      if (cursor) {
-        cursor.style.left = e.clientX + 'px';
-        cursor.style.top = e.clientY + 'px';
-      }
-    }
     
     if (this.heldInventoryItem) {
       const cursor = document.createElement('div');
@@ -806,6 +797,14 @@ class MinecraftGame {
       document.body.appendChild(cursor);
       
       document.addEventListener('mousemove', this.updateHeldItemCursor);
+    }
+  }
+  // Add method to class:
+  updateHeldItemCursor() {
+    const cursor = document.getElementById('held-item-cursor');
+    if (cursor) {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top = e.clientY + 'px';
     }
   }
 

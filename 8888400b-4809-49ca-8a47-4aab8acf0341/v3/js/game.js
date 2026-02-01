@@ -85,6 +85,8 @@ class MinecraftGame {
     
     this.droppedItems = [];
     this.heldInventoryItem = null;  // For inventory drag/drop
+    
+    this.mouse = {x:0,y:0}
 
     this.init();
   }
@@ -796,16 +798,16 @@ class MinecraftGame {
       
       document.body.appendChild(cursor);
       
-      document.addEventListener('mousedown', this.updateHeldItemCursor); // show item on inital click
-      document.addEventListener('mousemove', this.updateHeldItemCursor);
+      this.updateHeldItemCursor(mouse.x,mouse.y) // show item on initial click
+      document.addEventListener('mousemove', (e) => { this.updateHeldItemCursor(e.clientX, e.clientY) });
     }
   }
   // Add method to class:
-  updateHeldItemCursor(e) {
+  updateHeldItemCursor(x,y) {
     const cursor = document.getElementById('held-item-cursor');
     if (cursor) {
-      cursor.style.left = e.clientX + 'px';
-      cursor.style.top = e.clientY + 'px';
+      cursor.style.left = x + 'px';
+      cursor.style.top = y + 'px';
     }
   }
 
@@ -1288,6 +1290,14 @@ class MinecraftGame {
     document.getElementById('respawn-btn').onclick = () => {
       this.respawn();
     };
+    addEventListener("mousedown", (e) => {
+      this.mouse.x = e.clientX
+      this.mouse.y = e.clientY
+    })
+    addEventListener("mousemove", (e) => {
+      this.mouse.x = e.clientX
+      this.mouse.y = e.clientY
+    })
 
     document.addEventListener('keydown', e => {
       if (this.keys[e.code]) return;

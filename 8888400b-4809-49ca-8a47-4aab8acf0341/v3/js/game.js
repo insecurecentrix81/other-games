@@ -321,7 +321,17 @@ class MinecraftGame {
       hotbar: this.hotbarSlots.map(slot => slot ? {...slot} : null),
       inventory: this.inventorySlots.map(slot => slot ? {...slot} : null),
       selectedSlot: this.selectedSlot,
-      modifiedBlocks: Array.from(this.modifiedBlocks.entries())
+      modifiedBlocks: Array.from(this.modifiedBlocks.entries()),
+      droppedItems: this.droppedItems.map(item => ({
+        x: item.mesh.position.x,
+        y: item.mesh.position.y,
+        z: item.mesh.position.z,
+        itemId: item.itemId,
+        count: item.count,
+        vx: item.velocity.x,
+        vy: item.velocity.y,
+        vz: item.velocity.z
+      }))
     };
   }
 
@@ -369,6 +379,12 @@ class MinecraftGame {
     if (save.modifiedBlocks) {
       for (const [key, value] of save.modifiedBlocks) {
         this.modifiedBlocks.set(key, value);
+      }
+    }
+    if (save.droppedItems) {
+      for (const di of save.droppedItems) {
+        const vel = new THREE.Vector3(di.vx || 0, di.vy || 0, di.vz || 0);
+        this.spawnDroppedItem(di.x, di.y, di.z, di.itemId, di.count, vel);
       }
     }
     
@@ -1493,6 +1509,12 @@ class MinecraftGame {
     
     this.gameMode = 'survival';
     this.isFlying = false;
+    this.droppedItems.forEach(item => {
+      this.scene.remove(item.mesh);
+      item.mesh.geometry.dispose();
+      item.mesh.material.dispose();
+    });
+    this.droppedItems = [];
   }
 
   async startGame(isNewWorld = false) {

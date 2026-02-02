@@ -571,11 +571,15 @@ class MinecraftGame {
     }
   }
 
-  updateFog() {
+  /*updateFog() {
     const viewDistance = CHUNK_SIZE * this.settings.renderDistance;
     // Exponential fog - density controls how quickly it fades
     const density = 0.015 / this.settings.renderDistance;
     this.scene.fog = new THREE.FogExp2(0x87ceeb, density);
+  }*/
+  updateFog() {
+    const viewDistance = CHUNK_SIZE * this.settings.renderDistance;
+    this.scene.fog = new THREE.Fog(0x87ceeb, viewDistance * 0.5, viewDistance * 0.9);
   }
 
   setupHighlight() {

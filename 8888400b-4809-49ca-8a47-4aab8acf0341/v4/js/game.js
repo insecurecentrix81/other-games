@@ -1585,8 +1585,6 @@ class MinecraftGame {
       if (this.chunkWorker) {
         this.chunkWorker.postMessage({ type: 'init', seed: this.worldSeed });
       }
-
-      this.generateInitialChunks();
       
       if (isNewWorld) {
         this.findSpawnPoint();
@@ -1670,9 +1668,7 @@ class MinecraftGame {
   processMeshBuildQueue() {
     if (this.meshBuildQueue.length === 0) return;
     if (!this.chunkWorker) {
-      // Fallback: process on main thread with time budget
-      alert("fallback: process on main thread")
-      this.processMeshQueueMainThread();
+      alert("ERROR: chunk worker not available")
       return;
     }
     
@@ -1732,29 +1728,9 @@ class MinecraftGame {
     }
   }
 
-  processMeshQueueMainThread() {
-    // Fallback for when worker isn't available
-    alert("fallback pmqmt")
-    throw "fallback"
-    const startTime = performance.now();
-    const budgetMs = 8;
-    
-    while (this.meshBuildQueue.length > 0) {
-      if (performance.now() - startTime > budgetMs) break;
-      
-      const { cx, cz } = this.meshBuildQueue.shift();
-      const key = `${cx},${cz}`;
-      
-      if (this.chunks.has(key)) {
-        this.buildChunkMesh(cx, cz);
-      }
-    }
-  }
-
   createMeshFromGeometry(cx, cz, geometry) {
     const key = `${cx},${cz}`;
     
-    // Remove old mesh if exists
     if (this.chunkMeshes.has(key)) {
       const oldGroup = this.chunkMeshes.get(key);
       this.scene.remove(oldGroup);
@@ -1773,21 +1749,22 @@ class MinecraftGame {
       geo.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
       geo.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
       
-      // Use pre-computed normals instead of computing them!
       if (data.normals && data.normals.length > 0) {
         geo.setAttribute('normal', new THREE.Float32BufferAttribute(data.normals, 3));
       } else {
-        // Fallback only if normals not provided
         geo.computeVertexNormals();
       }
       
       const mat = new THREE.MeshStandardMaterial({
         vertexColors: true,
         transparent: isTrans,
-        opacity: isTrans ? 0.6 : 1.0,
+        opacity: isTrans ? 0.8 : 1.0,
         depthWrite: !isTrans,
         roughness: 0.8,
-        side: THREE.FrontSide
+        // Cross-type blocks are in transparent mesh, need DoubleSide
+        side: isTrans ? THREE.DoubleSide : THREE.FrontSide,
+        // If you add textures later, uncomment this:
+        // alphaTest: isTrans ? 0.5 : 0,
       });
       
       const mesh = new THREE.Mesh(geo, mat);
@@ -1803,6 +1780,39 @@ class MinecraftGame {
     
     this.scene.add(group);
     this.chunkMeshes.set(key, group);
+  }
+  
+  checkBlockSupport(x, y, z) {
+    const block = this.getBlock(x, y, z);
+    if (block === BLOCK.AIR) return;
+    
+    const blockData = BLOCK_DATA[block];
+    if (!blockData || !blockData.placedOn) return;
+    
+    const blockBelow = this.getBlock(x, y - 1, z);
+    
+    // Check if the block below is valid support
+    if (!blockData.placedOn.includes(blockBelow)) {
+      // Block loses support - break it and drop item
+      this.setBlock(x, y, z, BLOCK.AIR);
+      
+      // Handle drops
+      let dropItem = block;
+      if (blockData.drops === null) {
+        // Check for rare drops
+        if (blockData.rareDrops && Math.random() < blockData.rareDrops.chance) {
+          dropItem = blockData.rareDrops.item;
+        } else {
+          dropItem = null;
+        }
+      } else if (blockData.drops !== undefined) {
+        dropItem = blockData.drops;
+      }
+      
+      if (dropItem !== null) {
+        this.spawnDroppedItem(x + 0.5, y + 0.5, z + 0.5, dropItem, 1);
+      }
+    }
   }
 
   generateChunk(cx, cz) {
@@ -1860,76 +1870,6 @@ class MinecraftGame {
       }
       return;
     }
-
-    // Fallback: generate on main thread
-    //this.generateChunkMainThread(cx, cz);
-  }
-
-  /* Put generateChunkMainThread method here - fallback for when workers aren't available */
-  generateChunkMainThread(cx, cz) {
-    alert("fallback main thread")
-    throw "fallback"
-    const key = `${cx},${cz}`;
-    const chunk = new Uint8Array(CHUNK_SIZE * WORLD_HEIGHT * CHUNK_SIZE);
-
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-        const wx = cx * CHUNK_SIZE + lx;
-        const wz = cz * CHUNK_SIZE + lz;
-        const height = this.getTerrainHeight(wx, wz);
-        const biome = this.getBiome(wx, wz);
-
-        for (let y = 0; y < WORLD_HEIGHT; y++) {
-          const idx = lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT;
-
-          if (y === 0) {
-            chunk[idx] = BLOCK.BEDROCK;
-          } else if (y < height - 4) {
-            const rand = Math.random();
-            if (rand < 0.008) chunk[idx] = BLOCK.COAL_ORE;
-            else if (rand < 0.012 && y < 40) chunk[idx] = BLOCK.IRON_ORE;
-            else if (rand < 0.014 && y < 20) chunk[idx] = BLOCK.GOLD_ORE;
-            else if (rand < 0.016 && y < 16) chunk[idx] = BLOCK.DIAMOND_ORE;
-            else chunk[idx] = BLOCK.STONE;
-          } else if (y < height - 1) {
-            chunk[idx] = biome === 'desert' ? BLOCK.SAND : BLOCK.DIRT;
-          } else if (y < height) {
-            if (biome === 'desert') chunk[idx] = BLOCK.SAND;
-            else if (biome === 'snow') chunk[idx] = BLOCK.SNOW;
-            else if (height <= WATER_LEVEL + 2) chunk[idx] = BLOCK.SAND;
-            else chunk[idx] = BLOCK.GRASS;
-          }
-        }
-
-        // Trees
-        if (height > WATER_LEVEL + 2 && biome !== 'desert' && Math.random() < 0.015) {
-          const treeHeight = 4 + Math.floor(Math.random() * 2);
-          for (let ty = 0; ty < treeHeight; ty++) {
-            const y = height + ty;
-            if (y < WORLD_HEIGHT) {
-              chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT] = BLOCK.WOOD;
-            }
-          }
-          for (let dx = -2; dx <= 2; dx++) {
-            for (let dz = -2; dz <= 2; dz++) {
-              for (let dy = treeHeight - 1; dy <= treeHeight + 1; dy++) {
-                if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && Math.random() < 0.5) continue;
-                const nx = lx + dx, nz = lz + dz, ny = height + dy;
-                if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE && ny < WORLD_HEIGHT) {
-                  if (chunk[nx + ny * CHUNK_SIZE + nz * CHUNK_SIZE * WORLD_HEIGHT] === BLOCK.AIR) {
-                    chunk[nx + ny * CHUNK_SIZE + nz * CHUNK_SIZE * WORLD_HEIGHT] = BLOCK.LEAVES;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    this.chunks.set(key, chunk);
-    this.applyModificationsToChunk(cx, cz);
-    this.buildChunkMesh(cx, cz);
   }
 
   applyModificationsToChunk(cx, cz) {
@@ -1950,24 +1890,6 @@ class MinecraftGame {
         }
       }
     }
-  }
-
-  generateInitialChunks() {
-      const pcx = Math.floor(this.player.position.x / CHUNK_SIZE);
-      const pcz = Math.floor(this.player.position.z / CHUNK_SIZE);
-
-      // Only load a very small 3x3 area immediately
-      const loadDistance = 1; 
-
-      for (let dx = -loadDistance; dx <= loadDistance; dx++) {
-        for (let dz = -loadDistance; dz <= loadDistance; dz++) {
-          const cx = pcx + dx;
-          const cz = pcz + dz;
-          if (!this.chunks.has(`${cx},${cz}`)) {
-            //this.generateChunkMainThread(cx, cz);
-          }
-        }
-      }
   }
 
   findSpawnPoint() {
@@ -1995,176 +1917,33 @@ class MinecraftGame {
 
   setBlock(x, y, z, type) {
     if (y < 0 || y >= WORLD_HEIGHT) return;
-
+  
     this.modifiedBlocks.set(`${x},${y},${z}`, type);
-
+  
     const cx = Math.floor(x / CHUNK_SIZE);
     const cz = Math.floor(z / CHUNK_SIZE);
     const chunk = this.chunks.get(`${cx},${cz}`);
-
+  
     if (chunk) {
       const lx = ((x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT] = type;
-
-      // Queue mesh rebuilds for affected chunks
+  
+      // Queue mesh rebuilds
       this.queueMeshBuild(cx, cz);
       if (lx === 0) this.queueMeshBuild(cx - 1, cz);
       if (lx === CHUNK_SIZE - 1) this.queueMeshBuild(cx + 1, cz);
       if (lz === 0) this.queueMeshBuild(cx, cz - 1);
       if (lz === CHUNK_SIZE - 1) this.queueMeshBuild(cx, cz + 1);
     }
+  
+    // If we removed a block, check if block above needs support
+    if (type === BLOCK.AIR) {
+      this.checkBlockSupport(x, y + 1, z);
+    }
   }
 
   // ==================== MESH BUILDING ====================
-
-  /* 
-   * Put buildChunkMesh method here - this is a large method that:
-   * - Creates geometry for visible block faces
-   * - Handles ambient occlusion calculation
-   * - Separates opaque and transparent geometry
-   * - Creates THREE.js mesh objects
-   * 
-   * The full implementation is in the original file's buildChunkMesh method
-   */
-  buildChunkMesh(cx, cz) {
-    const key = `${cx},${cz}`;
-    const chunk = this.chunks.get(key);
-    if (!chunk) return;
-
-    if (this.chunkMeshes.has(key)) {
-      const oldGroup = this.chunkMeshes.get(key);
-      this.scene.remove(oldGroup);
-      oldGroup.children.forEach(mesh => {
-        mesh.geometry.dispose();
-        mesh.material.dispose();
-      });
-    }
-
-    const opaque = { pos: [], col: [] };
-    const trans = { pos: [], col: [] };
-
-    const localGetBlock = (x, y, z) => {
-      if (y < 0 || y >= WORLD_HEIGHT) return BLOCK.AIR;
-      const lx = x - (cx * CHUNK_SIZE);
-      const lz = z - (cz * CHUNK_SIZE);
-      if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
-        const modKey = `${x},${y},${z}`;
-        if (this.modifiedBlocks.has(modKey)) {
-          return this.modifiedBlocks.get(modKey);
-        }
-        return chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT];
-      }
-      return this.getBlock(x, y, z);
-    };
-
-    const isOccluder = (x, y, z) => {
-      const block = localGetBlock(x, y, z);
-      return block !== BLOCK.AIR && !BLOCK_DATA[block]?.transparent;
-    };
-
-    const vertexAO = (s1, s2, c) => (s1 && s2) ? 0 : 3 - (s1 + s2 + c);
-    const aoLevels = [0.5, 0.7, 0.85, 1.0];
-
-    const addFace = (x, y, z, dir, color, target) => {
-      const r = ((color >> 16) & 255) / 255;
-      const g = ((color >> 8) & 255) / 255;
-      const b = (color & 255) / 255;
-
-      const face = FACE_DATA[dir];
-
-      const ao = face.corners.map(c => {
-        const s1 = isOccluder(x + c.neighbors[0][0], y + c.neighbors[0][1], z + c.neighbors[0][2]) ? 1 : 0;
-        const s2 = isOccluder(x + c.neighbors[1][0], y + c.neighbors[1][1], z + c.neighbors[1][2]) ? 1 : 0;
-        const corner = isOccluder(x + c.neighbors[2][0], y + c.neighbors[2][1], z + c.neighbors[2][2]) ? 1 : 0;
-        return vertexAO(s1, s2, corner);
-      });
-
-      const flip = ao[0] + ao[2] < ao[1] + ao[3];
-      const indices = flip ? [1, 2, 3, 1, 3, 0] : [0, 1, 2, 0, 2, 3];
-
-      const noise = (Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1;
-      const v = 1 - (Math.abs(noise) * 0.08);
-
-      indices.forEach(i => {
-        const corner = face.corners[i];
-        target.pos.push(x + corner.pos[0], y + corner.pos[1], z + corner.pos[2]);
-        const m = aoLevels[ao[i]] * face.shade * v;
-        target.col.push(r * m, g * m, b * m);
-      });
-    };
-
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      for (let y = 0; y < WORLD_HEIGHT; y++) {
-        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-          const wx = cx * CHUNK_SIZE + lx;
-          const wz = cz * CHUNK_SIZE + lz;
-          
-          const modKey = `${wx},${y},${wz}`;
-          let block;
-          if (this.modifiedBlocks.has(modKey)) {
-            block = this.modifiedBlocks.get(modKey);
-          } else {
-            const idx = lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT;
-            block = chunk[idx];
-          }
-          
-          if (block === BLOCK.AIR) continue;
-
-          const data = BLOCK_DATA[block];
-          if (!data) continue;
-          
-          const target = data.transparent ? trans : opaque;
-
-          const shouldRender = (nx, ny, nz) => {
-            const neighbor = localGetBlock(nx, ny, nz);
-            if (neighbor === BLOCK.AIR) return true;
-            const nData = BLOCK_DATA[neighbor];
-            if (!nData) return true;
-            if (nData.transparent && !data.transparent) return true;
-            if (data.transparent && nData.transparent && neighbor !== block) return true;
-            return false;
-          };
-
-          if (shouldRender(wx, y + 1, wz)) addFace(wx, y, wz, 'top', data.top, target);
-          if (shouldRender(wx, y - 1, wz)) addFace(wx, y, wz, 'bottom', data.bottom, target);
-          if (shouldRender(wx, y, wz + 1)) addFace(wx, y, wz, 'front', data.side, target);
-          if (shouldRender(wx, y, wz - 1)) addFace(wx, y, wz, 'back', data.side, target);
-          if (shouldRender(wx + 1, y, wz)) addFace(wx, y, wz, 'right', data.side, target);
-          if (shouldRender(wx - 1, y, wz)) addFace(wx, y, wz, 'left', data.side, target);
-        }
-      }
-    }
-
-    const group = new THREE.Group();
-    const createMesh = (data, isTrans) => {
-      if (data.pos.length === 0) return;
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(data.pos, 3));
-      geo.setAttribute('color', new THREE.Float32BufferAttribute(data.col, 3));
-      geo.computeVertexNormals();
-      const mat = new THREE.MeshStandardMaterial({ 
-        vertexColors: true, 
-        transparent: isTrans, 
-        opacity: isTrans ? 0.6 : 1.0,
-        depthWrite: !isTrans,
-        roughness: 0.8,
-        side: THREE.FrontSide
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      
-      if (this.settings.shadowsEnabled) {
-        mesh.castShadow = !isTrans;
-        mesh.receiveShadow = !isTrans;
-      }
-      group.add(mesh);
-    };
-
-    createMesh(opaque, false);
-    createMesh(trans, true);
-    this.scene.add(group);
-    this.chunkMeshes.set(key, group);
-  }
 
   // ==================== PLAYER & PHYSICS ====================
 
@@ -2434,7 +2213,12 @@ class MinecraftGame {
     
     if (blockData.drops !== undefined) {
       if (blockData.drops === null) {
-        dropItem = null;
+        // Check for rare drops (like seeds from tall grass)
+        if (blockData.rareDrops && Math.random() < blockData.rareDrops.chance) {
+          dropItem = blockData.rareDrops.item;
+        } else {
+          dropItem = null;
+        }
       } else {
         dropItem = blockData.drops;
       }
@@ -2465,6 +2249,20 @@ class MinecraftGame {
     
     const heldItem = this.getHeldItem();
     if (!heldItem) return;
+    
+    const blockData = BLOCK_DATA[heldItem.id];
+    if (!blockData) return;
+  
+    const { x, y, z } = this.placementBlock;
+    
+    // Check if this block requires specific support
+    if (blockData.placedOn) {
+      const blockBelow = this.getBlock(x, y - 1, z);
+      if (!blockData.placedOn.includes(blockBelow)) {
+        // Can't place here - invalid support
+        return;
+      }
+    }
     
     if (!BLOCK_DATA[heldItem.id]) return;
 

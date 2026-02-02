@@ -531,10 +531,10 @@ class MinecraftGame {
       this.renderer.shadowMap.type = THREE.VSMShadowMap;
       this.sun.castShadow = true;
 
-      const res = this.settings.shadowDistance * CHUNK_SIZE * this.settings.renderdistance;
+      const res = this.settings.shadowDistance * CHUNK_SIZE * this.settings.renderDistance;
       this.sun.shadow.mapSize.set(res, res);
       
-      const d = CHUNK_SIZE * this.settings.renderdistance;
+      const d = CHUNK_SIZE * this.settings.renderDistance;
       this.sun.shadow.camera.left = -d;
       this.sun.shadow.camera.right = d;
       this.sun.shadow.camera.top = d;

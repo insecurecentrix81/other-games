@@ -241,10 +241,10 @@ function addCrossGeometry(wx, y, wz, color, target) {
 }
 
 function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
-  const opaque = { pos: [], col: [], norm: [] };  // Added norm array
-  const trans = { pos: [], col: [], norm: [] };   // Added norm array
+  // Add uvs array to both opaque and transparent
+  const opaque = { pos: [], col: [], norm: [], uvs: [] };
+  const trans = { pos: [], col: [], norm: [], uvs: [] };
 
-  // Helper to get block at world position
   const getBlock = (wx, y, wz) => {
     if (y < 0 || y >= WORLD_HEIGHT) return BLOCK.AIR;
     
@@ -278,7 +278,6 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
   const vertexAO = (s1, s2, c) => (s1 && s2) ? 0 : 3 - (s1 + s2 + c);
   const aoLevels = [0.5, 0.7, 0.85, 1.0];
 
-  // Face normals - pre-defined for each direction
   const FACE_NORMALS = {
     top:    [0, 1, 0],
     bottom: [0, -1, 0],
@@ -288,14 +287,28 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
     left:   [-1, 0, 0]
   };
 
-  const addFace = (wx, y, wz, dir, color, target) => {
-    const r = ((color >> 16) & 255) / 255;
-    const g = ((color >> 8) & 255) / 255;
-    const b = (color & 255) / 255;
+  // UV corners for each face direction
+  // Order matches FACE_DATA corner order: [0,1,2,3]
+  const FACE_UVS = {
+    top:    [[0, 1], [0, 0], [1, 0], [1, 1]],
+    bottom: [[0, 0], [0, 1], [1, 1], [1, 0]],
+    front:  [[0, 1], [1, 1], [1, 0], [0, 0]],
+    back:   [[1, 1], [0, 1], [0, 0], [1, 0]],
+    right:  [[0, 1], [1, 1], [1, 0], [0, 0]],
+    left:   [[1, 1], [0, 1], [0, 0], [1, 0]]
+  };
+
+  const addFace = (wx, y, wz, dir, texSlot, target) => {
+    // Get texture UV coordinates
+    const [texCol, texRow] = texSlot || TEX.MISSING;
+    const texU = texCol * TILE_SIZE;
+    const texV = texRow * TILE_SIZE;
 
     const face = FACE_DATA[dir];
     const normal = FACE_NORMALS[dir];
+    const faceUVs = FACE_UVS[dir];
 
+    // Calculate AO for each corner
     const ao = face.corners.map(c => {
       const n = c.neighbors;
       const s1 = isOccluder(wx + n[0][0], y + n[0][1], wz + n[0][2]) ? 1 : 0;
@@ -304,24 +317,99 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
       return vertexAO(s1, s2, corner);
     });
 
+    // Flip quad for better AO
     const flip = ao[0] + ao[2] < ao[1] + ao[3];
     const indices = flip ? [1, 2, 3, 1, 3, 0] : [0, 1, 2, 0, 2, 3];
 
+    // Slight color variation
     const noise = (Math.sin(wx * 12.9898 + wz * 78.233) * 43758.5453) % 1;
-    const v = 1 - (Math.abs(noise) * 0.08);
+    const v = 1 - (Math.abs(noise) * 0.05);
 
     indices.forEach(i => {
       const corner = face.corners[i];
+      
+      // Position
       target.pos.push(wx + corner.pos[0], y + corner.pos[1], wz + corner.pos[2]);
-      const m = aoLevels[ao[i]] * face.shade * v;
-      target.col.push(r * m, g * m, b * m);
-      // Add pre-computed normal for this vertex
+      
+      // Color (AO tint - will be multiplied with texture)
+      const aoMult = aoLevels[ao[i]] * face.shade * v;
+      target.col.push(aoMult, aoMult, aoMult);  // Grayscale for AO
+      
+      // Normal
       target.norm.push(normal[0], normal[1], normal[2]);
+      
+      // UV coordinates
+      const uv = faceUVs[i];
+      target.uvs.push(
+        texU + uv[0] * TILE_SIZE,
+        texV + uv[1] * TILE_SIZE
+      );
     });
   };
 
-  // ... rest of the iteration logic stays the same ...
+  // Cross geometry with UVs
+  const addCrossGeometry = (wx, y, wz, texSlot, target) => {
+    const [texCol, texRow] = texSlot || TEX.MISSING;
+    const texU = texCol * TILE_SIZE;
+    const texV = texRow * TILE_SIZE;
 
+    const offset = 0.15;
+    const height = 0.9;
+
+    // Color variation
+    const variation = (Math.sin(wx * 12.9898 + wz * 78.233) * 43758.5453) % 1;
+    const colorMult = 0.85 + Math.abs(variation) * 0.15;
+
+    // Plane 1 vertices with UVs
+    const plane1 = [
+      // Front face (2 triangles)
+      { pos: [offset, 0, offset], uv: [0, 0] },
+      { pos: [1 - offset, 0, 1 - offset], uv: [1, 0] },
+      { pos: [1 - offset, height, 1 - offset], uv: [1, 1] },
+      { pos: [offset, 0, offset], uv: [0, 0] },
+      { pos: [1 - offset, height, 1 - offset], uv: [1, 1] },
+      { pos: [offset, height, offset], uv: [0, 1] },
+      // Back face
+      { pos: [1 - offset, 0, 1 - offset], uv: [1, 0] },
+      { pos: [offset, 0, offset], uv: [0, 0] },
+      { pos: [offset, height, offset], uv: [0, 1] },
+      { pos: [1 - offset, 0, 1 - offset], uv: [1, 0] },
+      { pos: [offset, height, offset], uv: [0, 1] },
+      { pos: [1 - offset, height, 1 - offset], uv: [1, 1] }
+    ];
+
+    // Plane 2 vertices with UVs
+    const plane2 = [
+      // Front face
+      { pos: [1 - offset, 0, offset], uv: [0, 0] },
+      { pos: [offset, 0, 1 - offset], uv: [1, 0] },
+      { pos: [offset, height, 1 - offset], uv: [1, 1] },
+      { pos: [1 - offset, 0, offset], uv: [0, 0] },
+      { pos: [offset, height, 1 - offset], uv: [1, 1] },
+      { pos: [1 - offset, height, offset], uv: [0, 1] },
+      // Back face
+      { pos: [offset, 0, 1 - offset], uv: [1, 0] },
+      { pos: [1 - offset, 0, offset], uv: [0, 0] },
+      { pos: [1 - offset, height, offset], uv: [0, 1] },
+      { pos: [offset, 0, 1 - offset], uv: [1, 0] },
+      { pos: [1 - offset, height, offset], uv: [0, 1] },
+      { pos: [offset, height, 1 - offset], uv: [1, 1] }
+    ];
+
+    const allVerts = [...plane1, ...plane2];
+
+    for (const vert of allVerts) {
+      target.pos.push(wx + vert.pos[0], y + vert.pos[1], wz + vert.pos[2]);
+      target.col.push(colorMult, colorMult, colorMult);
+      target.norm.push(0, 1, 0);  // Simplified normal
+      target.uvs.push(
+        texU + vert.uv[0] * TILE_SIZE,
+        texV + vert.uv[1] * TILE_SIZE
+      );
+    }
+  };
+
+  // Main loop
   for (let lx = 0; lx < CHUNK_SIZE; lx++) {
     for (let y = 0; y < WORLD_HEIGHT; y++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
@@ -338,18 +426,20 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
         }
 
         if (block === BLOCK.AIR) continue;
-        
+
         const data = BLOCK_DATA[block];
         if (!data) continue;
-        
+
         const target = data.transparent ? trans : opaque;
-        
-        // Handle cross-type blocks (flowers, grass, etc.)
+        const tex = data.tex || {};  // Texture slots
+
+        // Handle cross-type blocks
         if (data.type === BLOCK_TYPE.CROSS) {
-          addCrossGeometry(wx, y, wz, data.color || data.side, trans);
-          continue; // Skip cube face logic
+          addCrossGeometry(wx, y, wz, tex.side, trans);
+          continue;
         }
 
+        // Standard cube faces
         const shouldRender = (nx, ny, nz) => {
           const neighbor = getBlock(nx, ny, nz);
           if (neighbor === BLOCK.AIR) return true;
@@ -360,12 +450,12 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
           return false;
         };
 
-        if (shouldRender(wx, y + 1, wz)) addFace(wx, y, wz, 'top', data.top, target);
-        if (shouldRender(wx, y - 1, wz)) addFace(wx, y, wz, 'bottom', data.bottom, target);
-        if (shouldRender(wx, y, wz + 1)) addFace(wx, y, wz, 'front', data.side, target);
-        if (shouldRender(wx, y, wz - 1)) addFace(wx, y, wz, 'back', data.side, target);
-        if (shouldRender(wx + 1, y, wz)) addFace(wx, y, wz, 'right', data.side, target);
-        if (shouldRender(wx - 1, y, wz)) addFace(wx, y, wz, 'left', data.side, target);
+        if (shouldRender(wx, y + 1, wz)) addFace(wx, y, wz, 'top', tex.top, target);
+        if (shouldRender(wx, y - 1, wz)) addFace(wx, y, wz, 'bottom', tex.bottom, target);
+        if (shouldRender(wx, y, wz + 1)) addFace(wx, y, wz, 'front', tex.side, target);
+        if (shouldRender(wx, y, wz - 1)) addFace(wx, y, wz, 'back', tex.side, target);
+        if (shouldRender(wx + 1, y, wz)) addFace(wx, y, wz, 'right', tex.side, target);
+        if (shouldRender(wx - 1, y, wz)) addFace(wx, y, wz, 'left', tex.side, target);
       }
     }
   }
@@ -374,12 +464,14 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
     opaque: {
       positions: new Float32Array(opaque.pos),
       colors: new Float32Array(opaque.col),
-      normals: new Float32Array(opaque.norm)  // Added normals
+      normals: new Float32Array(opaque.norm),
+      uvs: new Float32Array(opaque.uvs)
     },
     transparent: {
       positions: new Float32Array(trans.pos),
       colors: new Float32Array(trans.col),
-      normals: new Float32Array(trans.norm)   // Added normals
+      normals: new Float32Array(trans.norm),
+      uvs: new Float32Array(trans.uvs)
     }
   };
 }
@@ -415,15 +507,16 @@ self.onmessage = function(e) {
     const chunkData = generateChunkData(cx, cz, seed);
     const geometry = buildMeshGeometry(cx, cz, chunkData, neighborArrays, modifiedBlocks || {});
     
-    // Transfer all buffers including normals
     const transferList = [
       chunkData.buffer,
       geometry.opaque.positions.buffer,
       geometry.opaque.colors.buffer,
       geometry.opaque.normals.buffer,
+      geometry.opaque.uvs.buffer,
       geometry.transparent.positions.buffer,
       geometry.transparent.colors.buffer,
-      geometry.transparent.normals.buffer
+      geometry.transparent.normals.buffer,
+      geometry.transparent.uvs.buffer
     ];
     
     self.postMessage({
@@ -446,14 +539,15 @@ self.onmessage = function(e) {
     
     const geometry = buildMeshGeometry(cx, cz, chunkArray, neighborArrays, modifiedBlocks || {});
     
-    // Transfer all buffers including normals
     const transferList = [
       geometry.opaque.positions.buffer,
       geometry.opaque.colors.buffer,
       geometry.opaque.normals.buffer,
+      geometry.opaque.uvs.buffer,
       geometry.transparent.positions.buffer,
       geometry.transparent.colors.buffer,
-      geometry.transparent.normals.buffer
+      geometry.transparent.normals.buffer,
+      geometry.transparent.uvs.buffer
     ];
     
     self.postMessage({

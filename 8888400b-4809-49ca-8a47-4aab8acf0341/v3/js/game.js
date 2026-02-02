@@ -10,6 +10,7 @@ class MinecraftGame {
       renderDistance: 2,
       shadowsEnabled: false,
       shadowDistance: 200,
+      shadowResolution: 4096,
       fov: 80,
       sensitivity: 1.0,
       fullscreen: false,
@@ -149,10 +150,10 @@ class MinecraftGame {
     this.setupHotbar();
     this.setupHealthBar();
     this.setupEventListeners();
-    this.setupSettingsUI();
+    this.loadSettings(); // Moved up: Must load data before building UI
+    this.setupSettingsUI(); 
     this.setupInventoryUI();
     this.setupSaveUI();
-    this.loadSettings();
     this.updateWorldSlots();
   }
 
@@ -524,32 +525,36 @@ class MinecraftGame {
     this.updateFog();
   }
 
-  /* Put updateShadows method here */
   updateShadows() {
     if (this.settings.shadowsEnabled) {
       this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.VSMShadowMap; // the only shadow that effectively avoids peter panning
+      this.renderer.shadowMap.type = THREE.VSMShadowMap;
       this.sun.castShadow = true;
 
-      const res = 4096
+      // Use settings for Resolution
+      const res = this.settings.shadowResolution || 4096;
       this.sun.shadow.mapSize.set(res, res);
       
-      const d = CHUNK_SIZE * this.settings.renderDistance;
+      // Use settings for Range (Distance)
+      const d = this.settings.shadowDistance || 200;
+      
       this.sun.shadow.camera.left = -d;
       this.sun.shadow.camera.right = d;
       this.sun.shadow.camera.top = d;
       this.sun.shadow.camera.bottom = -d;
       this.sun.shadow.camera.near = 1;
-      this.sun.shadow.camera.far = 350;
+      this.sun.shadow.camera.far = 350; // You might want to increase this if Range > 300
       this.sun.shadow.blurSamples = 4;
       this.sun.shadow.bias = -0.0002;
       this.sun.shadow.normalBias = 0;
       this.sun.shadow.camera.updateProjectionMatrix();
       
+      // Update materials needsUpdate to reflect shadow changes immediately
       this.chunkMeshes.forEach((group) => {
         group.children.forEach(mesh => {
           mesh.castShadow = true;
           mesh.receiveShadow = true;
+          mesh.material.needsUpdate = true;
         });
       });
     } else {
@@ -560,6 +565,7 @@ class MinecraftGame {
         group.children.forEach(mesh => {
           mesh.castShadow = false;
           mesh.receiveShadow = false;
+          mesh.material.needsUpdate = true;
         });
       });
     }
@@ -617,10 +623,15 @@ class MinecraftGame {
       this.gameMode === 'creative' ? 'none' : 'flex';
   }
 
-  /* Put setupSettingsUI method here - handles all settings sliders/checkboxes */
   setupSettingsUI() {
     const panel = document.getElementById('settings-panel');
     
+    // Helper to toggle shadow rows visibility
+    const updateShadowRows = (enabled) => {
+      document.getElementById('shadow-distance-row').style.display = enabled ? 'flex' : 'none';
+      document.getElementById('shadow-resolution-row').style.display = enabled ? 'flex' : 'none';
+    };
+
     const rdSlider = document.getElementById('setting-render-distance');
     rdSlider.value = this.settings.renderDistance;
     document.getElementById('render-distance-value').textContent = this.settings.renderDistance;
@@ -632,22 +643,34 @@ class MinecraftGame {
     
     const shadowCheck = document.getElementById('setting-shadows');
     shadowCheck.checked = this.settings.shadowsEnabled;
-    document.getElementById('shadow-distance-row').style.display = 
-      this.settings.shadowsEnabled ? 'flex' : 'none';
+    updateShadowRows(this.settings.shadowsEnabled);
+    
     shadowCheck.onchange = () => {
       this.settings.shadowsEnabled = shadowCheck.checked;
-      document.getElementById('shadow-distance-row').style.display = 
-        shadowCheck.checked ? 'flex' : 'none';
+      updateShadowRows(shadowCheck.checked);
       if (this.isPlaying) this.updateShadows();
       this.saveSettings();
     };
     
+    // Shadow Range (Distance)
     const sdSlider = document.getElementById('setting-shadow-distance');
     sdSlider.value = this.settings.shadowDistance;
     document.getElementById('shadow-distance-value').textContent = this.settings.shadowDistance;
     sdSlider.oninput = () => {
       this.settings.shadowDistance = parseInt(sdSlider.value);
       document.getElementById('shadow-distance-value').textContent = this.settings.shadowDistance;
+      if (this.isPlaying && this.settings.shadowsEnabled) this.updateShadows();
+      this.saveSettings();
+    };
+
+    const resSlider = document.getElementById('setting-shadow-resolution');
+    resSlider.value = this.settings.shadowResolution;
+    
+    document.getElementById('shadow-resolution-value').textContent = this.settings.shadowResolution;
+    
+    resSlider.oninput = () => {
+      this.settings.shadowResolution = parseInt(resSlider.value);
+      document.getElementById('shadow-resolution-value').textContent = this.settings.shadowResolution;
       if (this.isPlaying && this.settings.shadowsEnabled) this.updateShadows();
       this.saveSettings();
     };

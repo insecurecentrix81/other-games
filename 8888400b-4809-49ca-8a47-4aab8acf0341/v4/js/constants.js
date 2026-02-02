@@ -106,6 +106,8 @@ function getTexUV(texSlot) {
 // Update BLOCK_DATA to include texture references
 // Add 'tex' property with { top, side, bottom } texture slots
 
+let BLOCK_DATA = {}
+
 BLOCK_DATA[BLOCK.GRASS] = {
   name: 'Grass',
   type: BLOCK_TYPE.CUBE,

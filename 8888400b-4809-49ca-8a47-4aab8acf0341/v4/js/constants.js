@@ -16,12 +16,23 @@ const SAVE_VERSION = 1;
 const MAX_SAVE_SLOTS = 3;
 const AUTOSAVE_INTERVAL = 30000;
 
+const BLOCK_TYPE = {
+  CUBE: 0,
+  CROSS: 1
+};
+
 // Block types
 const BLOCK = {
   AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, WOOD: 4, LEAVES: 5,
   SAND: 6, /*WATER: 7,*/ COBBLE: 8, PLANKS: 9, BEDROCK: 10,
   GRAVEL: 11, COAL_ORE: 12, IRON_ORE: 13, SNOW: 14, GLASS: 15,
-  DIAMOND_ORE: 16, GOLD_ORE: 17, CRAFTING_TABLE: 18
+  DIAMOND_ORE: 16, GOLD_ORE: 17, CRAFTING_TABLE: 18,
+  TALL_GRASS: 30,
+  FLOWER_RED: 31,
+  FLOWER_YELLOW: 32,
+  FLOWER_BLUE: 33,
+  DEAD_BUSH: 34,
+  SAPLING: 35
 };
 
 // Item types (tools, materials, etc.)
@@ -35,24 +46,104 @@ const ITEM = {
 
 // Block data with hardness
 const BLOCK_DATA = {
-  [BLOCK.GRASS]:    { name: 'Grass',       hardness: 0.9,  top: 0x7cba3d, side: 0x8b6914, bottom: 0x6b4423, solid: true, toolType: 'shovel' },
-  [BLOCK.DIRT]:     { name: 'Dirt',        hardness: 0.75, top: 0x8b6914, side: 0x8b6914, bottom: 0x8b6914, solid: true, toolType: 'shovel' },
-  [BLOCK.STONE]:    { name: 'Stone',       hardness: 7.5,  top: 0x7f7f7f, side: 0x7f7f7f, bottom: 0x7f7f7f, solid: true, toolType: 'pickaxe', minTool: 'wooden' },
-  [BLOCK.WOOD]:     { name: 'Oak Log',     hardness: 2.0,  top: 0x9c7f4a, side: 0x5b3413, bottom: 0x9c7f4a, solid: true, toolType: 'axe' },
-  [BLOCK.LEAVES]:   { name: 'Leaves',      hardness: 0.2,  top: 0x3d8c40, side: 0x3d8c40, bottom: 0x3d8c40, solid: true },
-  [BLOCK.SAND]:     { name: 'Sand',        hardness: 0.75, top: 0xdbd3a0, side: 0xdbd3a0, bottom: 0xdbd3a0, solid: true, toolType: 'shovel' },
+  [BLOCK.GRASS]:    { name: 'Grass',       hardness: 0.9,  top: 0x7cba3d, side: 0x8b6914, bottom: 0x6b4423, solid: true, toolType: 'shovel', type: BLOCK_TYPE.CUBE },
+  [BLOCK.DIRT]:     { name: 'Dirt',        hardness: 0.75, top: 0x8b6914, side: 0x8b6914, bottom: 0x8b6914, solid: true, toolType: 'shovel', type: BLOCK_TYPE.CUBE },
+  [BLOCK.STONE]:    { name: 'Stone',       hardness: 7.5,  top: 0x7f7f7f, side: 0x7f7f7f, bottom: 0x7f7f7f, solid: true, toolType: 'pickaxe', minTool: 'wooden', type: BLOCK_TYPE.CUBE },
+  [BLOCK.WOOD]:     { name: 'Oak Log',     hardness: 2.0,  top: 0x9c7f4a, side: 0x5b3413, bottom: 0x9c7f4a, solid: true, toolType: 'axe', type: BLOCK_TYPE.CUBE },
+  [BLOCK.LEAVES]:   { name: 'Leaves',      hardness: 0.2,  top: 0x3d8c40, side: 0x3d8c40, bottom: 0x3d8c40, solid: true, type: BLOCK_TYPE.CUBE },
+  [BLOCK.SAND]:     { name: 'Sand',        hardness: 0.75, top: 0xdbd3a0, side: 0xdbd3a0, bottom: 0xdbd3a0, solid: true, toolType: 'shovel', type: BLOCK_TYPE.CUBE },
   /* [BLOCK.WATER]:    { name: 'Water',       hardness: -1,   top: 0x3498db, side: 0x3498db, bottom: 0x3498db, solid: false, transparent: true }, */
-  [BLOCK.COBBLE]:   { name: 'Cobblestone', hardness: 10.0, top: 0x6a6a6a, side: 0x6a6a6a, bottom: 0x6a6a6a, solid: true, toolType: 'pickaxe', minTool: 'wooden' },
-  [BLOCK.PLANKS]:   { name: 'Oak Planks',  hardness: 2.0,  top: 0xb8945f, side: 0xb8945f, bottom: 0xb8945f, solid: true, toolType: 'axe' },
-  [BLOCK.BEDROCK]:  { name: 'Bedrock',     hardness: -1,   top: 0x333333, side: 0x333333, bottom: 0x333333, solid: true },
-  [BLOCK.GRAVEL]:   { name: 'Gravel',      hardness: 0.9,  top: 0x7a7a7a, side: 0x7a7a7a, bottom: 0x7a7a7a, solid: true, toolType: 'shovel' },
-  [BLOCK.COAL_ORE]: { name: 'Coal Ore',    hardness: 4.5,  top: 0x4a4a4a, side: 0x4a4a4a, bottom: 0x4a4a4a, solid: true, toolType: 'pickaxe', minTool: 'wooden', drops: ITEM.COAL },
-  [BLOCK.IRON_ORE]: { name: 'Iron Ore',    hardness: 4.5,  top: 0x8a7560, side: 0x8a7560, bottom: 0x8a7560, solid: true, toolType: 'pickaxe', minTool: 'stone' },
-  [BLOCK.SNOW]:     { name: 'Snow',        hardness: 0.15, top: 0xf0f0f0, side: 0xe8e8e8, bottom: 0xdedede, solid: true, toolType: 'shovel' },
-  [BLOCK.GLASS]:    { name: 'Glass',       hardness: 0.45, top: 0xc8e8ff, side: 0xc8e8ff, bottom: 0xc8e8ff, solid: true, transparent: true, drops: null },
-  [BLOCK.DIAMOND_ORE]: { name: 'Diamond Ore', hardness: 4.5, top: 0x4aedd9, side: 0x4aedd9, bottom: 0x4aedd9, solid: true, toolType: 'pickaxe', minTool: 'iron', drops: ITEM.DIAMOND },
-  [BLOCK.GOLD_ORE]: { name: 'Gold Ore',    hardness: 4.5,  top: 0xfcee4b, side: 0xfcee4b, bottom: 0xfcee4b, solid: true, toolType: 'pickaxe', minTool: 'iron' },
-  [BLOCK.CRAFTING_TABLE]: { name: 'Crafting Table', hardness: 2.5, top: 0xbc9862, side: 0x9c7f4a, bottom: 0xb8945f, solid: true, toolType: 'axe' }
+  [BLOCK.COBBLE]:   { name: 'Cobblestone', hardness: 10.0, top: 0x6a6a6a, side: 0x6a6a6a, bottom: 0x6a6a6a, solid: true, toolType: 'pickaxe', minTool: 'wooden', type: BLOCK_TYPE.CUBE },
+  [BLOCK.PLANKS]:   { name: 'Oak Planks',  hardness: 2.0,  top: 0xb8945f, side: 0xb8945f, bottom: 0xb8945f, solid: true, toolType: 'axe', type: BLOCK_TYPE.CUBE },
+  [BLOCK.BEDROCK]:  { name: 'Bedrock',     hardness: -1,   top: 0x333333, side: 0x333333, bottom: 0x333333, solid: true, type: BLOCK_TYPE.CUBE },
+  [BLOCK.GRAVEL]:   { name: 'Gravel',      hardness: 0.9,  top: 0x7a7a7a, side: 0x7a7a7a, bottom: 0x7a7a7a, solid: true, toolType: 'shovel', type: BLOCK_TYPE.CUBE },
+  [BLOCK.COAL_ORE]: { name: 'Coal Ore',    hardness: 4.5,  top: 0x4a4a4a, side: 0x4a4a4a, bottom: 0x4a4a4a, solid: true, toolType: 'pickaxe', minTool: 'wooden', drops: ITEM.COAL, type: BLOCK_TYPE.CUBE },
+  [BLOCK.IRON_ORE]: { name: 'Iron Ore',    hardness: 4.5,  top: 0x8a7560, side: 0x8a7560, bottom: 0x8a7560, solid: true, toolType: 'pickaxe', minTool: 'stone', type: BLOCK_TYPE.CUBE },
+  [BLOCK.SNOW]:     { name: 'Snow',        hardness: 0.15, top: 0xf0f0f0, side: 0xe8e8e8, bottom: 0xdedede, solid: true, toolType: 'shovel', type: BLOCK_TYPE.CUBE },
+  [BLOCK.GLASS]:    { name: 'Glass',       hardness: 0.45, top: 0xc8e8ff, side: 0xc8e8ff, bottom: 0xc8e8ff, solid: true, transparent: true, drops: null, type: BLOCK_TYPE.CUBE },
+  [BLOCK.DIAMOND_ORE]: { name: 'Diamond Ore', hardness: 4.5, top: 0x4aedd9, side: 0x4aedd9, bottom: 0x4aedd9, solid: true, toolType: 'pickaxe', minTool: 'iron', drops: ITEM.DIAMOND, type: BLOCK_TYPE.CUBE },
+  [BLOCK.GOLD_ORE]: { name: 'Gold Ore',    hardness: 4.5,  top: 0xfcee4b, side: 0xfcee4b, bottom: 0xfcee4b, solid: true, toolType: 'pickaxe', minTool: 'iron', type: BLOCK_TYPE.CUBE },
+  [BLOCK.CRAFTING_TABLE]: { name: 'Crafting Table', hardness: 2.5, top: 0xbc9862, side: 0x9c7f4a, bottom: 0xb8945f, solid: true, toolType: 'axe', type: BLOCK_TYPE.CUBE }
+};
+BLOCK_DATA[BLOCK.TALL_GRASS] = {
+  name: 'Tall Grass',
+  type: BLOCK_TYPE.CROSS,
+  solid: false,
+  transparent: true,
+  hardness: 0,
+  color: 0x5d8c3a,      // Main color
+  top: 0x5d8c3a,
+  side: 0x5d8c3a,
+  bottom: 0x5d8c3a,
+  drops: null,          // Drops nothing normally
+  rareDrops: { item: BLOCK.SAPLING, chance: 0.05 }, // 5% chance for sapling
+  placedOn: [BLOCK.GRASS, BLOCK.DIRT]  // Can only exist on these blocks
+};
+
+BLOCK_DATA[BLOCK.FLOWER_RED] = {
+  name: 'Red Flower',
+  type: BLOCK_TYPE.CROSS,
+  solid: false,
+  transparent: true,
+  hardness: 0,
+  color: 0xff4444,
+  top: 0xff4444,
+  side: 0xff4444,
+  bottom: 0xff4444,
+  placedOn: [BLOCK.GRASS, BLOCK.DIRT]
+};
+
+BLOCK_DATA[BLOCK.FLOWER_YELLOW] = {
+  name: 'Yellow Flower',
+  type: BLOCK_TYPE.CROSS,
+  solid: false,
+  transparent: true,
+  hardness: 0,
+  color: 0xffdd44,
+  top: 0xffdd44,
+  side: 0xffdd44,
+  bottom: 0xffdd44,
+  placedOn: [BLOCK.GRASS, BLOCK.DIRT]
+};
+
+BLOCK_DATA[BLOCK.FLOWER_BLUE] = {
+  name: 'Blue Flower',
+  type: BLOCK_TYPE.CROSS,
+  solid: false,
+  transparent: true,
+  hardness: 0,
+  color: 0x4488ff,
+  top: 0x4488ff,
+  side: 0x4488ff,
+  bottom: 0x4488ff,
+  placedOn: [BLOCK.GRASS, BLOCK.DIRT]
+};
+
+BLOCK_DATA[BLOCK.DEAD_BUSH] = {
+  name: 'Dead Bush',
+  type: BLOCK_TYPE.CROSS,
+  solid: false,
+  transparent: true,
+  hardness: 0,
+  color: 0x8b6914,
+  top: 0x8b6914,
+  side: 0x8b6914,
+  bottom: 0x8b6914,
+  drops: null,
+  placedOn: [BLOCK.SAND]
+};
+
+BLOCK_DATA[BLOCK.SAPLING] = {
+  name: 'Sapling',
+  type: BLOCK_TYPE.CROSS,
+  solid: false,
+  transparent: true,
+  hardness: 0,
+  color: 0x2d5a1d,
+  top: 0x2d5a1d,
+  side: 0x2d5a1d,
+  bottom: 0x2d5a1d,
+  placedOn: [BLOCK.GRASS, BLOCK.DIRT]
 };
 
 // Item data

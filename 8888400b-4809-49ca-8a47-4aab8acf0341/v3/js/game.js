@@ -9,7 +9,7 @@ class MinecraftGame {
     this.settings = {
       renderDistance: 2,
       shadowsEnabled: false,
-      shadowDistance: 200,
+      shadowDistance: 50,
       shadowResolution: 4096,
       fov: 80,
       sensitivity: 1.0,

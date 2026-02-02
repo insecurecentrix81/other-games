@@ -89,6 +89,10 @@ class MinecraftGame {
     
     this.mouse = {x:0,y:0}
 
+    this.textureAtlas = null;
+    this.textureLoaded = false;
+    this.loadTextureAtlas();
+
     this.init();
   }
 
@@ -963,23 +967,69 @@ class MinecraftGame {
     const ctx = canvas.getContext('2d');
     const data = BLOCK_DATA[type];
     if (!data) return;
-
+  
+    // If we have a texture atlas loaded and in a browser context
+    if (this.textureAtlas && this.textureAtlas.image) {
+      const tex = data.tex;
+      if (tex) {
+        const atlasImg = this.textureAtlas.image;
+        const tilePixels = atlasImg.width / ATLAS_SIZE;
+        
+        // Draw isometric block using texture
+        const topTex = tex.top || tex.side;
+        const sideTex = tex.side;
+        
+        // For simplicity, just draw the top texture
+        // You could enhance this to draw all 3 visible faces
+        const [col, row] = topTex || [0, 0];
+        const srcX = col * tilePixels;
+        // Flip Y since image Y is top-down but our rows are bottom-up
+        const srcY = atlasImg.height - (row + 1) * tilePixels;
+        
+        // Draw a simple representation
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+        
+        // Top face
+        ctx.setTransform(1, 0.5, -1, 0.5, 16, 4);
+        ctx.drawImage(atlasImg, srcX, srcY, tilePixels, tilePixels, -8, -8, 16, 16);
+        
+        // Left face (darker)
+        const [sCol, sRow] = sideTex || topTex || [0, 0];
+        const sSrcX = sCol * tilePixels;
+        const sSrcY = atlasImg.height - (sRow + 1) * tilePixels;
+        
+        ctx.setTransform(1, 0.5, 0, 1, 4, 10);
+        ctx.globalAlpha = 0.8;
+        ctx.drawImage(atlasImg, sSrcX, sSrcY, tilePixels, tilePixels, 0, 0, 12, 14);
+        
+        // Right face (even darker)
+        ctx.setTransform(1, -0.5, 0, 1, 16, 16);
+        ctx.globalAlpha = 0.6;
+        ctx.drawImage(atlasImg, sSrcX, sSrcY, tilePixels, tilePixels, 0, 0, 12, 14);
+        
+        ctx.restore();
+        return;
+      }
+    }
+  
+    // Fallback to color-based drawing
     const toRGB = hex => `rgb(${(hex>>16)&255},${(hex>>8)&255},${hex&255})`;
     const darken = (hex, f) => {
       let r = ((hex>>16)&255)*f, g = ((hex>>8)&255)*f, b = (hex&255)*f;
       return `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
     };
-
+  
     ctx.fillStyle = toRGB(data.top);
     ctx.beginPath();
     ctx.moveTo(16, 4); ctx.lineTo(28, 10); ctx.lineTo(16, 16); ctx.lineTo(4, 10);
     ctx.closePath(); ctx.fill();
-
+  
     ctx.fillStyle = darken(data.side, 0.6);
     ctx.beginPath();
     ctx.moveTo(4, 10); ctx.lineTo(16, 16); ctx.lineTo(16, 28); ctx.lineTo(4, 22);
     ctx.closePath(); ctx.fill();
-
+  
     ctx.fillStyle = darken(data.side, 0.8);
     ctx.beginPath();
     ctx.moveTo(28, 10); ctx.lineTo(16, 16); ctx.lineTo(16, 28); ctx.lineTo(28, 22);
@@ -1755,23 +1805,45 @@ class MinecraftGame {
         geo.computeVertexNormals();
       }
       
-      const mat = new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        transparent: isTrans,
-        opacity: isTrans ? 0.8 : 1.0,
-        depthWrite: !isTrans,
-        roughness: 0.8,
-        // Cross-type blocks are in transparent mesh, need DoubleSide
-        side: isTrans ? THREE.DoubleSide : THREE.FrontSide,
-        // If you add textures later, uncomment this:
-        // alphaTest: isTrans ? 0.5 : 0,
-      });
+      // Add UV attribute if available
+      if (data.uvs && data.uvs.length > 0) {
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute(data.uvs, 2));
+      }
+      
+      // Create material based on whether texture is loaded
+      let mat;
+      
+      if (this.textureLoaded && this.textureAtlas && data.uvs && data.uvs.length > 0) {
+        // Textured material
+        mat = new THREE.MeshStandardMaterial({
+          map: this.textureAtlas,
+          vertexColors: true,  // Colors are used for AO tinting
+          transparent: isTrans,
+          alphaTest: isTrans ? 0.5 : 0,  // Cut out transparent pixels
+          depthWrite: !isTrans || !this.textureAtlas,  // Write depth unless transparent texture
+          roughness: 0.9,
+          metalness: 0.0,
+          side: isTrans ? THREE.DoubleSide : THREE.FrontSide
+        });
+      } else {
+        // Fallback color-only material
+        mat = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          transparent: isTrans,
+          opacity: isTrans ? 0.8 : 1.0,
+          depthWrite: !isTrans,
+          roughness: 0.8,
+          side: isTrans ? THREE.DoubleSide : THREE.FrontSide
+        });
+      }
       
       const mesh = new THREE.Mesh(geo, mat);
+      
       if (this.settings.shadowsEnabled && !isTrans) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
       }
+      
       group.add(mesh);
     };
     
@@ -2639,5 +2711,42 @@ class MinecraftGame {
     
     this.droppedItems.push(item);
     return item;
+  }
+
+  loadTextureAtlas() {
+    const loader = new THREE.TextureLoader();
+    
+    loader.load(
+      'assets/atlas.png',
+      (texture) => {
+        // Configure texture for pixelated look
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        
+        this.textureAtlas = texture;
+        this.textureLoaded = true;
+        console.log('Texture atlas loaded');
+        
+        // Rebuild existing meshes with textures if game already started
+        if (this.isPlaying) {
+          this.rebuildAllChunkMeshes();
+        }
+      },
+      undefined,
+      (error) => {
+        console.warn('Failed to load texture atlas, using colors only:', error);
+        this.textureLoaded = false;
+      }
+    );
+  }
+  
+  rebuildAllChunkMeshes() {
+    this.chunkMeshes.forEach((group, key) => {
+      const [cx, cz] = key.split(',').map(Number);
+      this.queueMeshBuild(cx, cz);
+    });
   }
 }

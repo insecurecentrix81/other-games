@@ -2577,7 +2577,7 @@ class MinecraftGame {
         
         const block = this.getBlock(this.targetBlock.x, this.targetBlock.y, this.targetBlock.z);
         const blockData = BLOCK_DATA[block];
-        
+        if (this.gamemode === "creative") this.breakBlock();
         if (blockData && blockData.hardness >= 0) {
           const tool = this.getHeldTool();
           const miningSpeed = this.getMiningSpeed(blockData, tool);

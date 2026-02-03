@@ -1714,6 +1714,17 @@ class MinecraftGame {
     // Sort by distance (closer chunks first)
     this.meshBuildQueue.sort((a, b) => a.dist - b.dist);
   }
+  queueMeshBuildPriority(cx, cz) {
+    const key = `${cx},${cz}`;
+    if (this.pendingMeshes.has(key)) return;
+    if (!this.chunks.has(key)) return;
+    
+    // Remove from queue if already present
+    this.meshBuildQueue = this.meshBuildQueue.filter(q => !(q.cx === cx && q.cz === cz));
+    
+    // Insert at front of queue (highest priority)
+    this.meshBuildQueue.unshift({ cx, cz, dist: -1 });
+  }
   rebuildChunkMeshNow(cx, cz) {
     const key = `${cx},${cz}`;
     
@@ -1771,7 +1782,7 @@ class MinecraftGame {
     }
     
     // Send up to 2 mesh build requests per frame
-    const maxPerFrame = 4;
+    const maxPerFrame = 8;
     let processed = 0;
     
     while (this.meshBuildQueue.length > 0 && processed < maxPerFrame) {
@@ -2049,28 +2060,14 @@ class MinecraftGame {
       const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT] = type;
   
-      // Determine which chunks need rebuilding
-      const chunksToRebuild = [[cx, cz]];
-      if (lx === 0) chunksToRebuild.push([cx - 1, cz]);
-      if (lx === CHUNK_SIZE - 1) chunksToRebuild.push([cx + 1, cz]);
-      if (lz === 0) chunksToRebuild.push([cx, cz - 1]);
-      if (lz === CHUNK_SIZE - 1) chunksToRebuild.push([cx, cz + 1]);
-  
-      // Immediately remove old meshes and queue rebuild
-      for (const [rcx, rcz] of chunksToRebuild) {
-        const key = `${rcx},${rcz}`;
-        if (this.chunkMeshes.has(key)) {
-          const group = this.chunkMeshes.get(key);
-          this.scene.remove(group);
-          group.children.forEach(mesh => {
-            mesh.geometry.dispose();
-            mesh.material.dispose();
-          });
-          this.chunkMeshes.delete(key);
-        }
-        // Queue high-priority rebuild
-        this.queueMeshBuild(rcx, rcz);
-      }
+      // Priority rebuild for the main chunk (insert at front of queue)
+      this.queueMeshBuildPriority(cx, cz);
+      
+      // Only rebuild adjacent chunks if block is on the edge (for AO correction)
+      if (lx === 0) this.queueMeshBuild(cx - 1, cz);
+      if (lx === CHUNK_SIZE - 1) this.queueMeshBuild(cx + 1, cz);
+      if (lz === 0) this.queueMeshBuild(cx, cz - 1);
+      if (lz === CHUNK_SIZE - 1) this.queueMeshBuild(cx, cz + 1);
     }
   
     if (type === BLOCK.AIR) {

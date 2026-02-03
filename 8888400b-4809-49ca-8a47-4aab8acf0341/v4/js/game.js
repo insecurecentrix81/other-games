@@ -1771,7 +1771,7 @@ class MinecraftGame {
     }
     
     // Send up to 2 mesh build requests per frame
-    const maxPerFrame = 1;
+    const maxPerFrame = 4;
     let processed = 0;
     
     while (this.meshBuildQueue.length > 0 && processed < maxPerFrame) {
@@ -2049,20 +2049,34 @@ class MinecraftGame {
       const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT] = type;
   
-      // Immediately rebuild affected chunks (not queued)
-      this.rebuildChunkMeshNow(cx, cz);
-      if (lx === 0) this.rebuildChunkMeshNow(cx - 1, cz);
-      if (lx === CHUNK_SIZE - 1) this.rebuildChunkMeshNow(cx + 1, cz);
-      if (lz === 0) this.rebuildChunkMeshNow(cx, cz - 1);
-      if (lz === CHUNK_SIZE - 1) this.rebuildChunkMeshNow(cx, cz + 1);
+      // Determine which chunks need rebuilding
+      const chunksToRebuild = [[cx, cz]];
+      if (lx === 0) chunksToRebuild.push([cx - 1, cz]);
+      if (lx === CHUNK_SIZE - 1) chunksToRebuild.push([cx + 1, cz]);
+      if (lz === 0) chunksToRebuild.push([cx, cz - 1]);
+      if (lz === CHUNK_SIZE - 1) chunksToRebuild.push([cx, cz + 1]);
+  
+      // Immediately remove old meshes and queue rebuild
+      for (const [rcx, rcz] of chunksToRebuild) {
+        const key = `${rcx},${rcz}`;
+        if (this.chunkMeshes.has(key)) {
+          const group = this.chunkMeshes.get(key);
+          this.scene.remove(group);
+          group.children.forEach(mesh => {
+            mesh.geometry.dispose();
+            mesh.material.dispose();
+          });
+          this.chunkMeshes.delete(key);
+        }
+        // Queue high-priority rebuild
+        this.queueMeshBuild(rcx, rcz);
+      }
     }
   
     if (type === BLOCK.AIR) {
       this.checkBlockSupport(x, y + 1, z);
     }
   }
-
-  // ==================== MESH BUILDING ====================
 
   // ==================== PLAYER & PHYSICS ====================
 

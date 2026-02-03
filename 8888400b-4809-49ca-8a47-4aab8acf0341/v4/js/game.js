@@ -2309,10 +2309,10 @@ class MinecraftGame {
   }
 
   getMiningSpeed(blockData, tool) {
-    if (this.gamemode === "creative") return 0.05 
+    if (this.gamemode === "creative") return 1000000
     if (!tool) return 1;
     if (tool.toolType === blockData.toolType) {
-      return Math.max(0.05,tool.miningSpeed);
+      return tool.miningSpeed;
     }
     return 1;
   }
@@ -2582,8 +2582,11 @@ class MinecraftGame {
           const tool = this.getHeldTool();
           const miningSpeed = this.getMiningSpeed(blockData, tool);
           const breakSpeed = miningSpeed / blockData.hardness;
-          
-          this.breakProgress += dt * breakSpeed;
+          if (this.gamemode === "creative") {
+            this.breakProgress += dt
+          } else {
+            this.breakProgress += dt * breakSpeed;
+          }
           this.updateBreakIndicator(this.breakProgress);
           
           if (this.breakProgress >= 1) {

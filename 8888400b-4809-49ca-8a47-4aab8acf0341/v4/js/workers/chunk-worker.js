@@ -290,12 +290,12 @@ function buildMeshGeometry(cx, cz, chunk, neighbors, modifiedBlocks) {
   // UV corners for each face direction
   // Order matches FACE_DATA corner order: [0,1,2,3]
   const FACE_UVS = {
-    top:    [[0, 1], [0, 0], [1, 0], [1, 1]],
-    bottom: [[0, 0], [0, 1], [1, 1], [1, 0]],
-    front:  [[0, 1], [1, 1], [1, 0], [0, 0]],
-    back:   [[1, 1], [0, 1], [0, 0], [1, 0]],
-    right:  [[0, 1], [1, 1], [1, 0], [0, 0]],
-    left:   [[1, 1], [0, 1], [0, 0], [1, 0]]
+    top:    [[0, 0], [0, 1], [1, 1], [1, 0]],
+    bottom: [[0, 1], [0, 0], [1, 0], [1, 1]],
+    front:  [[0, 0], [1, 0], [1, 1], [0, 1]],
+    back:   [[1, 0], [0, 0], [0, 1], [1, 1]],
+    right:  [[0, 0], [1, 0], [1, 1], [0, 1]],
+    left:   [[1, 0], [0, 0], [0, 1], [1, 1]]
   };
 
   const addFace = (wx, y, wz, dir, texSlot, target) => {

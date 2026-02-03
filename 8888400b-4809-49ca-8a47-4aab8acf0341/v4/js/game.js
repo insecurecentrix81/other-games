@@ -1714,6 +1714,54 @@ class MinecraftGame {
     // Sort by distance (closer chunks first)
     this.meshBuildQueue.sort((a, b) => a.dist - b.dist);
   }
+  rebuildChunkMeshNow(cx, cz) {
+    const key = `${cx},${cz}`;
+    
+    if (!this.chunks.has(key)) return;
+    if (!this.chunkWorker) return;
+    
+    // Remove from queue if present
+    this.meshBuildQueue = this.meshBuildQueue.filter(q => !(q.cx === cx && q.cz === cz));
+    
+    this.pendingMeshes.set(key, true);
+    
+    // Gather neighbor chunks
+    const neighbors = {};
+    const neighborOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+    
+    for (const [dx, dz] of neighborOffsets) {
+      const nkey = `${cx + dx},${cz + dz}`;
+      if (this.chunks.has(nkey)) {
+        neighbors[nkey] = this.chunks.get(nkey).slice().buffer;
+      }
+    }
+    
+    // Get modifications
+    const modifiedBlocks = {};
+    this.modifiedBlocks.forEach((value, modKey) => {
+      const [mx, my, mz] = modKey.split(',').map(Number);
+      const mcx = Math.floor(mx / CHUNK_SIZE);
+      const mcz = Math.floor(mz / CHUNK_SIZE);
+      if (Math.abs(mcx - cx) <= 1 && Math.abs(mcz - cz) <= 1) {
+        modifiedBlocks[modKey] = value;
+      }
+    });
+    
+    const chunk = this.chunks.get(key);
+    const chunkBuffer = chunk.slice().buffer;
+    
+    const transferList = [chunkBuffer];
+    Object.values(neighbors).forEach(buf => transferList.push(buf));
+    
+    this.chunkWorker.postMessage({
+      type: 'buildMesh',
+      id: this.chunkRequestId++,
+      cx, cz,
+      chunk: chunkBuffer,
+      neighbors,
+      modifiedBlocks
+    }, transferList);
+  }
 
   processMeshBuildQueue() {
     if (this.meshBuildQueue.length === 0) return;
@@ -2001,15 +2049,14 @@ class MinecraftGame {
       const lz = ((z % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       chunk[lx + y * CHUNK_SIZE + lz * CHUNK_SIZE * WORLD_HEIGHT] = type;
   
-      // Queue mesh rebuilds
-      this.queueMeshBuild(cx, cz);
-      if (lx === 0) this.queueMeshBuild(cx - 1, cz);
-      if (lx === CHUNK_SIZE - 1) this.queueMeshBuild(cx + 1, cz);
-      if (lz === 0) this.queueMeshBuild(cx, cz - 1);
-      if (lz === CHUNK_SIZE - 1) this.queueMeshBuild(cx, cz + 1);
+      // Immediately rebuild affected chunks (not queued)
+      this.rebuildChunkMeshNow(cx, cz);
+      if (lx === 0) this.rebuildChunkMeshNow(cx - 1, cz);
+      if (lx === CHUNK_SIZE - 1) this.rebuildChunkMeshNow(cx + 1, cz);
+      if (lz === 0) this.rebuildChunkMeshNow(cx, cz - 1);
+      if (lz === CHUNK_SIZE - 1) this.rebuildChunkMeshNow(cx, cz + 1);
     }
   
-    // If we removed a block, check if block above needs support
     if (type === BLOCK.AIR) {
       this.checkBlockSupport(x, y + 1, z);
     }

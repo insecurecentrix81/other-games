@@ -92,6 +92,7 @@ class MinecraftGame {
     this.textureAtlas = null;
     this.textureLoaded = false;
     this.loadTextureAtlas();
+    this.overlayTexture = null;
 
     this.init();
   }
@@ -1851,7 +1852,7 @@ class MinecraftGame {
     
     const group = new THREE.Group();
     
-    const createMesh = (data, isTrans) => {
+    const createMesh = (data, isTrans) => {  
       if (!data.positions || data.positions.length === 0) return;
       
       const geo = new THREE.BufferGeometry();
@@ -1894,6 +1895,33 @@ class MinecraftGame {
           roughness: 0.8,
           side: isTrans ? THREE.DoubleSide : THREE.FrontSide
         });
+      }
+      if (this.overlayTexture) {
+        mat.onBeforeCompile = (shader) => {
+          // Pass the overlay texture to the shader
+          shader.uniforms.overlayMap = { value: this.overlayTexture };
+          
+          // Fragment Shader: Blend the textures
+          shader.fragmentShader = `
+            uniform sampler2D overlayMap;
+          ` + shader.fragmentShader;
+  
+          shader.fragmentShader = shader.fragmentShader.replace(
+            `#include <map_fragment>`,
+            `
+            #include <map_fragment>
+            
+            // Since each atlas tile is 1/16, multiplying by 16 
+            // and using fract() gives us 0.0 to 1.0 for every face.
+            vec2 faceUv = fract(vMapUv * 16.0);
+            vec4 overlayCol = texture2D(overlayMap, faceUv);
+            
+            // Blend overlayCol with 50% opacity (0.5)
+            // We use the overlay's own alpha multiplied by 0.5
+            diffuseColor.rgb = mix(diffuseColor.rgb, overlayCol.rgb, overlayCol.a * 0.5);
+            `
+          );
+        };
       }
       
       const mesh = new THREE.Mesh(geo, mat);
@@ -2773,6 +2801,15 @@ class MinecraftGame {
 
   loadTextureAtlas() {
     const loader = new THREE.TextureLoader();
+
+    // Load Overlay First (or concurrently)
+    loader.load('assets/img_overlay.png', (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      this.overlayTexture = tex;
+    });
     
     loader.load(
       'assets/atlas.png',

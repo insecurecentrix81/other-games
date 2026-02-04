@@ -1898,26 +1898,28 @@ class MinecraftGame {
       }
       if (this.overlayTexture) {
         mat.onBeforeCompile = (shader) => {
-          // Pass the overlay texture to the shader
           shader.uniforms.overlayMap = { value: this.overlayTexture };
           
-          // Fragment Shader: Blend the textures
           shader.fragmentShader = `
             uniform sampler2D overlayMap;
           ` + shader.fragmentShader;
-  
+    
           shader.fragmentShader = shader.fragmentShader.replace(
             `#include <map_fragment>`,
             `
             #include <map_fragment>
             
-            // Since each atlas tile is 1/16, multiplying by 16 
-            // and using fract() gives us 0.0 to 1.0 for every face.
+            // Since the atlas is 16x16, each block face's UV is 1/16th of the atlas.
+            // We multiply by 16 and use fract() to get a 0.0 to 1.0 coordinate 
+            // for every individual block face.
             vec2 faceUv = fract(vMapUv * 16.0);
+            
+            // Sample our 250x250 image using the new 0-1 coordinates
             vec4 overlayCol = texture2D(overlayMap, faceUv);
             
-            // Blend overlayCol with 50% opacity (0.5)
-            // We use the overlay's own alpha multiplied by 0.5
+            // Blend the overlay: 
+            // diffuseColor is the original block color.
+            // we mix it with overlayCol at 50% (0.5) opacity.
             diffuseColor.rgb = mix(diffuseColor.rgb, overlayCol.rgb, overlayCol.a * 0.5);
             `
           );
@@ -2805,7 +2807,7 @@ class MinecraftGame {
     // Load Overlay First (or concurrently)
     loader.load('assets/img_overlay.png', (tex) => {
       tex.magFilter = THREE.NearestFilter;
-      tex.minFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.LinearFilter;
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
       this.overlayTexture = tex;

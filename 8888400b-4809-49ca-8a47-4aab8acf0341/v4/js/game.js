@@ -1378,6 +1378,40 @@ class MinecraftGame {
     })
 
     document.addEventListener('keydown', e => {
+      if (e.code === 'KeyQ' && this.isPlaying && !this.isPaused && !this.inventoryOpen && !this.player.isDead) {
+        const heldItem = this.getHeldItem();
+        if (heldItem) {
+          // Calculate throw direction from camera
+          const throwDir = new THREE.Vector3(0, 0, -1);
+          throwDir.applyQuaternion(this.camera.quaternion);
+          throwDir.multiplyScalar(5);  // Throw speed
+          throwDir.y += 2;  // Arc upward slightly
+          
+          // Spawn in front of player
+          const spawnPos = this.player.position.clone();
+          spawnPos.y -= 0.5;
+          spawnPos.addScaledVector(throwDir.clone().normalize(), 0.5);
+          
+          // Drop one item (or all if shift held)
+          const dropCount = this.keys['ShiftLeft'] ? heldItem.count : 1;
+          
+          this.spawnDroppedItem(
+            spawnPos.x,
+            spawnPos.y,
+            spawnPos.z,
+            heldItem.id,
+            dropCount,
+            throwDir
+          );
+          
+          // Remove from hotbar
+          heldItem.count -= dropCount;
+          if (heldItem.count <= 0) {
+            this.hotbarSlots[this.selectedSlot] = null;
+          }
+          this.updateHotbar();
+        }
+      }
       if (this.keys[e.code]) return;
       this.keys[e.code] = true;
       
@@ -1421,41 +1455,6 @@ class MinecraftGame {
         this.saveGame(false);
         document.getElementById('settings-panel').classList.add('visible');
         document.exitPointerLock();
-      }
-
-      if (e.code === 'KeyQ' && this.isPlaying && !this.isPaused && !this.inventoryOpen && !this.player.isDead) {
-        const heldItem = this.getHeldItem();
-        if (heldItem) {
-          // Calculate throw direction from camera
-          const throwDir = new THREE.Vector3(0, 0, -1);
-          throwDir.applyQuaternion(this.camera.quaternion);
-          throwDir.multiplyScalar(5);  // Throw speed
-          throwDir.y += 2;  // Arc upward slightly
-          
-          // Spawn in front of player
-          const spawnPos = this.player.position.clone();
-          spawnPos.y -= 0.5;
-          spawnPos.addScaledVector(throwDir.clone().normalize(), 0.5);
-          
-          // Drop one item (or all if shift held)
-          const dropCount = this.keys['ShiftLeft'] ? heldItem.count : 1;
-          
-          this.spawnDroppedItem(
-            spawnPos.x,
-            spawnPos.y,
-            spawnPos.z,
-            heldItem.id,
-            dropCount,
-            throwDir
-          );
-          
-          // Remove from hotbar
-          heldItem.count -= dropCount;
-          if (heldItem.count <= 0) {
-            this.hotbarSlots[this.selectedSlot] = null;
-          }
-          this.updateHotbar();
-        }
       }
       
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {

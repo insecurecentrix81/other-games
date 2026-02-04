@@ -46,7 +46,7 @@ const ITEM = {
 
 // ==================== TEXTURE ATLAS CONFIG ====================
 
-const ATLAS_SIZE = 250;  // 16x16 grid of textures
+const ATLAS_SIZE = 1;  // 16x16 grid of textures
 const TILE_SIZE = 1 / ATLAS_SIZE;  // UV size of one tile (0.0625)
 
 // Texture positions in atlas [column, row] (0-indexed from bottom-left)

@@ -2325,7 +2325,6 @@ class MinecraftGame {
     const block = this.getBlock(x, y, z);
     const blockData = BLOCK_DATA[block];
     
-    if (block === BLOCK.BEDROCK) return;
     if (!blockData) return;
 
     const tool = this.getHeldTool();

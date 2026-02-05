@@ -2416,7 +2416,7 @@ class MinecraftGame {
     }
 
     this.setBlock(x, y, z, heldItem.id);
-    this.placeCooldown = PLACE_COOLDOWN;
+    this.placeCooldown = this.gamemode === "creative" ? CREATIVE_PLACE_COOLDOWN : PLACE_COOLDOWN;
   }
 
   spawnParticles(x, y, z, color) {
@@ -2584,7 +2584,7 @@ class MinecraftGame {
           // 1. Creative Mode: Bypass all hardness/progress checks
           if (this.gameMode === 'creative') {
             this.breakBlock();
-            this.breakCooldown = BREAK_COOLDOWN; 
+            this.breakCooldown = CREATIVE_BREAK_COOLDOWN; 
           } 
           // 2. Survival Mode: Respect hardness and check for bedrock (-1)
           else {
@@ -2599,7 +2599,7 @@ class MinecraftGame {
               
               if (this.breakProgress >= 1) {
                 this.breakBlock();
-                this.breakCooldown = 0.05;
+                this.breakCooldown = BREAK_COOLDOWN;
               }
             } else if (blockData && blockData.hardness === -1) {
               // In Survival, hardness -1 means we reset progress and do nothing

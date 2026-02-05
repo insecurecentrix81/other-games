@@ -93,6 +93,8 @@ class MinecraftGame {
     this.textureLoaded = false;
     this.loadTextureAtlas();
 
+    this.breakCooldown = 0; 
+
     this.init();
   }
 
@@ -2308,7 +2310,7 @@ class MinecraftGame {
   }
 
   getMiningSpeed(blockData, tool) {
-    if (this.gamemode === "creative") return 1000000
+    if (this.gameMode === 'creative') return 1000; // Arbitrary high number
     if (!tool) return 1;
     if (tool.toolType === blockData.toolType) {
       return tool.miningSpeed;
@@ -2573,30 +2575,38 @@ class MinecraftGame {
           this.breakProgress = 0;
           this.currentBreakingBlock = blockKey;
         }
-        
-        const block = this.getBlock(this.targetBlock.x, this.targetBlock.y, this.targetBlock.z);
-        const blockData = BLOCK_DATA[block];
-        
-        if (this.gamemode === "creative") this.breakBlock();
-        if (blockData && blockData.hardness >= 0) {
-          const tool = this.getHeldTool();
-          const miningSpeed = this.getMiningSpeed(blockData, tool);
-          const breakSpeed = miningSpeed / blockData.hardness;
-          if (this.gamemode === "creative") {
-            this.breakProgress += 1/0
-          } else {
-            this.breakProgress += dt * breakSpeed;
-          }
-          this.updateBreakIndicator(this.breakProgress);
-          
-          if (this.breakProgress >= 1 || this.gamemode === "creative") {
+      
+        // Handle the universal break cooldown (0.05s)
+        if (this.breakCooldown > 0) {
+          this.breakCooldown -= dt;
+        } else {
+          if (this.gameMode === 'creative') {
+            // Creative: Break immediately and set the next cooldown
             this.breakBlock();
+            this.breakCooldown = 0.05; 
+          } else {
+            // Survival: Calculate progress
+            const block = this.getBlock(this.targetBlock.x, this.targetBlock.y, this.targetBlock.z);
+            const blockData = BLOCK_DATA[block];
+      
+            if (blockData && blockData.hardness >= 0) {
+              const tool = this.getHeldTool();
+              const miningSpeed = this.getMiningSpeed(blockData, tool);
+              const breakSpeed = miningSpeed / blockData.hardness;
+              
+              this.breakProgress += dt * breakSpeed;
+              this.updateBreakIndicator(this.breakProgress);
+              
+              if (this.breakProgress >= 1) {
+                this.breakBlock();
+                this.breakCooldown = 0.05; // Set cooldown after successful break
+              }
+            }
           }
-        } else if (blockData && blockData.hardness === -1) {
-          this.breakProgress = 0;
-          this.updateBreakIndicator(0);
         }
       } else {
+        // If not holding break or no target, reset cooldown/progress
+        if (this.breakCooldown > 0) this.breakCooldown -= dt;
         if (this.breakProgress > 0) {
           this.breakProgress = 0;
           this.currentBreakingBlock = null;

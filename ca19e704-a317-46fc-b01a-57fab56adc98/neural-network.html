@@ -105,8 +105,8 @@
         hand: {x:508, y:41, w:82, h:41}
       };
 
-      const POPULATION_SIZE = 40;
-      const MUTATION_RATE = 0.05 * 10;
+      const POPULATION_SIZE = 50;
+      const MUTATION_RATE = 0.005;
       const SPAWN_X = 150;
       const GENERATION_DURATION = 10000;
       const PIXELS_PER_METER = 20;
@@ -228,7 +228,7 @@
       class Walker {
         constructor(brain) {
           // Expanded NN: 14 inputs (added arm angles), 20 hidden, 8 outputs (4 legs + 4 arms)
-          this.brain = brain || new NeuralNetwork(14, 40, 8);
+          this.brain = brain || new NeuralNetwork(14, 100, 8);
           this.bodyParts = [];
           this.constraints = [];
           this.alive = true;
@@ -236,7 +236,7 @@
           this.slowTimer = 0; // Track how long moving slowly
           this.maxDistance = 0; // Track max distance reached
 
-          this.createRagdoll(SPAWN_X, 450);
+          this.createRagdoll(SPAWN_X, 400);
         }
 
         createRagdoll(x, y) {
@@ -245,33 +245,34 @@
           const group = Body.nextGroup(true);
           const limbOpt = { 
             collisionFilter: { group: group, category: CAT_BODY, mask: CAT_GROUND },
-            friction: 0.8,
+            friction: 1,
+            restitution:0,
             density: 0.05
           };
 
           // Core body
           this.torso = Bodies.rectangle(x, y, 40, 60, limbOpt);
-          this.head = Bodies.circle(x, y - 50, 20, limbOpt);
+          this.head = Bodies.circle(x, y - 50, 20, {...limbOpt,density:0.1});
 
           // Left Leg
           this.leftUL = Bodies.rectangle(x - 10, y + 40, 15, 50, limbOpt);
           this.leftLL = Bodies.rectangle(x - 10, y + 90, 10, 50, limbOpt);
-          this.leftFoot = Bodies.rectangle(x - 15, y + 120, 30, 10, { ...limbOpt, friction: 1.0 });
+          this.leftFoot = Bodies.rectangle(x - 15, y + 120, 30, 10, { ...limbOpt, friction: 1.0 ,density:0.1});
 
           // Right Leg
           this.rightUL = Bodies.rectangle(x + 10, y + 40, 15, 50, limbOpt);
           this.rightLL = Bodies.rectangle(x + 10, y + 90, 10, 50, limbOpt);
-          this.rightFoot = Bodies.rectangle(x + 15, y + 120, 30, 10, { ...limbOpt, friction: 1.0 });
+          this.rightFoot = Bodies.rectangle(x + 15, y + 120, 30, 10, { ...limbOpt, friction: 1.0 ,density:0.1});
 
           // Left Arm
           this.leftUA = Bodies.rectangle(x - 30, y - 15, 12, 40, { ...limbOpt, density: 0.02 });
           this.leftLA = Bodies.rectangle(x - 30, y + 25, 10, 35, { ...limbOpt, density: 0.02 });
-          this.leftHand = Bodies.rectangle(x - 30, y + 50, 15, 15, { ...limbOpt, density: 0.01 });
+          this.leftHand = Bodies.rectangle(x - 30, y + 50, 15, 15, { ...limbOpt, density: 0.1 });
 
           // Right Arm
           this.rightUA = Bodies.rectangle(x + 30, y - 15, 12, 40, { ...limbOpt, density: 0.02 });
           this.rightLA = Bodies.rectangle(x + 30, y + 25, 10, 35, { ...limbOpt, density: 0.02 });
-          this.rightHand = Bodies.rectangle(x + 30, y + 50, 15, 15, { ...limbOpt, density: 0.01 });
+          this.rightHand = Bodies.rectangle(x + 30, y + 50, 15, 15, { ...limbOpt, density: 0.1 });
 
           const stiffness = 0.9;
 
@@ -386,7 +387,7 @@
 
           let output = this.brain.predict(inputs);
 
-          const strength = 0.1; 
+          const strength = 30; 
 
           // Hip Motors
           this.applyJointTorque(this.torso, this.leftUL, output[0] * strength);
@@ -407,9 +408,9 @@
 
         applyJointTorque(bodyA, bodyB, torque) {
           Matter.Body.setAngularVelocity(bodyA, 
-            Matter.Common.clamp(bodyA.angularVelocity - torque, -0.2, 0.2));
+            Matter.Common.clamp(bodyA.angularVelocity - torque/bodyA.density, -0.5, 0.5));
           Matter.Body.setAngularVelocity(bodyB, 
-            Matter.Common.clamp(bodyB.angularVelocity + torque, -0.2, 0.2));
+            Matter.Common.clamp(bodyB.angularVelocity + torque/bodyB.density, -0.5, 0.5));
         }
 
         update() {
@@ -433,6 +434,7 @@
           // Death conditions
           if (this.head.position.y > 500) this.alive = false;
           if (this.torso.position.y > 550) this.alive = false;
+          if (this.torso.position.y < this.head.position.y) this.alive = false;
           if (this.leftUL.position.y > 550 || this.rightUL.position.y > 550) this.alive = false;
           if (this.torso.position.x < SPAWN_X - 100) this.alive = false;
 
@@ -459,13 +461,13 @@
           // Fitness calculation - heavily rewards actual movement speed
           let distance = currentDistance;
           let headHeight = Math.max(0, 580 - this.head.position.y);
-          let uprightBonus = headHeight * 0.2;
+          let uprightBonus = headHeight * 0.5;
           let anglePenalty = Math.abs(this.torso.angle) * 100;
           let footDiff = Math.abs(this.leftFoot.position.y - this.rightFoot.position.y);
           let steppingBonus = footDiff * 0.8;
           
           // Velocity bonus - strongly rewards forward movement
-          let velocityBonus = Math.max(0, speed) * 20;
+          let velocityBonus = speed * 20;
           
           // Penalty for slow timer (discourages sliding)
           let slidePenalty = this.slowTimer * 0.5;
@@ -511,8 +513,25 @@
                   -s.w * scaleW / 2, -s.h * scaleH / 2, s.w * scaleW, s.h * scaleH);
               }
             } else {
-              ctx.fillStyle = this.alive ? '#5588cc' : '#444';
+            switch(spriteName) {
+            case "head":
+            ctx.fillStyle = "#fcc"
+            break
+            case "torso":
+            ctx.fillStyle = "#99c"
+            break
+            default:
+            ctx.fillStyle = '#5588cc'
+            break
+            }
+              ctx.fillStyle = this.alive ? ctx.fillStyle : '#444';
+              if (spriteName === "head") {
+                ctx.beginPath()
+                ctx.arc(-10,-15,20,0,6.29)
+                ctx.fill()
+              } else {
               ctx.fillRect(-10, -15, 20, 30);
+              }
             }
             ctx.restore();
           }
@@ -560,7 +579,9 @@
 
       const ground = Matter.Bodies.rectangle(400, 600, 120000, 40, { 
         isStatic: true,
-        collisionFilter: { category: CAT_GROUND }
+        collisionFilter: { category: CAT_GROUND },
+        friction: 1,
+        restitution:0,
       });
       Matter.World.add(engine.world, ground);
 
@@ -631,8 +652,8 @@
               active = true;
             }
             // Track best distance (even from dead walkers - their max)
-            if (w.maxDistance > currentBestDistance) {
-              currentBestDistance = w.maxDistance;
+            if (w.maxDistance+SPAWN_X/PIXELS_PER_METER > currentBestDistance) {
+              currentBestDistance = w.maxDistance+SPAWN_X/PIXELS_PER_METER;
             }
           }
 

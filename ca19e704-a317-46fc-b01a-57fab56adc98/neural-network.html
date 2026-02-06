@@ -8,12 +8,68 @@
     <!-- Import Matter.js for Physics -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-      body { margin: 0; padding: 0; background: #222; overflow: hidden; font-family: 'Courier New', Courier, monospace; color: white; }
-      canvas { display: block; margin: 0 auto; background: #333; border-bottom: 4px solid #555; }
-      #ui { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; pointer-events: none; }
-      #controls { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; }
-      button { cursor: pointer; padding: 5px 10px; background: #444; color: white; border: 1px solid #666; font-family: inherit; }
-      button:hover { background: #666; }
+      body { 
+        margin: 0; 
+        padding: 0; 
+        background: #111; 
+        overflow: hidden; 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        color: white;
+        /* Center the canvas on the screen */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+      }
+    
+      canvas { 
+        display: block; 
+        background: #333; 
+        border: 2px solid #444;
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        /* This makes the 800x600 canvas scale to fit any screen */
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        /* Keeps the sprites looking sharp if they scale up */
+        image-rendering: pixelated; 
+      }
+    
+      #ui { 
+        position: absolute; 
+        top: 20px; 
+        left: 20px; 
+        background: rgba(0,0,0,0.8); 
+        padding: 15px; 
+        border-radius: 10px; 
+        pointer-events: none; 
+        border-left: 4px solid #4a90e2;
+        z-index: 10;
+      }
+    
+      #controls { 
+        position: absolute; 
+        top: 20px; 
+        right: 20px; 
+        background: rgba(0,0,0,0.8); 
+        padding: 15px; 
+        border-radius: 10px; 
+        z-index: 10;
+      }
+    
+      button { 
+        cursor: pointer; 
+        padding: 8px 15px; 
+        background: #4a90e2; 
+        color: white; 
+        border: none; 
+        border-radius: 4px;
+        font-weight: bold;
+        transition: background 0.2s;
+      }
+      
+      button:hover { background: #357abd; }
     </style>
   </head>
   <body>

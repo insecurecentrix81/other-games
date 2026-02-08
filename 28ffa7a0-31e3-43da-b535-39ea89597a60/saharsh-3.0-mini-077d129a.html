@@ -218,7 +218,7 @@ If you need to call a tool, output ONLY a single JSON object or code block in th
 
 Tools:
   datetime: {} — Returns the current time. e.g. {"tool": "datetime", "args": {}}
-  securecentrix_info: {} — Provides additional information about Secure Centrix81 e.g. {"tool": "securecentrix_info", "args": {}}
+  securecentrix_info: {} — Provides additional information about Secure Centrix81. Use this tool to navigate Secure Centrix81 instead of using Javascript. e.g. {"tool": "securecentrix_info", "args": {}}
   javascript: {"code": "string"} — Evaluates javascript. e.g. {"tool": "random", "args": {"code": "let x = 10;return x * 5;"}}
 
 Alternatively, you can execute javascript in this format:
@@ -227,7 +227,7 @@ let x = 10;
 return x * 5;
 \`\`\``;
 
-const REASONING_PROMPT = `[SYSTEM] Repond chain-of-though process to answer the user's latest message. Provide clear, organized reasoning. If the question is simple, keep it brief — do NOT overthink. If you think you need a tool, say which one and why.
+const REASONING_PROMPT = `[SYSTEM] Repond with a chain-of-thought process to answer the user's latest message. Provide clear, organized reasoning. If the question is simple, keep it brief — do NOT overthink it. If you need a tool, call it.
 
 If you do not need to use a tool, plan your final answer for the user without calling tools. 
 Output ONLY your reasoning. Do NOT output the final answer yet.`;
@@ -639,7 +639,7 @@ ruffle retroarch`
                 default: `Error: unknown page "${args.page}"`
             }
             return `Secure Centrix81 is an advanced gaming website that specializes in security. It can be accessed at https://securecentrix81.github.io. Secure Centrix81 has the following games:
-- Saharsh Gobinath Clicker: a fun, addicting game based on the fictional character "Saharsh Gobinath," a person who fails all of his classes and gets in trouble
+- Saharsh Gobinath Clicker: a fun, addicting game based on the fictional character "Saharsh Gobinath," a person who fails all of his classes and gets in trouble(https://securecentrix81.github.io/saharshgobinathclicker)
 - webretro: a browser-based front-end emulator (use the argument {"page":"webretro"} to see more)
 - project-hub-v2: a list of games (see "project-hub")
 - turbowarp-links: a list of scratch games (see "turbowarp-links")

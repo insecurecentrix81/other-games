@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Saharsh 3.0 Mini</title>
@@ -9,200 +9,202 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
+      * { box-sizing: border-box; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0; padding: 0;
-            background-color: #fafafa;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-        /* Add this right after the body styles */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('https://securecentrix81.github.io/other-games/28ffa7a0-31e3-43da-b535-39ea89597a60/saharsh-gp_photo.jpg');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            filter: blur(10px);
-            transform: scale(1.1);
-            opacity: 0.15;
-            z-index: -1;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin: 0; padding: 0;
+        background-color: #fafafa;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      #bg-panner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        /* The Image */
+        background-image: url('https://securecentrix81.github.io/other-games/28ffa7a0-31e3-43da-b535-39ea89597a60/saharsh-3.0-mini-background-v1.png');
+        /* This makes it repeat infinitely */
+        background-repeat: repeat; 
+        /* This "zooms" it in by forcing the tile size to be large */
+        background-size: 600px; 
 
-        /* Loading Screen */
-        #loading-screen {
-            position: fixed; inset: 0; background: #fff;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 1000; transition: opacity 0.4s ease;
-        }
-        #loading-screen.hidden { opacity: 0; pointer-events: none; }
+        filter: blur(12px);
+        opacity: 0.2;
+        z-index: -1; /* Behind everything */
+        background-size: 8000px; /* Increase this number to zoom in more */
+      }
 
-        .loading-icon {
-            width: 48px; height: 48px;
-            border: 3px solid #e0e0e0; border-top-color: #333; border-radius: 50%;
-            animation: spin 0.8s linear infinite; margin-bottom: 24px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+      /* Loading Screen */
+      #loading-screen {
+        position: fixed; inset: 0; background: none;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 1000; transition: opacity 0.4s ease;
+      }
+      #loading-screen.hidden { opacity: 0; pointer-events: none; }
 
-        .loading-title { font-size: 1.25rem; font-weight: 600; color: #333; margin-bottom: 8px; }
-        .loading-status { color: #666; font-size: 0.875rem; max-width: 300px; text-align: center; margin-bottom: 20px; }
-        .loading-progress { width: 240px; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; }
-        .loading-progress-bar { height: 100%; background: #333; width: 0%; transition: width 0.3s ease; }
+      .loading-icon {
+        width: 48px; height: 48px;
+        border: 3px solid #e0e0e0; border-top-color: #333; border-radius: 50%;
+        animation: spin 0.8s linear infinite; margin-bottom: 24px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Main Container */
-        .container {
-            max-width: 720px; margin: 0 auto; padding: 16px;
-            height: 100vh; display: flex; flex-direction: column;
-        }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 16px; }
-        h1 { margin: 0; color: #333; font-size: 1.125rem; font-weight: 600; }
+      .loading-title { font-size: 1.25rem; font-weight: 600; color: #333; margin-bottom: 8px; }
+      .loading-status { color: #666; font-size: 0.875rem; max-width: 300px; text-align: center; margin-bottom: 20px; }
+      .loading-progress { width: 240px; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; }
+      .loading-progress-bar { height: 100%; background: #333; width: 0%; transition: width 0.3s ease; }
 
-        .btn-clear {
-            padding: 6px 12px; background: transparent; color: #666;
-            border: 1px solid #ddd; border-radius: 6px; cursor: pointer;
-            font-size: 0.8rem; transition: all 0.2s;
-        }
-        .btn-clear:hover { background: #f0f0f0; }
+      /* Main Container */
+      .container {
+        max-width: 720px; margin: 0 auto; padding: 16px;
+        height: 100vh; display: flex; flex-direction: column;
+      }
+      .header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 16px; }
+      h1 { margin: 0; color: #333; font-size: 1.125rem; font-weight: 600; }
 
-        /* Chat */
-        #chat-box {
-            flex: 1; overflow-y: auto;
-            display: flex; flex-direction: column; gap: 12px; padding: 8px 0;
-        }
-        .message {
-            max-width: 85%; padding: 10px 14px; border-radius: 16px;
-            line-height: 1.55; word-wrap: break-word; font-size: 0.95rem;
-        }
-        .user-msg {
-            align-self: flex-end; background: #333; color: #fff;
-            border-bottom-right-radius: 4px;
-        }
-        .bot-msg {
-            align-self: flex-start; background: #fff; color: #333;
-            border: 1px solid #e5e5e5; border-bottom-left-radius: 4px;
-        }
+      .btn-clear {
+        padding: 6px 12px; background: transparent; color: #666;
+        border: 1px solid #ddd; border-radius: 6px; cursor: pointer;
+        font-size: 0.8rem; transition: all 0.2s;
+      }
+      .btn-clear:hover { background: #f0f0f0; }
 
-        /* Markdown inside bot messages */
-        .bot-msg p { margin: 0 0 8px; }
-        .bot-msg p:last-child { margin-bottom: 0; }
-        .bot-msg ul, .bot-msg ol { margin: 8px 0; padding-left: 20px; }
-        .bot-msg li { margin: 4px 0; }
-        .bot-msg code {
-            background: #f4f4f4; padding: 2px 5px; border-radius: 4px;
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.85em;
-        }
-        .bot-msg pre {
-            background: #1e1e1e; color: #d4d4d4; padding: 12px;
-            border-radius: 8px; overflow-x: auto; margin: 8px 0;
-        }
-        .bot-msg pre code { background: none; padding: 0; color: inherit; }
+      /* Chat */
+      #chat-box {
+        flex: 1; overflow-y: auto;
+        display: flex; flex-direction: column; gap: 12px; padding: 8px 0;
+      }
+      .message {
+        max-width: 85%; padding: 10px 14px; border-radius: 16px;
+        line-height: 1.55; word-wrap: break-word; font-size: 0.95rem;
+      }
+      .user-msg {
+        align-self: flex-end; background: #333; color: #fff;
+        border-bottom-right-radius: 4px;
+      }
+      .bot-msg {
+        align-self: flex-start; background: #fff; color: #333;
+        border: 1px solid #e5e5e5; border-bottom-left-radius: 4px;
+      }
 
-        /* Think / Reasoning Blocks */
-        .think-block {
-            margin: 6px 0; border: 1px solid #e0e0e0; border-radius: 8px;
-            overflow: hidden; background: #fafafa; font-size: 0.9em;
-        }
-        .think-toggle {
-            display: flex; align-items: center; gap: 6px;
-            padding: 8px 10px; cursor: pointer; user-select: none; color: #888;
-        }
-        .think-toggle:hover { background: #f0f0f0; }
-        .think-icon { font-size: 0.65rem; transition: transform 0.2s; display: inline-block; }
-        .think-block.expanded .think-icon { transform: rotate(90deg); }
-        .think-content {
-            display: none; padding: 10px 12px;
-            border-top: 1px solid #e0e0e0; color: #555; background: #fff;
-            white-space: pre-wrap; word-break: break-word;
-        }
-        .think-block.expanded .think-content { display: block; }
+      /* Markdown inside bot messages */
+      .bot-msg p { margin: 0 0 8px; }
+      .bot-msg p:last-child { margin-bottom: 0; }
+      .bot-msg ul, .bot-msg ol { margin: 8px 0; padding-left: 20px; }
+      .bot-msg li { margin: 4px 0; }
+      .bot-msg code {
+        background: #f4f4f4; padding: 2px 5px; border-radius: 4px;
+        font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.85em;
+      }
+      .bot-msg pre {
+        background: #1e1e1e; color: #d4d4d4; padding: 12px;
+        border-radius: 8px; overflow-x: auto; margin: 8px 0;
+      }
+      .bot-msg pre code { background: none; padding: 0; color: inherit; }
 
-        /* Tool-specific styling inside think blocks */
-        .think-block.tool-block { border-color: #c8e6c9; background: #f1f8e9; }
-        .think-block.tool-block .think-toggle { color: #558b2f; }
-        .think-block.tool-block .think-content { background: #f9fbe7; border-color: #c8e6c9; }
+      /* Think / Reasoning Blocks */
+      .think-block {
+        margin: 6px 0; border: 1px solid #e0e0e0; border-radius: 8px;
+        overflow: hidden; background: #fafafa; font-size: 0.9em;
+      }
+      .think-toggle {
+        display: flex; align-items: center; gap: 6px;
+        padding: 8px 10px; cursor: pointer; user-select: none; color: #888;
+      }
+      .think-toggle:hover { background: #f0f0f0; }
+      .think-icon { font-size: 0.65rem; transition: transform 0.2s; display: inline-block; }
+      .think-block.expanded .think-icon { transform: rotate(90deg); }
+      .think-content {
+        display: none; padding: 10px 12px;
+        border-top: 1px solid #e0e0e0; color: #555; background: #fff;
+        white-space: pre-wrap; word-break: break-word;
+      }
+      .think-block.expanded .think-content { display: block; }
 
-        /* Streaming spinner for active think block */
-        .think-spinner {
-            width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: #888;
-            border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
-        }
+      /* Tool-specific styling inside think blocks */
+      .think-block.tool-block { border-color: #c8e6c9; background: #f1f8e9; }
+      .think-block.tool-block .think-toggle { color: #558b2f; }
+      .think-block.tool-block .think-content { background: #f9fbe7; border-color: #c8e6c9; }
 
-        /* Phase indicator (replaces think-indicator) */
-        .phase-indicator {
-            color: #888; font-size: 0.85em; padding: 8px 0;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .phase-indicator::before {
-            content: ''; width: 14px; height: 14px;
-            border: 2px solid #ddd; border-top-color: #888;
-            border-radius: 50%; animation: spin 0.8s linear infinite;
-        }
+      /* Streaming spinner for active think block */
+      .think-spinner {
+        width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: #888;
+        border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
+      }
 
-        /* Typing cursor */
-        .typing-cursor::after {
-            content: '▋'; animation: blink 1s step-end infinite; color: #999;
-        }
-        @keyframes blink { 50% { opacity: 0; } }
+      /* Phase indicator (replaces think-indicator) */
+      .phase-indicator {
+        color: #888; font-size: 0.85em; padding: 8px 0;
+        display: flex; align-items: center; gap: 8px;
+      }
+      .phase-indicator::before {
+        content: ''; width: 14px; height: 14px;
+        border: 2px solid #ddd; border-top-color: #888;
+        border-radius: 50%; animation: spin 0.8s linear infinite;
+      }
 
-        /* Input Area */
-        .input-area { display: flex; gap: 8px; padding-top: 12px; }
-        #user-input {
-            flex: 1; padding: 12px 16px; border: 1px solid #ddd;
-            border-radius: 24px; font-size: 0.95rem; outline: none;
-            transition: border-color 0.2s;
-        }
-        #user-input:focus { border-color: #999; }
-        #send-btn {
-            padding: 0 20px; background: #333; color: #fff; border: none;
-            border-radius: 24px; cursor: pointer; font-size: 0.9rem;
-            font-weight: 500; transition: background 0.2s;
-        }
-        #send-btn:hover { background: #444; }
-        #send-btn:disabled { background: #ccc; cursor: not-allowed; }
-        #send-btn.stop { background: #c0392b; }
-        #send-btn.stop:hover { background: #a93226; }
+      /* Typing cursor */
+      .typing-cursor::after {
+        content: '▋'; animation: blink 1s step-end infinite; color: #999;
+      }
+      @keyframes blink { 50% { opacity: 0; } }
 
-        .empty-state {
-            flex: 1; display: flex; align-items: center;
-            justify-content: center; color: #aaa;
-        }
+      /* Input Area */
+      .input-area { display: flex; gap: 8px; padding-top: 12px; }
+      #user-input {
+        flex: 1; padding: 12px 16px; border: 1px solid #ddd;
+        border-radius: 24px; font-size: 0.95rem; outline: none;
+        transition: border-color 0.2s;
+      }
+      #user-input:focus { border-color: #999; }
+      #send-btn {
+        padding: 0 20px; background: #333; color: #fff; border: none;
+        border-radius: 24px; cursor: pointer; font-size: 0.9rem;
+        font-weight: 500; transition: background 0.2s;
+      }
+      #send-btn:hover { background: #444; }
+      #send-btn:disabled { background: #ccc; cursor: not-allowed; }
+      #send-btn.stop { background: #c0392b; }
+      #send-btn.stop:hover { background: #a93226; }
+
+      .empty-state {
+        flex: 1; display: flex; align-items: center;
+        justify-content: center; color: #aaa;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <div id="bg-panner"></div>
 
-<!-- Loading Screen -->
-<div id="loading-screen">
-    <div class="loading-icon"></div>
-    <div class="loading-title">Saharsh 3.0 Mini</div>
-    <div class="loading-status" id="loading-status">Initializing...</div>
-    <div class="loading-progress">
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-icon"></div>
+      <div class="loading-title">Saharsh 3.0 Mini</div>
+      <div class="loading-status" id="loading-status">Initializing...</div>
+      <div class="loading-progress">
         <div class="loading-progress-bar" id="loading-progress-bar"></div>
+      </div>
     </div>
-</div>
 
-<!-- Main Container -->
-<div class="container" id="main-container" style="display: none;">
-    <div class="header">
+    <!-- Main Container -->
+    <div class="container" id="main-container" style="display: none;">
+      <div class="header">
         <h1>Saharsh 3.0 Mini</h1>
         <button class="btn-clear" id="clear-btn">Clear</button>
-    </div>
-    <div id="chat-box">
+      </div>
+      <div id="chat-box">
         <div class="empty-state" id="empty-state">Send a message to start</div>
-    </div>
-    <div class="input-area">
+      </div>
+      <div class="input-area">
         <input type="text" id="user-input" placeholder="Type a message..." />
         <button id="send-btn">Send</button>
+      </div>
     </div>
-</div>
 
-<script>addEventListener("error",(e)=>{alert(e.message)})</script>
+    <script>addEventListener("error",(e)=>{alert(e.message)})</script>
     <script>function strToBuf(str) {
         return new TextEncoder().encode(str);
       }
@@ -282,7 +284,7 @@
 
         return bufToStr(plaintextBuf);
       }</script>
-<script type="module">
+    <script type="module">
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
 // const SELECTED_MODEL = "Qwen3-1.7B-q4f16_1-MLC";
@@ -366,10 +368,10 @@ function parseToolCall(text) {
         const start = text.indexOf('{');
         const end = text.lastIndexOf('}');
         if (start === -1 || end === -1) return null;
-        
+
         const jsonStr = text.substring(start, end + 1);
         const data = JSON.parse(jsonStr);
-        
+
         if (data.tool && data.args) {
             return { name: data.tool.toLowerCase(), args: data.args };
         }
@@ -874,7 +876,7 @@ async function reasonAndRespond(container) {
     /* ── Pass 1 : Reasoning ── */
     workMsgs.push({ role: "user", content: TOOLS_DESCRIPTION });
     workMsgs.push({ role: "user", content: REASONING_PROMPT });
-    
+
     renderLive(container, steps, 'thinking', '');
 
     let reasoning = await streamGenerate(workMsgs, txt => {
@@ -901,17 +903,17 @@ async function reasonAndRespond(container) {
         if (tool) {
             /* ── Execute tool ── */
             const result = await executeTool(tool.name, tool.args);
-            
+
             // Create a version of the result for the UI (redacted if it's the info tool)
             const displayResult = (tool.name === 'securecentrix_info') 
                 ? "Data retrieved from Secure Centrix81 database." 
                 : result;
-            
+
             steps.push({
                 label: `Tool: ${tool.name}`,
                 content: `Called: ${tool.name}\nArgs: ${JSON.stringify(tool.args)}\nResult: ${displayResult}`
             });
-            
+
             /* ── Feed REAL result back to the AI (not the redacted one) ── */
             workMsgs.push({
                 role: "user",
@@ -1023,10 +1025,10 @@ async function init() {
 }
 
 init();
-</script>
+    </script>
     <script>
-        window.usDebtFormatted = "$38422818570606.64"
-    let moneyTarget = 38422818570606.64;
+      window.usDebtFormatted = "$38422818570606.64"
+      let moneyTarget = 38422818570606.64;
       let currentMoney = 38422818570606.64;
       let growthRatePerMs = 201.651206792806;
       let baseDebt = 38490798138585.9;
@@ -1071,7 +1073,7 @@ init();
         simulateLiveTarget();
         currentMoney += (moneyTarget - currentMoney) * 0.05;
         const formatted = formatter.format(currentMoney);
-          window.usDebtFormatted = formatted
+        window.usDebtFormatted = formatted
         for (let i of document.querySelectorAll('.us-debt')) {
           i.innerText = formatted;
         }
@@ -1082,5 +1084,37 @@ init();
       fetchDebt();
       setInterval(fetchDebt, 1000 * 30);
     </script>
-</body>
+    <script>
+      (function animateBackground() {
+        const bg = document.getElementById('bg-panner');
+
+        // Set your velocities (pixels per frame)
+        let velX = (Math.random()-0.5)*2; 
+        let velY = (Math.random()-0.5)*2;
+
+        // Caps (Maximum velocity)
+        const maxVel = 1.0;
+        velX = Math.min(Math.max(velX, -maxVel), maxVel);
+        velY = Math.min(Math.max(velY, -maxVel), maxVel);
+
+        let posX = 0;
+        let posY = 0;
+
+        function update() {
+          velX += (Math.random()-0.5)*0.001
+          velY += (Math.random()-0.5)*0.001
+          posX += velX;
+          posY += velY;
+
+          // Apply to background-position
+          // We use pixels (px) to move the repeating tiles
+          bg.style.backgroundPosition = `${posX}px ${posY}px`;
+
+          requestAnimationFrame(update);
+        }
+
+        update();
+      })();
+    </script>
+  </body>
 </html>

@@ -209,7 +209,7 @@ let shouldStop   = false;
 marked.setOptions({ breaks: true, gfm: true });
 
 /* ─── Prompts ─── */
-const SYSTEM_PROMPT = `[SYSTEM] You are an AI assistant named Saharsh 3.0 Mini hosted on Secure Centrix81, a gaming website. `;
+const SYSTEM_PROMPT = `[SYSTEM] You are an AI assistant named Saharsh 3.0 Mini hosted on Secure Centrix81, a gaming website which can be accessed at https://securecentrix81.github.io. You are not hosted on a server; you are being hosted locally on the user's computer. Your proccessing power is limited by the user's computer.`;
 
 const TOOLS_DESCRIPTION = `[SYSTEM] You have access to the following tools.
 If you need to call a tool, output ONLY a single JSON object or code block in these formats:
@@ -217,11 +217,9 @@ If you need to call a tool, output ONLY a single JSON object or code block in th
 {"tool": "name", "args": {"param": "value"}}
 
 Tools:
-  math: {"expr": "string"} — e.g. {"tool": "math", "args": {"expr": "5*4"}}
-  datetime: {} — e.g. {"tool": "datetime", "args": {}}
-  securecentrix_info: {} — e.g. {"tool": "securecentrix_info", "args": {}}
-  random: {"min": number, "max": number} — e.g. {"tool": "random", "args": {"min": 1, "max": 100}}
-  javascript: {"code": "string"} — e.g. {"tool": "random", "args": {"code": "let x = 10;return x * 5;"}}
+  datetime: {} — Returns the current time. e.g. {"tool": "datetime", "args": {}}
+  securecentrix_info: {} — Provides additional information about Secure Centrix81 e.g. {"tool": "securecentrix_info", "args": {}}
+  javascript: {"code": "string"} — Evaluates javascript. e.g. {"tool": "random", "args": {"code": "let x = 10;return x * 5;"}}
 
 Alternatively, you can execute javascript in this format:
 \`\`\`javascript

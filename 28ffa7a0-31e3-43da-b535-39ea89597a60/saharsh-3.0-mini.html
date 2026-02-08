@@ -575,14 +575,14 @@ Now think about how to use this result to answer the user's original question.`;
       }
 
       /* ─── Streaming helper ─── */
-      async function streamGenerate(msgs, onToken, temp=0.7) {
+      async function streamGenerate(msgs, onToken, temp=0.2) {
         let text = "";
         const stream = await engine.chat.completions.create({
           messages: msgs,
           stream: true,
           max_tokens: 1024,
           temperature: temp,
-          top_p: 0.9,
+          top_p: 0.7,
           chat_template_kwargs: { enable_thinking: false },
         });
         for await (const chunk of stream) {

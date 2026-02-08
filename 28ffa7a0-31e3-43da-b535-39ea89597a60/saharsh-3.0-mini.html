@@ -430,8 +430,7 @@ return x * 5;
 If you already have enough information, write your final answer directly for the user **without calling any tools**. Be natural and helpful. Do NOT call any unnecessary tools. `;
 
       function makeToolResultPrompt(name, args, result) {
-        return `[SYSTEM] The tool ${name}(${args}) returned: ${result}
-Now think about how to use this result to answer the user's original question.`;
+        return `[SYSTEM] The tool ${name}(${args}) returned: ${result}`;
       }
 
       /* ─── Conversation history (only real user/assistant turns) ─── */

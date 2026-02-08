@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saharsh 3.0 Mini</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin: 0; padding: 0;
+        background-color: #fafafa;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      #bg-panner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        /* The Image */
+        background-image: url('https://securecentrix81.github.io/other-games/28ffa7a0-31e3-43da-b535-39ea89597a60/saharsh-3.0-mini-background-v1.png');
+        /* This makes it repeat infinitely */
+        background-repeat: repeat; 
+        /* This "zooms" it in by forcing the tile size to be large */
+        background-size: 600px; 
+
+        filter: blur(12px);
+        opacity: 0.2;
+        z-index: -1; /* Behind everything */
+        background-size: 8000px; /* Increase this number to zoom in more */
+      }
+
+      /* Loading Screen */
+      #loading-screen {
+        position: fixed; inset: 0; background: none;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 1000; transition: opacity 0.4s ease;
+      }
+      #loading-screen.hidden { opacity: 0; pointer-events: none; }
+
+      .loading-icon {
+        width: 48px; height: 48px;
+        border: 3px solid #e0e0e0; border-top-color: #333; border-radius: 50%;
+        animation: spin 0.8s linear infinite; margin-bottom: 24px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      .loading-title { font-size: 1.25rem; font-weight: 600; color: #333; margin-bottom: 8px; }
+      .loading-status { color: #666; font-size: 0.875rem; max-width: 300px; text-align: center; margin-bottom: 20px; }
+      .loading-progress { width: 240px; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; }
+      .loading-progress-bar { height: 100%; background: #333; width: 0%; transition: width 0.3s ease; }
+
+      /* Main Container */
+      .container {
+        max-width: 720px; margin: 0 auto; padding: 16px;
+        height: 100vh; display: flex; flex-direction: column;
+      }
+      .header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 16px; }
+      h1 { margin: 0; color: #333; font-size: 1.125rem; font-weight: 600; }
+
+      .btn-clear {
+        padding: 6px 12px; background: transparent; color: #666;
+        border: 1px solid #ddd; border-radius: 6px; cursor: pointer;
+        font-size: 0.8rem; transition: all 0.2s;
+      }
+      .btn-clear:hover { background: #f0f0f0; }
+
+      /* Chat */
+      #chat-box {
+        flex: 1; overflow-y: auto;
+        display: flex; flex-direction: column; gap: 12px; padding: 8px 0;
+      }
+      .message {
+        max-width: 85%; padding: 10px 14px; border-radius: 16px;
+        line-height: 1.55; word-wrap: break-word; font-size: 0.95rem;
+      }
+      .user-msg {
+        align-self: flex-end; background: #333; color: #fff;
+        border-bottom-right-radius: 4px;
+      }
+      .bot-msg {
+        align-self: flex-start; background: #fff; color: #333;
+        border: 1px solid #e5e5e5; border-bottom-left-radius: 4px;
+      }
+
+      /* Markdown inside bot messages */
+      .bot-msg p { margin: 0 0 8px; }
+      .bot-msg p:last-child { margin-bottom: 0; }
+      .bot-msg ul, .bot-msg ol { margin: 8px 0; padding-left: 20px; }
+      .bot-msg li { margin: 4px 0; }
+      .bot-msg code {
+        background: #f4f4f4; padding: 2px 5px; border-radius: 4px;
+        font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.85em;
+      }
+      .bot-msg pre {
+        background: #1e1e1e; color: #d4d4d4; padding: 12px;
+        border-radius: 8px; overflow-x: auto; margin: 8px 0;
+      }
+      .bot-msg pre code { background: none; padding: 0; color: inherit; }
+
+      /* Think / Reasoning Blocks */
+      .think-block {
+        margin: 6px 0; border: 1px solid #e0e0e0; border-radius: 8px;
+        overflow: hidden; background: #fafafa; font-size: 0.9em;
+      }
+      .think-toggle {
+        display: flex; align-items: center; gap: 6px;
+        padding: 8px 10px; cursor: pointer; user-select: none; color: #888;
+      }
+      .think-toggle:hover { background: #f0f0f0; }
+      .think-icon { font-size: 0.65rem; transition: transform 0.2s; display: inline-block; }
+      .think-block.expanded .think-icon { transform: rotate(90deg); }
+      .think-content {
+        display: none; padding: 10px 12px;
+        border-top: 1px solid #e0e0e0; color: #555; background: #fff;
+        white-space: pre-wrap; word-break: break-word;
+      }
+      .think-block.expanded .think-content { display: block; }
+
+      /* Tool-specific styling inside think blocks */
+      .think-block.tool-block { border-color: #c8e6c9; background: #f1f8e9; }
+      .think-block.tool-block .think-toggle { color: #558b2f; }
+      .think-block.tool-block .think-content { background: #f9fbe7; border-color: #c8e6c9; }
+
+      /* Streaming spinner for active think block */
+      .think-spinner {
+        width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: #888;
+        border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
+      }
+
+      /* Phase indicator (replaces think-indicator) */
+      .phase-indicator {
+        color: #888; font-size: 0.85em; padding: 8px 0;
+        display: flex; align-items: center; gap: 8px;
+      }
+      .phase-indicator::before {
+        content: ''; width: 14px; height: 14px;
+        border: 2px solid #ddd; border-top-color: #888;
+        border-radius: 50%; animation: spin 0.8s linear infinite;
+      }
+
+      /* Typing cursor */
+      .typing-cursor::after {
+        content: '▋'; animation: blink 1s step-end infinite; color: #999;
+      }
+      @keyframes blink { 50% { opacity: 0; } }
+
+      /* Input Area */
+      .input-area { display: flex; gap: 8px; padding-top: 12px; }
+      #user-input {
+        flex: 1; padding: 12px 16px; border: 1px solid #ddd;
+        border-radius: 24px; font-size: 0.95rem; outline: none;
+        transition: border-color 0.2s;
+      }
+      #user-input:focus { border-color: #999; }
+      #send-btn {
+        padding: 0 20px; background: #333; color: #fff; border: none;
+        border-radius: 24px; cursor: pointer; font-size: 0.9rem;
+        font-weight: 500; transition: background 0.2s;
+      }
+      #send-btn:hover { background: #444; }
+      #send-btn:disabled { background: #ccc; cursor: not-allowed; }
+      #send-btn.stop { background: #c0392b; }
+      #send-btn.stop:hover { background: #a93226; }
+
+      .empty-state {
+        flex: 1; display: flex; align-items: center;
+        justify-content: center; color: #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bg-panner"></div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-icon"></div>
+      <div class="loading-title">Saharsh 3.0 Mini</div>
+      <div class="loading-status" id="loading-status">Initializing...</div>
+      <div class="loading-progress">
+        <div class="loading-progress-bar" id="loading-progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container" id="main-container" style="display: none;">
+      <div class="header">
+        <h1>Saharsh 3.0 Mini</h1>
+        <button class="btn-clear" id="clear-btn">Clear</button>
+      </div>
+      <div id="chat-box">
+        <div class="empty-state" id="empty-state">Send a message to start</div>
+      </div>
+      <div class="input-area">
+        <input type="text" id="user-input" placeholder="Type a message..." />
+        <button id="send-btn">Send</button>
+      </div>
+    </div>
+
+    <script>addEventListener("error",(e)=>{alert(e.message)})</script>
+    <script>
+      function strToBuf(str) {
+        return new TextEncoder().encode(str);
+      }
+
+      function bufToStr(buf) {
+        return new TextDecoder().decode(buf);
+      }
+
+      function bufToBase64(buf) {
+        return btoa(String.fromCharCode(...new Uint8Array(buf)));
+      }
+
+      function base64ToBuf(b64) {
+        return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      }
+
+      async function deriveKey(password, salt) {
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw", strToBuf(password), { name: "PBKDF2" }, false, ["deriveKey"]
+        );
+
+        return crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt,
+            iterations: 100000,
+            hash: "SHA-256",
+          },
+          keyMaterial,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
+
+      async function encryptAES(value, password) {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(password, salt);
+
+        const ciphertext = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv },
+          key,
+          strToBuf(value)
+        );
+
+        const result = {
+          salt: bufToBase64(salt),
+          iv: bufToBase64(iv),
+          data: bufToBase64(ciphertext)
+        };
+        return btoa(JSON.stringify(result));
+      }
+
+
+      async function decryptAES(encrypted, password) {
+        const { salt, iv, data } = JSON.parse(encrypted);
+        const key = await deriveKey(password, base64ToBuf(salt));
+
+        const plaintextBuf = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: base64ToBuf(iv) },
+          key,
+          base64ToBuf(data)
+        );
+
+        return bufToStr(plaintextBuf);
+      }
+    </script>
+    <script>
+      window.usDebtFormatted = "$38422818570606.64"
+      let moneyTarget = 38422818570606.64;
+      let currentMoney = 38422818570606.64;
+      let growthRatePerMs = 201.651206792806;
+      let baseDebt = 38490798138585.9;
+      let baseTime = 1769040000000;
+      const apiUrl = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?sort=-record_date&page[size]=2';
+
+      const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+      async function fetchDebt() {
+        try {
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          const latest = data.data[0];
+          const previous = data.data[1];
+          const d1 = parseFloat(latest.tot_pub_debt_out_amt);
+          const d2 = parseFloat(previous.tot_pub_debt_out_amt);
+          const t1 = new Date(latest.record_date).getTime();
+          const t2 = new Date(previous.record_date).getTime();
+          growthRatePerMs = (d1 - d2) / (t1 - t2);
+          baseDebt = d1;
+          baseTime = t1;
+          currentMoney = Math.max(d1, currentMoney);
+          moneyTarget = d1;
+        } catch (error) {
+          console.error('Error fetching debt data:', error);
+        }
+      }
+
+      function simulateLiveTarget() {
+        if (baseTime > 0) {
+          const msElapsedSinceRecord = Date.now() - baseTime;
+          moneyTarget = baseDebt + (growthRatePerMs * msElapsedSinceRecord);
+        }
+      }
+
+      function updateDebt() {
+        simulateLiveTarget();
+        currentMoney += (moneyTarget - currentMoney) * 0.05;
+        const formatted = formatter.format(currentMoney);
+        window.usDebtFormatted = formatted
+        for (let i of document.querySelectorAll('.us-debt')) {
+          i.innerText = formatted;
+        }
+        requestAnimationFrame(updateDebt);
+      }
+
+      updateDebt();
+      fetchDebt();
+      setInterval(fetchDebt, 1000 * 30);
+    </script>
+    <script>
+      (function animateBackground() {
+        const bg = document.getElementById('bg-panner');
+
+        // Set your velocities (pixels per frame)
+        let velX = (Math.random()-0.5)*2*0.25; 
+        let velY = (Math.random()-0.5)*2*0.25;
+
+        // Caps (Maximum velocity)
+        const maxVel = 0.5;
+        velX = Math.min(Math.max(velX, -maxVel), maxVel);
+        velY = Math.min(Math.max(velY, -maxVel), maxVel);
+
+        let posX = 0;
+        let posY = 0;
+
+        function update() {
+          velX += (Math.random()-0.5)*0.001
+          velY += (Math.random()-0.5)*0.001
+          posX += velX;
+          posY += velY;
+
+          // Apply to background-position
+          // We use pixels (px) to move the repeating tiles
+          bg.style.backgroundPosition = `${posX}px ${posY}px`;
+
+          requestAnimationFrame(update);
+        }
+
+        update();
+      })();
+    </script>
+    <script type="module">
+      import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+
+      // const SELECTED_MODEL = "Qwen3-1.7B-q4f16_1-MLC";
+      const SELECTED_MODEL = "Llama-3.2-3B-Instruct-q4f16_1-MLC"
+      /* ─── DOM refs ─── */
+      const loadingScreen    = document.getElementById('loading-screen');
+      const loadingStatus    = document.getElementById('loading-status');
+      const loadingBar       = document.getElementById('loading-progress-bar');
+      const mainContainer    = document.getElementById('main-container');
+      const chatBox          = document.getElementById('chat-box');
+      const userInput        = document.getElementById('user-input');
+      const sendBtn          = document.getElementById('send-btn');
+      const clearBtn         = document.getElementById('clear-btn');
+
+      /* ─── State ─── */
+      let engine;
+      let isGenerating = false;
+      let shouldStop   = false;
+
+      marked.setOptions({ breaks: true, gfm: true });
+
+      /* ─── Prompts ─── */
+      const SYSTEM_PROMPT = `[SYSTEM] You are an AI assistant named Saharsh 3.0 Mini hosted on Secure Centrix81, a gaming website which can be accessed at https://securecentrix81.github.io. You are not hosted on a server; you are being hosted locally on the user's computer. Your proccessing power is limited by the user's computer.`;
+
+      const TOOLS_DESCRIPTION = `[SYSTEM] You have access to the following tools.
+If you need to call a tool, output ONLY a single JSON object or code block in these formats:
+
+{"tool": "name", "args": {"param": "value"}}
+
+Tools:
+datetime: {} — Returns the current time. e.g. {"tool": "datetime", "args": {}}
+securecentrix_info: {} — Provides additional information about Secure Centrix81 such as games, URLS, etc... Use this tool to navigate Secure Centrix81 instead of using Javascript. e.g. {"tool": "securecentrix_info", "args": {}}
+javascript: {"code": "string"} — Evaluates javascript. e.g. {"tool": "random", "args": {"code": "let x = 10;return x * 5;"}}
+
+Alternatively, you can execute javascript via a code block:
+\`\`\`javascript
+let x = 10;
+return x * 5;
+\`\`\`
+
+Do NOT use the javascript tool to search Secure Centrix81. Use the securecentrix_info tool instead.`;
+
+      const REASONING_PROMPT = `[SYSTEM] Repond with a chain-of-thought process to answer the user's latest message. Provide clear, organized reasoning. If the question is simple, keep it brief — do NOT overthink it. If you need a tool, call it.
+
+If you do not need to use a tool, plan your final answer for the user without calling tools. 
+Output ONLY your reasoning. Do NOT output the final answer yet.`;
+
+      const RESPOND_PROMPT = `[SYSTEM] Based on your reasoning above, now do ONE of the following:
+
+If you need to call a tool first, output ONLY the JSON object:
+{"tool": "name", "args": {...}}
+or
+If you need to call the javascript tool first, output ONLY the code block:
+\`\`\`javascript
+// Write code here
+let x = 10;
+return x * 5;
+\`\`\`
+
+-OR-
+
+If you already have enough information, write your final answer directly for the user. Be natural and helpful. Do NOT mention your reasoning, these instructions, or the tool system.`;
+
+      function makeToolResultPrompt(name, args, result) {
+        return `[SYSTEM] The tool ${name}(${args}) returned: ${result}
+Now think about how to use this result to answer the user's original question.`;
+      }
+
+      /* ─── Conversation history (only real user/assistant turns) ─── */
+      let history = [{ role: "system", content: SYSTEM_PROMPT }];
+
+      /* ─── Tool execution ─── */
+      function parseToolCall(text) {
+        // 1. First, check for a Javascript Markdown Block
+        const jsMatch = text.match(/```javascript\s*\n([\s\S]*?)\n```/);
+        if (jsMatch) {
+          return { name: 'javascript', args: { code: jsMatch[1].trim() } };
+        }
+
+        // 2. Fallback to the existing JSON logic
+        try {
+          const start = text.indexOf('{');
+          const end = text.lastIndexOf('}');
+          if (start === -1 || end === -1) return null;
+
+          const jsonStr = text.substring(start, end + 1);
+          const data = JSON.parse(jsonStr);
+
+          if (data.tool && data.args) {
+            return { name: data.tool.toLowerCase(), args: data.args };
+          }
+        } catch (e) {
+          return null; 
+        }
+        return null;
+      }
+
+      async function executeTool(name, args) {
+        switch (name) {
+          case 'javascript': {
+            try {
+              // We wrap the code in a function. 
+              // To get a result back, the AI should use 'return'
+              let realConsoleLog = console.log
+              let result = ""
+              console.log = (...args) => {
+                result += args.join(" ") + "\n"
+              }
+              let execResult
+              try {
+                execResult = eval(args.code);
+              } catch (e) {
+                let runner = Function(args.code);
+                execResult = runner()
+              }
+              if (execResult === undefined) execResult = ""
+              result += execResult;
+              if (result.trim() === "") return "Code executed successfully (no return value)";
+              return String(result)
+            } catch (e) {
+              return e.message;
+            }
+          }
+          case 'math': {
+            try {
+              const expr = args.expr.replace(/\^/g, '**'); // Access .expr
+              const round = Math.round
+              const floor = Math.floor
+              const ceil = Math.ceil
+              const sqrt = Math.sqrt
+              const sin = Math.sin
+              const cos = Math.cos
+              const pi = Math.PI
+              const PI = Math.PI
+              const e = Math.E
+              const E = Math.E
+              const cbrt = Math.cbrt
+              const abs = Math.abs
+              const asin = Math.asin
+              const acos = Math.acos
+              const acosh = Math.acosh
+              const asinh = Math.asinh
+              const atan = Math.atan
+              const atanh = Math.atanh
+              const cosh = Math.cosh
+              const exp = Math.exp
+              const ln = Math.log
+              const log = Math.log10
+              const log2 = Math.log2
+              const log10 = Math.log10
+              const max = Math.max
+              const min = Math.min
+              const pow = Math.pow
+              const tan = Math.tan
+              const tanh = Math.tanh
+              const random = Math.random
+              let val
+              try {
+                val = eval('return (' + expr + ')');
+              } catch (e) {
+                const runner = Function('return (' + expr + ')');
+                val = runner()
+              }
+              return String(val);
+            } catch (e) { return "Error: " + e.message; }
+          }
+          case 'datetime':
+            return new Date().toLocaleString();
+          case 'random': {
+            const lo = parseInt(args.min); // Access .min
+            const hi = parseInt(args.max); // Access .max
+            if (!isNaN(lo) && !isNaN(hi)) {
+              const min = Math.min(lo, hi);
+              const max = Math.max(lo, hi);
+              return String(Math.floor(Math.random() * (max - min + 1)) + min);
+            }
+            return "Error: use args {min: number, max: number}";
+          }
+          case 'securecentrix_info': {
+            switch (args.page) {
+              case "webretro": return "Webretro is an open-source port of the RetroArch emulator frontend to WebAssembly (WASM) using Emscripten. It allows users to play classic console games (NES, SNES, Genesis, GBA) directly in a web browser. Key features include save state management, support for various controllers, and in-browser ROM loading. It can be accessed on Secure Centrix81 via the url https://securecentrix81.github.io/webretro"
+              case "project-hub": return `Project Hub v2 can be accessed at https://securecentrix81.github.io/project-hub-v2. See {"page":"project-hub-list"} for an extensive list of games hosted on project-hub-v2.`
+              case "project-hub-list": return `1v1.lol\n2048\nAce Attorney\nAnimal Crossing: Wild World\nAnimator Vs Animation\nBasketball Stars\nBitLife\nBlock Blast\nBloons TD 1,2,5\nBloxorz\nBreaking the Bank\nCookie Clicker\nCooking Mama 1,2,3\nCraftmine\nCrossy Road\nCut the Rope\n- Holiday Gift\n- Time Travel\nDELTARUNE\nDouchebag Life\nDouchebag Workout 2\nDraw the Hill\nDuck Life 1,2,3,4\nDune\nEscaping the Prison\nFlappy Bird\nFleeing the Complex\nFNAF 1,2,3,UCN,World\nFriday Night Funkin'\nFruit Ninja\nGoogle Dino\nHappy Wheels\nHextris\nHollow Knight\nInfiltrating the Airship\nInfinite Mario Bros\nInteractive Buddy\nJetpack Joyride\nLearn to Fly 1,2\nMadalin Stunt Cars 2,3\nMinecraft: Classic\nMini Putt\nMotoX3M 1,2\nMonster High - Ghoul Spirit\nN-Gon\nPandemic 2\nPapa's:\n- Bakeria\n- Burgeria\n- Cheeseria\n- Donuteria\n- Freezeria\n- Pancakeria\n- Pastaria\n- Pizzeria\n- Sushiria\nPaper.io 2\nPapery Planes\nPokemon:\n- Emerald\n- Pearl\n- Fire Red\nPortal: Flash\nRed Ball 4\nResent Client\nRetro Bowl\nRiddle School 1,2,3,4,5\nRiddle Transfer 1,2\nRocket Soccer\nSaharsh Gobinath Clicker (famous)\nRolly Vortex\nSand Game\nSlope\nSolitaire\nSonic: Flash\nStack\nStealing the Diamond\nStickman Hook\nStorm the House 2\nSubway Surfers:\n- San Francisco\n- Zurich\nSuperhot\nSuper Mario 64\nSuper Scribblenauts\nSuper Smash Flash\nTanuki Sunset\nTemple Run 2\nTetris\nThe Binding of Isaac\nThe Impossible Quiz\nThere Is No Game\nTownscaper\nTranscube\nUNDERTALE\nUNDERTALE: Yellow\nVex 4,5,6\nWordle\nWorld's Hardest Game 1,2`
+              case "turbowarp-links": return `Turbowarp is Scratch compiler that lets them run over ten times as fast as they normally would. The list of games can be accessed at https://securecentrix81.github.io/turbowarp-links, and the actual turbowarp compiler can be accessed at https://securecentrix81.github.io/turbowarp. List of games: Vectoid TD 3D v1.4\nNavier Stokes Fluid Simulation\nKnotted\nThe Mast [3D]\nosu! Full Remake\nSubmersible\n3D Tearable Cloth\nScratch Bloons TD\nTerraria\n2D Physics Engine\nRope Physics\nSand and Water\nPortal 3D Test Chamber 13\nChess AI\nAppel v1.4\nAppel Multiplayer v2.0`
+              case "gfiles": return `Gfiles is a public HTML5 Game Archive made by SevenworksDev. Gfiles can be accessed at https://securecentrix81.github.io/gfiles/. Credit goes to https://github.com/HTML5GameArchive/gfiles for making this. See {"page":"gfiles-list"} for a very long list of games.`
+              case "gfiles-list": return `# games\n1v1lol\n2048\nadarkroom\nasciispace\nassessmentexamination\nasteroids\nastray\nbackcountry\nbaldisbasics\nbasketballlegends\nbasketballstars\nbasketbrosio\nbasketrandom\nbitlife\nblackholesquare\nbounceback\nboxingrandom\nbreaklock\nbreakout\nbtd4\ncaptaincallisto\nchess\nchromaincident\nchromedino\nclickerheroes\nclusterrush\nconnect3\ncookieclicker\ncrossyroad\ncsgoclicker\ncubefield\ncubitomayhem\ncuttherope\ncuttheropeholiday\ncuttheropetimetravel\ndeathrun3d\ndeepestsword\ndoodlejump\ndoom\ndrawthehill\ndrift\ndrifthunters\ndrivemad\nducklife\nducklife2\nducklife3\nducklife4\nducklife5\nearntodie\nedgenotfound\neggycar\nevilglitch\nfactoryballsforever\nfireboyandwatergirlforesttemple\nflappy2048\nflappybird\nflappyplane\nflightsimulator\nfridaynightfunkin\nfriendlyfire\nfruitninja\ngeometrydash\ngetawayshootoutnew\ngladihoppers\ngooglesnake\ngopherkart\ngrindcraft\nhexgl\nhextris\nhighwaytraffic\nkonnekt\nlearntofly\nletssurf\nlittlealchemy\nmergeroundracers\nmonkeymart\nmotoroadrash3d\nmotox3m\nninjavsevilcorp\nomnombounce\novo\novo2\npackabunchas\npacman\npaperio\nparticleclicker\npushback\nq1k3\nr3\nracer\nradiusraid\nredball4\nretrobowl\nretrohaunt\nriddleschool2\nritz\nroadblocks\nrooftopsnipers\nrun3\nscrapmetal3\nshuttledeck\nsketchbook04\nsleepingbeauty\nslitherio\nslope\nslope2\nsnake\nsnowbattle\nsoccerrandom\nsolitaire\nspacecompany\nspacegarden\nspacehuggers\nspaceinvaders\nstack\nstackball\nstickman-hook\nstickmanboost\nstickmanclimb\nstickmangolf\nstickmanhook\nstickmansurvival\nsubwaysurfers\nsubwaysurfersny\nsubwaysurferssingapore\ntanukisunset\ntetris\nthemazeofspacegoblins\ntimeshooter\ntimeshooter2\ntimeshooter3\ntinyfishing\ntombofthemask\ntopspeedracing3d\ntowermaster\ntrimps\ntunnelrush\nvex3\nvex4\nvex5\nvex6\nwebecomewhatwebehold\nworldshardestgame2\nxx142b2exe\nzombsroyale\n# Emulators\nruffle retroarch`
+              case "other-games": return `The "Other games" section can be accessed at https://securecentrix81.github.io/other-games. It contains a game request form https://forms.gle/aR7bQ4U1szfQNqKn9 and multiple user-requested games. The game request form allows for people to request for AI-generated games, or to import pre-made games. You do not have access to the full list of games hosted on Secure Centrix81. The user must visit https://securecentrix81.github.io/other-games in order to view them.`
+              case "giveaway": return `There is a ongoing giveaway of ${window.usDebtFormatted} on Secure Centrix81. Giveaways can be accessed from the bottom of the page at: https://securecentrix81.github.io/securecentrix81. To be elegible for the giveaway, the user must complete an exhaustive 155-step guide that outlines a journey required to claim the giveaway, which frames the entire history of the universe and human progress as essential prerequisites for a single internet transaction. The process begins with the primordial necessity of existing as matter and surviving the formation of the solar system, then traces biological evolution from the first self-replicating RNA through the development of mammalian traits and human cognition. It proceeds to demand the mastery of every major human milestone, including the Agricultural Revolution, metallurgy, the invention of calculus, and the Industrial Revolution, leading into the complex development of semiconductor physics and the manual construction of a modern web browser from scratch. `
+              default: `Error: unknown page "${args.page}"`
+                             }
+            return `Secure Centrix81 is an advanced gaming website that specializes in security. It can be accessed at https://securecentrix81.github.io. People can sign up for a login key at https://securecentrix81.github.io/signup, or you can generate one with the tool: {"tool":"generate_key","args":{}}.Secure Centrix81 has the following games:
+- Saharsh Gobinath Clicker: a fun, addicting game based on the fictional character "Saharsh Gobinath," a person who fails all of his classes and gets in trouble(https://securecentrix81.github.io/saharshgobinathclicker)
+- webretro: a browser-based front-end emulator (use the argument {"page":"webretro"} to see more)
+- project-hub-v2: a list of games (see "project-hub")
+- turbowarp-links: a list of scratch games (see "turbowarp-links")
+- gfiles: a list of games (see "gfiles")
+- polytrack: a web-based racing game inspired by TrackMania
+- Madalin Stunt Cars: a multiplayer 3d stunt driving game(features version 2 and 3)
+- other games: a Game Request form, with a long list of user-created games (see "other-games")
+- money giveaway(${window.usDebtFormatted}, see "giveaway")`
+          }
+          case "generate_key":
+            return encryptAES("https://securecentrix81.github.io/auth_immediate_ok#saharsh-3.0-mini+"+Date.now(), "ba76f35d-16d1-42d5-9740-c4bba18f56c60f8ade21-0db0-43d9-be0b-f70a75a90e8f0872ba44-168c-492e-8210-64798ab4786f02be5f8d-e1c8-49bb-b692-a7c3e25683ca09bd097a-e24d-468c-adff-e202754f0e0bf8dbcf49-3239-47cd-a748-636f7f863187ef2d6ab3-5de8-4baf-ae2c-8c2d39540352cddb025e-006f-4a83-92a6-521545081c4dff4ef70e-4768-47f6-9917-2a1560f389efd236d0eb-e088-4a85-9098-937af54db57b")
+          default:
+            return "Error: unknown tool '" + name + "'";
+                    }
+      }
+
+      /* ─── Streaming helper ─── */
+      async function streamGenerate(msgs, onToken, temp=0.7) {
+        let text = "";
+        const stream = await engine.chat.completions.create({
+          messages: msgs,
+          stream: true,
+          max_tokens: 1024,
+          temperature: temp,
+          top_p: 0.9,
+          chat_template_kwargs: { enable_thinking: false },
+        });
+        for await (const chunk of stream) {
+          if (shouldStop) break;
+          text += chunk.choices[0]?.delta?.content || "";
+          if (onToken) onToken(text);
+        }
+          if (shouldStop) throw { stopped: true };
+        return text;
+      }
+
+      /* ─── Display helpers ─── */
+      function scrollBottom() { chatBox.scrollTop = chatBox.scrollHeight; }
+
+      function createThinkBlockEl(label, content, expanded, isLive) {
+        const block = document.createElement('div');
+        block.className = 'think-block' + (expanded ? ' expanded' : '');
+        if (label.startsWith('Tool:')) block.classList.add('tool-block');
+
+        const toggle = document.createElement('div');
+        toggle.className = 'think-toggle';
+
+        if (isLive) {
+          const spinner = document.createElement('span');
+          spinner.className = 'think-spinner';
+          toggle.appendChild(spinner);
+        } else {
+          const icon = document.createElement('span');
+          icon.className = 'think-icon';
+          icon.textContent = '▶';
+          toggle.appendChild(icon);
+        }
+        const lbl = document.createElement('span');
+        lbl.textContent = ' ' + label;
+        toggle.appendChild(lbl);
+        toggle.onclick = () => block.classList.toggle('expanded');
+
+        const body = document.createElement('div');
+        body.className = 'think-content';
+        body.textContent = content;               // plain text during streaming
+        if (!isLive) body.innerHTML = marked.parse(content);  // markdown after done
+
+        block.appendChild(toggle);
+        block.appendChild(body);
+        return block;
+      }
+
+      /** Rebuild the bot bubble during streaming */
+      function renderLive(container, steps, phase, streamText) {
+        container.innerHTML = '';
+
+        // Completed reasoning/tool steps → collapsed blocks
+        steps.forEach(s => {
+          container.appendChild(createThinkBlockEl(s.label, s.content, false, false));
+        });
+
+        if (phase === 'thinking') {
+          if (streamText) {
+            container.appendChild(createThinkBlockEl('Thinking…', streamText, true, true));
+          } else {
+            const ind = document.createElement('div');
+            ind.className = 'phase-indicator';
+            ind.textContent = 'Thinking…';
+            container.appendChild(ind);
+          }
+        } else if (phase === 'responding') {
+          if (streamText) {
+            const div = document.createElement('div');
+            div.className = 'typing-cursor';
+            div.textContent = streamText;      // plain text while streaming
+            container.appendChild(div);
+          } else {
+            const ind = document.createElement('div');
+            ind.className = 'phase-indicator';
+            ind.textContent = 'Composing response…';
+            container.appendChild(ind);
+          }
+        }
+      }
+
+      /** Final render with markdown + KaTeX */
+      function renderFinal(container, steps, response) {
+        container.innerHTML = '';
+
+        steps.forEach(s => {
+          container.appendChild(createThinkBlockEl(s.label, s.content, false, false));
+        });
+
+        if (response) {
+          const div = document.createElement('div');
+          div.innerHTML = marked.parse(response);
+          container.appendChild(div);
+          if (typeof renderMathInElement === 'function') {
+            renderMathInElement(div, {
+              delimiters: [
+                { left: '$$',  right: '$$',  display: true  },
+                { left: '$',   right: '$',   display: false },
+                { left: '\\[', right: '\\]', display: true  },
+                { left: '\\(', right: '\\)', display: false },
+              ],
+              throwOnError: false,
+            });
+          }
+        }
+      }
+
+      /* ─── Multi-pass reasoning pipeline ─── */
+      async function reasonAndRespond(container) {
+        const steps = [];                       // { label, content }
+        let workMsgs = [...history];            // copy — don't pollute real history
+        const MAX_TOOL_ROUNDS = 100;
+
+        /* ── Pass 1 : Reasoning ── */
+        workMsgs.push({ role: "user", content: TOOLS_DESCRIPTION });
+        workMsgs.push({ role: "user", content: REASONING_PROMPT });
+
+        renderLive(container, steps, 'thinking', '');
+
+        let reasoning = await streamGenerate(workMsgs, txt => {
+          renderLive(container, steps, 'thinking', txt);
+          scrollBottom();
+        });
+        workMsgs.push({ role: "assistant", content: reasoning });
+        steps.push({ label: 'Reasoning', content: reasoning });
+
+        /* ── Pass 2+ : Respond / tool loop ── */
+        let finalResponse = "";
+
+        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+          workMsgs.push({ role: "user", content: RESPOND_PROMPT });
+          renderLive(container, steps, 'responding', '');
+
+          let response = await streamGenerate(workMsgs, txt => {
+            renderLive(container, steps, 'responding', txt);
+            scrollBottom();
+          });
+          workMsgs.push({ role: "assistant", content: response });
+
+          const tool = parseToolCall(response);
+          if (tool) {
+            /* ── Execute tool ── */
+            const result = await executeTool(tool.name, tool.args);
+
+            // Create a version of the result for the UI (redacted if it's the info tool)
+            const displayResult = (tool.name === 'securecentrix_info') 
+            ? "Data retrieved from Secure Centrix81 database." 
+            : result;
+
+            steps.push({
+              label: `Tool: ${tool.name}`,
+              content: `Called: ${tool.name}\nArgs: ${JSON.stringify(tool.args)}\nResult: ${displayResult}`
+            });
+
+            /* ── Feed REAL result back to the AI (not the redacted one) ── */
+            workMsgs.push({
+              role: "user",
+              content: makeToolResultPrompt(tool.name, tool.args, result)
+            });
+            renderLive(container, steps, 'thinking', '');
+
+            let postToolReasoning = await streamGenerate(workMsgs, txt => {
+              renderLive(container, steps, 'thinking', txt);
+              scrollBottom();
+            });
+            workMsgs.push({ role: "assistant", content: postToolReasoning });
+            steps.push({ label: 'Reasoning', content: postToolReasoning });
+
+          } else {
+            /* ── No tool call → this is the final answer ── */
+            finalResponse = response;
+            break;
+          }
+        }
+
+        if (!finalResponse) {
+          finalResponse = "Sorry, I couldn't finish processing. Please try rephrasing.";
+        }
+
+        renderFinal(container, steps, finalResponse);
+        return finalResponse;
+      }
+
+      /* ─── Send message ─── */
+      async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text || isGenerating) return;
+
+        const empty = document.getElementById('empty-state');
+        if (empty) empty.style.display = 'none';
+
+        appendUserBubble(text);
+        userInput.value = '';
+
+        isGenerating = true;
+        shouldStop = false;
+        sendBtn.textContent = 'Stop';
+        sendBtn.classList.add('stop');
+        userInput.disabled = true;
+
+        history.push({ role: "user", content: "[USER]:\n"+text });
+
+        const botDiv = document.createElement('div');
+        botDiv.className = 'message bot-msg';
+        chatBox.appendChild(botDiv);
+        scrollBottom();
+
+        try {
+          const finalText = await reasonAndRespond(botDiv);
+          history.push({ role: "assistant", content: finalText });
+        } catch (e) {
+          if (!e.stopped) {
+            botDiv.textContent = "Error: " + (e.message || e);
+          }
+        } finally {
+          isGenerating = false;
+          sendBtn.textContent = 'Send';
+          sendBtn.classList.remove('stop');
+          userInput.disabled = false;
+          userInput.focus();
+          scrollBottom();
+        }
+      }
+
+      function appendUserBubble(text) {
+        const div = document.createElement('div');
+        div.className = 'message user-msg';
+        div.textContent = text;
+        chatBox.appendChild(div);
+        scrollBottom();
+      }
+
+      function clearChat() {
+        history = [{ role: "system", content: SYSTEM_PROMPT }];
+        chatBox.innerHTML = '<div class="empty-state" id="empty-state">Send a message to start</div>';
+      }
+
+      /* ─── Event listeners ─── */
+      sendBtn.onclick = () => {
+        if (isGenerating) shouldStop = true;
+        else sendMessage();
+      };
+      userInput.onkeypress = e => { if (e.key === 'Enter' && !isGenerating) sendMessage(); };
+      clearBtn.onclick = clearChat;
+
+      /* ─── Init ─── */
+      async function init() {
+        try {
+          loadingStatus.textContent = "Downloading model…";
+          engine = await CreateMLCEngine(SELECTED_MODEL, {
+            initProgressCallback: (progress) => {
+              loadingBar.style.width = Math.ceil(progress.progress * 100) + '%';
+              loadingStatus.textContent = progress.text;
+            }
+          });
+          loadingScreen.classList.add('hidden');
+          mainContainer.style.display = 'flex';
+          userInput.focus();
+        } catch (err) {
+          loadingStatus.textContent = "Error: " + err.message;
+          loadingBar.style.background = '#c0392b';
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

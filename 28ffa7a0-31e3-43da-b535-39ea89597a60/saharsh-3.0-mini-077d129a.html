@@ -209,29 +209,27 @@ let shouldStop   = false;
 marked.setOptions({ breaks: true, gfm: true });
 
 /* ─── Prompts ─── */
-const SYSTEM_PROMPT = `[SYSTEM] You are an AI assistant named Saharsh 3.0 Mini hosted on Secure Centrix81, a gaming website. You are helpful, concise, and friendly. Always follow the instructions given to you carefully.`;
+const SYSTEM_PROMPT = `[SYSTEM] You are an AI assistant named Saharsh 3.0 Mini hosted on Secure Centrix81, a gaming website. `;
 
-const TOOLS_DESCRIPTION = `You have access to the following tools.
-If you need to call the javascript tool, output ONLY a single JSON object or code block in these formats:
+const TOOLS_DESCRIPTION = `[SYSTEM] You have access to the following tools.
+If you need to call a tool, output ONLY a single JSON object or code block in these formats:
 
 {"tool": "name", "args": {"param": "value"}}
 
 Tools:
   math: {"expr": "string"} — e.g. {"tool": "math", "args": {"expr": "5*4"}}
   datetime: {} — e.g. {"tool": "datetime", "args": {}}
+  securecentrix_info: {} — e.g. {"tool": "securecentrix_info", "args": {}}
   random: {"min": number, "max": number} — e.g. {"tool": "random", "args": {"min": 1, "max": 100}}
-  javascript: {"code": "string"} — e.g. {"tool": "random", "args": {"code": "const x = 10;return x * 5"}}
+  javascript: {"code": "string"} — e.g. {"tool": "random", "args": {"code": "let x = 10;return x * 5;"}}
 
 Alternatively, you can execute javascript in this format:
 \`\`\`javascript
-// Write code here
-const x = 10;
+let x = 10;
 return x * 5;
 \`\`\``;
 
 const REASONING_PROMPT = `[SYSTEM] Repond chain-of-though process to answer the user's latest message. Provide clear, organized reasoning. If the question is simple, keep it brief — do NOT overthink. If you think you need a tool, say which one and why.
-
-${TOOLS_DESCRIPTION}
 
 If you do not need to use a tool, plan your final answer for the user without calling tools. 
 Output ONLY your reasoning. Do NOT output the final answer yet.`;
@@ -243,9 +241,16 @@ If you need to call a tool first, output ONLY the JSON object:
 
 -OR-
 
-If you already have enough information, write your final answer directly for the user. Be natural and helpful. Do NOT mention your reasoning, these instructions, or the tool system.
+If you need to call the javascript tool first, output ONLY the code block:
+\`\`\`javascript
+// Write code here
+let x = 10;
+return x * 5;
+\`\`\`
 
-${TOOLS_DESCRIPTION}`;
+-OR-
+
+If you already have enough information, write your final answer directly for the user. Be natural and helpful. Do NOT mention your reasoning, these instructions, or the tool system.`;
 
 function makeToolResultPrompt(name, args, result) {
     return `[SYSTEM] The tool ${name}(${args}) returned: ${result}
@@ -293,7 +298,13 @@ function executeTool(name, args) {
                 console.log = (...args) => {
                     result += args.join(" ") + "\n"
                 }
-                let execResult = eval(args.code);
+                let execResult
+                try {
+                    execResult = eval(args.code);
+                } catch (e) {
+                    let runner = Function(args.code);
+                    execResult = runner()
+                }
                 if (execResult === undefined) execResult = ""
                 result += execResult;
                 if (result.trim() === "") return "Code executed successfully (no return value)";
@@ -335,7 +346,13 @@ function executeTool(name, args) {
                 const tan = Math.tan
                 const tanh = Math.tanh
                 const random = Math.random
-                const val = eval('return (' + expr + ')');
+                let val
+                try {
+                    val = eval('return (' + expr + ')');
+                } catch (e) {
+                    const runner = Function('return (' + expr + ')');
+                    val = runner()
+                }
                 return String(val);
             } catch (e) { return "Error: " + e.message; }
         }
@@ -350,6 +367,289 @@ function executeTool(name, args) {
                 return String(Math.floor(Math.random() * (max - min + 1)) + min);
             }
             return "Error: use args {min: number, max: number}";
+        }
+        case 'securecentrix_info': {
+            switch (args.page) {
+                case "webretro": return "Webretro is an open-source port of the RetroArch emulator frontend to WebAssembly (WASM) using Emscripten. It allows users to play classic console games (NES, SNES, Genesis, GBA) directly in a web browser. Key features include save state management, support for various controllers, and in-browser ROM loading. It can be accessed on Secure Centrix81 via the url https://securecentrix81.github.io/webretro"
+                case "project-hub": return `Project Hub v2 can be accessed at https://securecentrix81.github.io/project-hub-v2. See {"page":"project-hub-list"} for an extensive list of games hosted on project-hub-v2.`
+                case "project-hub-list": return `1v1.lol
+2048
+Ace Attorney
+Animal Crossing: Wild World
+Animator Vs Animation
+Basketball Stars
+BitLife
+Block Blast
+Bloons TD 1,2,5
+Bloxorz
+Breaking the Bank
+Cookie Clicker
+Cooking Mama 1,2,3
+Craftmine
+Crossy Road
+Cut the Rope
+- Holiday Gift
+- Time Travel
+DELTARUNE
+Douchebag Life
+Douchebag Workout 2
+Draw the Hill
+Duck Life 1,2,3,4
+Dune
+Escaping the Prison
+Flappy Bird
+Fleeing the Complex
+FNAF 1,2,3,UCN,World
+Friday Night Funkin'
+Fruit Ninja
+Google Dino
+Happy Wheels
+Hextris
+Hollow Knight
+Infiltrating the Airship
+Infinite Mario Bros
+Interactive Buddy
+Jetpack Joyride
+Learn to Fly 1,2
+Madalin Stunt Cars 2,3
+Minecraft: Classic
+Mini Putt
+MotoX3M 1,2
+Monster High - Ghoul Spirit
+N-Gon
+Pandemic 2
+Papa's:
+- Bakeria
+- Burgeria
+- Cheeseria
+- Donuteria
+- Freezeria
+- Pancakeria
+- Pastaria
+- Pizzeria
+- Sushiria
+Paper.io 2
+Papery Planes
+Pokemon:
+- Emerald
+- Pearl
+- Fire Red
+Portal: Flash
+Red Ball 4
+Resent Client
+Retro Bowl
+Riddle School 1,2,3,4,5
+Riddle Transfer 1,2
+Rocket Soccer
+Saharsh Gobinath Clicker (famous)
+Rolly Vortex
+Sand Game
+Slope
+Solitaire
+Sonic: Flash
+Stack
+Stealing the Diamond
+Stickman Hook
+Storm the House 2
+Subway Surfers:
+- San Francisco
+- Zurich
+Superhot
+Super Mario 64
+Super Scribblenauts
+Super Smash Flash
+Tanuki Sunset
+Temple Run 2
+Tetris
+The Binding of Isaac
+The Impossible Quiz
+There Is No Game
+Townscaper
+Transcube
+UNDERTALE
+UNDERTALE: Yellow
+Vex 4,5,6
+Wordle
+World's Hardest Game 1,2`
+                case "turbowarp-links": return `Turbowarp is Scratch compiler that lets them run over ten times as fast as they normally would. The list of games can be accessed at https://securecentrix81.github.io/turbowarp-links, and the actual turbowarp compiler can be accessed at https://securecentrix81.github.io/turbowarp. List of games: Vectoid TD 3D v1.4
+Navier Stokes Fluid Simulation
+Knotted
+The Mast [3D]
+osu! Full Remake
+Submersible
+3D Tearable Cloth
+Scratch Bloons TD
+Terraria
+2D Physics Engine
+Rope Physics
+Sand and Water
+Portal 3D Test Chamber 13
+Chess AI
+Appel v1.4
+Appel Multiplayer v2.0`
+                case "gfiles": return `Gfiles is a public HTML5 Game Archive made by SevenworksDev. Gfiles can be accessed at https://securecentrix81.github.io/gfiles/. Credit goes to https://github.com/HTML5GameArchive/gfiles for making this. See {"page":"gfiles-list"} for a very long list of games.`
+                case "gfiles-list": return `# games
+1v1lol
+2048
+adarkroom
+asciispace
+assessmentexamination
+asteroids
+astray
+backcountry
+baldisbasics
+basketballlegends
+basketballstars
+basketbrosio
+basketrandom
+bitlife
+blackholesquare
+bounceback
+boxingrandom
+breaklock
+breakout
+btd4
+captaincallisto
+chess
+chromaincident
+chromedino
+clickerheroes
+clusterrush
+connect3
+cookieclicker
+crossyroad
+csgoclicker
+cubefield
+cubitomayhem
+cuttherope
+cuttheropeholiday
+cuttheropetimetravel
+deathrun3d
+deepestsword
+doodlejump
+doom
+drawthehill
+drift
+drifthunters
+drivemad
+ducklife
+ducklife2
+ducklife3
+ducklife4
+ducklife5
+earntodie
+edgenotfound
+eggycar
+evilglitch
+factoryballsforever
+fireboyandwatergirlforesttemple
+flappy2048
+flappybird
+flappyplane
+flightsimulator
+fridaynightfunkin
+friendlyfire
+fruitninja
+geometrydash
+getawayshootoutnew
+gladihoppers
+googlesnake
+gopherkart
+grindcraft
+hexgl
+hextris
+highwaytraffic
+konnekt
+learntofly
+letssurf
+littlealchemy
+mergeroundracers
+monkeymart
+motoroadrash3d
+motox3m
+ninjavsevilcorp
+omnombounce
+ovo
+ovo2
+packabunchas
+pacman
+paperio
+particleclicker
+pushback
+q1k3
+r3
+racer
+radiusraid
+redball4
+retrobowl
+retrohaunt
+riddleschool2
+ritz
+roadblocks
+rooftopsnipers
+run3
+scrapmetal3
+shuttledeck
+sketchbook04
+sleepingbeauty
+slitherio
+slope
+slope2
+snake
+snowbattle
+soccerrandom
+solitaire
+spacecompany
+spacegarden
+spacehuggers
+spaceinvaders
+stack
+stackball
+stickman-hook
+stickmanboost
+stickmanclimb
+stickmangolf
+stickmanhook
+stickmansurvival
+subwaysurfers
+subwaysurfersny
+subwaysurferssingapore
+tanukisunset
+tetris
+themazeofspacegoblins
+timeshooter
+timeshooter2
+timeshooter3
+tinyfishing
+tombofthemask
+topspeedracing3d
+towermaster
+trimps
+tunnelrush
+vex3
+vex4
+vex5
+vex6
+webecomewhatwebehold
+worldshardestgame2
+xx142b2exe
+zombsroyale
+# Emulators
+ruffle retroarch`
+                case "other-games": return `The "Other games" section can be accessed at https://securecentrix81.github.io/other-games. It contains a game request form https://forms.gle/aR7bQ4U1szfQNqKn9 and multiple user-requested games. The game request form allows for people to request for AI-generated games, or to import pre-made games. You do not have access to the full list of games hosted on Secure Centrix81. The user must visit https://securecentrix81.github.io/other-games in order to view them.`
+                case "giveaway": return `There is a ongoing giveaway of ${window.usDebtFormatted} on Secure Centrix81. Giveaways can be accessed from the bottom of the page at: https://securecentrix81.github.io/securecentrix81. To be elegible for the giveaway, the user must complete an exhaustive 155-step guide that outlines a journey required to claim the giveaway, which frames the entire history of the universe and human progress as essential prerequisites for a single internet transaction. The process begins with the primordial necessity of existing as matter and surviving the formation of the solar system, then traces biological evolution from the first self-replicating RNA through the development of mammalian traits and human cognition. It proceeds to demand the mastery of every major human milestone, including the Agricultural Revolution, metallurgy, the invention of calculus, and the Industrial Revolution, leading into the complex development of semiconductor physics and the manual construction of a modern web browser from scratch. `
+                default: `Error: unknown page "${args.page}"`
+            }
+            return `Secure Centrix81 is an advanced gaming website that specializes in security. It can be accessed at https://securecentrix81.github.io. Secure Centrix81 has the following games:
+- Saharsh Gobinath Clicker: a fun, addicting game based on the fictional character "Saharsh Gobinath," a person who fails all of his classes and gets in trouble
+- webretro: a browser-based front-end emulator (use the argument {"page":"webretro"} to see more)
+- project-hub-v2: a list of games (see "project-hub")
+- turbowarp-links: a list of scratch games (see "turbowarp-links")
+- gfiles: a list of games (see "gfiles")
+- polytrack: a web-based racing game inspired by TrackMania
+- Madalin Stunt Cars: a multiplayer 3d stunt driving game(features version 2 and 3)
+- other games: a Game Request form, with a long list of user-created games (see "other-games")
+- money giveaway(${window.usDebtFormatted}, see "giveaway")`
         }
         default:
             return "Error: unknown tool '" + name + "'";
@@ -478,7 +778,9 @@ async function reasonAndRespond(container) {
     const MAX_TOOL_ROUNDS = 100;
 
     /* ── Pass 1 : Reasoning ── */
+    workMsgs.push({ role: "user", content: TOOLS_DESCRIPTION });
     workMsgs.push({ role: "user", content: REASONING_PROMPT });
+    
     renderLive(container, steps, 'thinking', '');
 
     let reasoning = await streamGenerate(workMsgs, txt => {
@@ -622,5 +924,63 @@ async function init() {
 
 init();
 </script>
+    <script>
+        window.usDebtFormatted = "$38422818570606.64"
+    let moneyTarget = 38422818570606.64;
+      let currentMoney = 38422818570606.64;
+      let growthRatePerMs = 201.651206792806;
+      let baseDebt = 38490798138585.9;
+      let baseTime = 1769040000000;
+      const apiUrl = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?sort=-record_date&page[size]=2';
+
+      const formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+      async function fetchDebt() {
+        try {
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          const latest = data.data[0];
+          const previous = data.data[1];
+          const d1 = parseFloat(latest.tot_pub_debt_out_amt);
+          const d2 = parseFloat(previous.tot_pub_debt_out_amt);
+          const t1 = new Date(latest.record_date).getTime();
+          const t2 = new Date(previous.record_date).getTime();
+          growthRatePerMs = (d1 - d2) / (t1 - t2);
+          baseDebt = d1;
+          baseTime = t1;
+          currentMoney = Math.max(d1, currentMoney);
+          moneyTarget = d1;
+        } catch (error) {
+          console.error('Error fetching debt data:', error);
+        }
+      }
+
+      function simulateLiveTarget() {
+        if (baseTime > 0) {
+          const msElapsedSinceRecord = Date.now() - baseTime;
+          moneyTarget = baseDebt + (growthRatePerMs * msElapsedSinceRecord);
+        }
+      }
+
+      function updateDebt() {
+        simulateLiveTarget();
+        currentMoney += (moneyTarget - currentMoney) * 0.05;
+        const formatted = formatter.format(currentMoney);
+          window.usDebtFormatted = formatted
+        for (let i of document.querySelectorAll('.us-debt')) {
+          i.innerText = formatted;
+        }
+        requestAnimationFrame(updateDebt);
+      }
+
+      updateDebt();
+      fetchDebt();
+      setInterval(fetchDebt, 1000 * 30);
+    </script>
 </body>
 </html>

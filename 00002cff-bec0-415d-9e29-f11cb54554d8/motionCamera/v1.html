@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Motion Camera</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Container mirrors the entire view */
+        .viewport {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+
+        /* Layer 1: Live Video */
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Layer 2: Delayed Canvas Overlay */
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            
+            /* Performance: GPU accelerated filters */
+            filter: invert(100%);
+            opacity: 0.5;
+            
+            /* PRO TIP: Uncomment the line below and comment out filter/opacity 
+               above for a professional motion-only "Difference" effect */
+            /* mix-blend-mode: difference; opacity: 1; */
+            
+            pointer-events: none;
+        }
+
+        #ui {
+            position: fixed;
+            top: 20px;
+            right: 20px; /* Right side because of scaleX(-1) */
+            transform: scaleX(-1); 
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            border: 1px solid rgba(255,255,255,0.2);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="viewport">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimization: disable alpha channel
+
+        // CONFIGURATION
+        const delayFrames = 1; // ~100ms delay at 60fps
+        let frameBuffer = [];
+
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        width: { ideal: 1280 }, 
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 60 } 
+                    },
+                    audio: false
+                });
+                
+                video.srcObject = stream;
+                
+                return new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        // Set internal canvas resolution to match video stream
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        resolve();
+                    };
+                });
+            } catch (err) {
+                console.error("Camera error:", err);
+                document.getElementById('ui').innerText = "CAMERA_ERROR: ACCESS_DENIED";
+            }
+        }
+
+        async function render() {
+            // 1. Capture the current video frame as a high-performance ImageBitmap
+            // This is much faster than drawing to a hidden canvas first
+            try {
+                const bitmap = await createImageBitmap(video);
+                frameBuffer.push(bitmap);
+            } catch (e) {
+                // If the video isn't ready, skip this frame
+            }
+
+            // 2. If we have enough frames, draw the oldest one to the overlay canvas
+            if (frameBuffer.length > delayFrames) {
+                const oldestFrame = frameBuffer.shift();
+                
+                // Clear and draw the delayed frame
+                // The CSS 'filter' property handles the inversion automatically on the GPU
+                ctx.drawImage(oldestFrame, 0, 0);
+
+                // IMPORTANT: Manually close the bitmap to free GPU memory immediately
+                oldestFrame.close();
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        // Initialize
+        setupCamera().then(() => {
+            render();
+        });
+
+        // Optimization: Handle visibility change to clear buffer when tab is backgrounded
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                while(frameBuffer.length > 0) {
+                    frameBuffer.shift().close();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

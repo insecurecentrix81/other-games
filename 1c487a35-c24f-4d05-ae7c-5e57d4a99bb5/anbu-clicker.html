@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Anbu Clicker</title>
+  <style>
+    body {
+      font-family: 'Consolas';
+      background-image: url("https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg");
+      background-size: 50px;
+      cursor:none;
+    }
+
+    @keyframes rgb-color {
+      0% {
+        color: red;
+      }
+
+      33.3% {
+        color: green;
+      }
+
+      66.7% {
+        color: blue;
+      }
+
+      100% {
+        color: red;
+      }
+    }
+
+    .clicker-image-container {
+      width: 250px;
+      height: 250px;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      transition: 0.1s;
+    }
+
+    .clicker-image {
+      width: 250px;
+      position: relative;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .clicker-image-container:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      transition: 0.3s;
+    }
+
+    .clicker-image-container:active {
+      transform: translate(-50%, -50%) scale(1.25);
+      transition: 0s;
+    }
+
+    .click-number-text {
+      pointer-events: none;
+      font-size: 18px;
+      position: absolute;
+      animation: moveText 3s linear 1;
+    }
+
+    @keyframes moveText {
+      0% {transform: translate(0, 0); opacity: 1;}
+      100% {transform: translate(0, -150px); opacity: 0;}
+    }
+
+    #clicker-count {
+      font-family: 'Consolas';
+      font-size: 25px;
+      text-align: center;
+    }
+
+    #shiny-count {
+      font-family: 'Consolas';
+      font-size: 25px;
+      text-align: center;
+      color: #ffbf00;
+    }
+
+    #prestige-count {
+      font-family: 'Consolas';
+      font-size: 25px;
+      text-align: center;
+      animation: rgb-color 3s infinite;
+    }
+
+    .game-container {
+      position: fixed;
+      top: 5%;
+      left: 5%;
+      width: 90%;
+      height: 90%;
+      background-color: #ffffff;
+      text-align: center;
+    }
+
+    .clicker-section {
+      width: 100%;
+      height: 100%;
+    }
+
+    #customCursor {
+      object-fit: cover;
+      width: 20px;
+      height: 20px;
+      pointer-events: none;
+    }
+
+    .upgrade-svg {
+      width: 50px;
+      height: 50px;
+      background-color: #cccccc;
+      border-radius: 50%;
+      position: fixed;
+      top: calc(5% + 10px);
+      left: calc(5% + 10px);
+    }
+
+    .upgrade-svg:hover {
+      background-color: #bbbbbb;
+    }
+
+    .shiny-upgrade-svg {
+      width: 50px;
+      height: 50px;
+      background-color: #ffbf00;
+      border-radius: 50%;
+      position: fixed;
+      top: calc(5% + 10px);
+      left: calc(5% + 70px);
+    }
+
+    .upgrade-btn {
+      width: 100%;
+      margin: 10px 0 10px 0;
+      padding-top: 10px;
+      padding-bottom: 10px;
+      font-size: 3em;
+    }
+
+    .upgrade-item {
+      background-color: #eee;
+    }
+
+    .upgrade-item.locked {
+      opacity: 0.5;
+      background-color: #ddd;
+    }
+
+    .upgrade-item.hidden {
+      opacity: 0.4;
+      background-color: #e8e8e8;
+    }
+
+    .upgrade-text {
+      white-space: pre-wrap;
+      pointer-events: none;
+    }
+
+    #prestige-btn {
+      color: #fff;
+      background-image: radial-gradient(hsl(261, 100%, 78%) 0%, hsl(261, 100%, 16%) 100%);
+    }
+
+    #upgrade-section {
+      width: 100%;
+      height: 100%;
+      max-height: calc(100vh - 300px);
+      overflow: scroll;
+    }
+
+    .small {
+      font-size: 0.7em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="game-container">
+    <h1>Anbu Clicker 2</h1>
+    <div id="clicker-count">0x Anbu</div>
+    <div id="shiny-count" style="display:none">0x Shiny Anbu</div>
+    <div id="prestige-count" style="display:none">0x Super Anbu</div>
+
+    <div class="clicker-section" style="display:block" id="clicker-game-section">
+      <!-- I see you are trying to hack this game. You can't just change this. Run gameState.clickerCount = 1e100-->
+      <div class="clicker-container">
+        <div class="clicker-image-container" id="clicker">
+          <img class="clicker-image" draggable="false" style="user-select:none;"
+          src="https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg">
+        </div>
+      </div>
+    </div>
+
+    <div class="clicker-section" style="display:none" id="clicker-upgrade-section">
+      <h1>Upgrades</h1>
+      <div id="upgrade-section">
+        <button id="prestige-btn"></button>
+      </div>
+    </div>
+
+    <div id="upgrade-svg" class="upgrade-svg">
+      <svg width="50px" height="50px" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+        viewBox="0 0 24 24">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 6v13m0-13 4 4m-4-4-4 4" />
+      </svg>
+    </div>
+  </div>
+
+  <div id="shiny-upgrade-svg" class="shiny-upgrade-svg">
+      <svg width="50px" height="50px" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+        viewBox="0 0 24 24">
+        <path stroke="#664c00" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 6v13m0-13 4 4m-4-4-4 4" />
+      </svg>
+    </div>
+  </div>
+
+  <div id="click-number-texts"></div>
+
+  <img id="customCursor"
+    src="https://asset-cdn.schoology.com/system/files/imagecache/profile_big/pictures/picture-c0b09cdead19788fb0f8be0d53b5c572_68c34cd700b90.jpg">
+
+  <script src="index.js" type="text/javascript"></script>
+</body>
+
+</html>

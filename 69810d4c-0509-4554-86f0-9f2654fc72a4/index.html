@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-file HTML Editor</title>
+    <style>
+        :root {
+            --bg-dark: #1e1e1e;
+            --bg-panel: #252526;
+            --border: #333;
+            --accent: #007acc;
+            --text: #cccccc;
+            --menu-bg: #252526;
+            --menu-hover: #37373d;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg-dark); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        /* HEADER */
+        header { height: 50px; background: #333; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #000; justify-content: space-between; }
+        h1 { font-size: 16px; margin: 0; color: #fff; }
+        .toolbar button { background: var(--accent); border: none; color: white; padding: 6px 12px; cursor: pointer; border-radius: 3px; font-size: 13px; margin-left: 10px; }
+        .toolbar button.secondary { background: #444; }
+        .toolbar button:hover { opacity: 0.9; }
+
+        /* MAIN LAYOUT */
+        .workspace { display: flex; flex: 1; overflow: hidden; }
+        
+        /* SIDEBAR */
+        .sidebar { width: 250px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .file-controls { padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 5px; }
+        .file-controls input { background: #3c3c3c; border: 1px solid #555; color: white; padding: 4px; width: 100%; border-radius: 3px; }
+        .file-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        
+        /* FILE ITEMS */
+        .file-item { padding: 5px 15px; cursor: pointer; display: flex; align-items: center; font-size: 13px; user-select: none; }
+        .file-item:hover { background: #2a2d2e; }
+        .file-item.active { background: #37373d; color: white; border-left: 2px solid var(--accent); }
+        .file-item .del-btn { margin-left: auto; color: #aaa; cursor: pointer; font-size: 16px; display: none; }
+        .file-item:hover .del-btn { display: block; }
+        
+        /* TREE VIEW */
+        ul.tree-root, ul.nested-group { list-style: none; padding: 0; margin: 0; }
+        ul.nested-group { padding-left: 15px; display: none; }
+        ul.nested-group.expanded { display: block; }
+        .folder-item { cursor: pointer; padding: 5px 10px; color: #aaa; font-size: 13px; font-weight: bold; display: flex; align-items: center; user-select: none; }
+        .folder-item:hover { color: #fff; }
+        .folder-icon { display: inline-block; width: 15px; font-size: 10px; transition: transform 0.2s; }
+        .folder-item.open .folder-icon { transform: rotate(90deg); }
+        .file-item { padding-left: 24px; }
+
+        /* EDITOR AREA */
+        .editor-container { flex: 1; position: relative; }
+        #monaco-root { width: 100%; height: 100%; }
+        
+        /* LOADING OVERLAY */
+        #loader { position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10; display: none;}
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #fff; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* PREVIEW AREA */
+        .preview-container { width: 40%; background: white; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+        .preview-header { padding: 5px 10px; background: #eee; color: #333; font-size: 12px; border-bottom: 1px solid #ccc; font-weight: bold; display: flex; justify-content: space-between; }
+        .preview-status { font-size: 10px; color: #666; }
+        iframe { flex: 1; border: none; width: 100%; height: 100%; background: #fff; }
+
+        /* CONTEXT MENU */
+        #context-menu { position: fixed; z-index: 10000; width: 150px; background: var(--menu-bg); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.5); display: none; padding: 5px 0; border-radius: 4px; }
+        .context-menu-item { padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text); display: flex; align-items: center; }
+        .context-menu-item:hover { background: var(--menu-hover); color: #fff; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Project Editor (Worker Mode)</h1>
+    <div class="toolbar" style="display: flex; align-items: center; gap: 10px;">
+        <div class="project-selector" style="display: flex; align-items: center; gap: 5px; background: #444; padding: 2px 8px; border-radius: 4px;">
+            <select id="projectSelect" onchange="editorApp.switchProject(this.value)" style="background: transparent; color: white; border: none; font-size: 13px; outline: none; cursor: pointer;"></select>
+            <button class="secondary" onclick="editorApp.createNewProject()" title="New">+</button>
+            <button class="secondary" onclick="editorApp.deleteCurrentProject()" style="color: #f44336;" title="Delete">🗑</button>
+        </div>
+        <button class="secondary" onclick="editorApp.formatCode()">Format</button>
+        <button onclick="editorApp.runCode()">▶ Run</button>
+        <button onclick="editorApp.openFullscreenPreview()" 
+                style="background: #007acc;" 
+                title="Open preview in new tab (fullscreen)">
+            ⛶ Fullscreen
+        </button>
+</div>
+    </div>
+</header>
+
+<div class="workspace">
+    <div class="sidebar">
+        <div class="file-controls">
+            <input type="text" id="newFilename" placeholder="New file (e.g. js/app.js)">
+            <button class="secondary" onclick="editorApp.addFile()">+</button>
+        </div>
+        <div id="fileList" class="file-list"></div>
+    </div>
+    <div class="editor-container">
+        <div id="loader"><div class="spinner"></div></div>
+        <div id="monaco-root"></div>
+    </div>
+    <div class="preview-container">
+        <div class="preview-header">
+            <span>Output</span>
+            <span id="previewStatus" class="preview-status">Ready</span>
+        </div>
+        <iframe id="previewFrame" sandbox="allow-scripts allow-modals allow-same-origin allow-forms"></iframe>
+    </div>
+</div>
+
+<div id="context-menu">
+    <div class="context-menu-item" id="ctx-rename">Rename</div>
+    <div class="context-menu-item" id="ctx-delete">Delete</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/loader.min.js"></script>
+
+<!-- WORKER SCRIPT DEFINITION -->
+<!-- This worker processes files into Blobs to avoid main thread lag and prepares the import map -->
+<script id="worker-code" type="javascript/worker">
+    self.onmessage = function(e) {
+        const { files, rootFile } = e.data;
+        const fileMap = {};
+        const imports = {};
+
+        // 1. Convert all files to Blob URLs
+        Object.keys(files).forEach(path => {
+            const file = files[path];
+            let mime = 'text/plain';
+            if (path.endsWith('.html')) mime = 'text/html';
+            else if (path.endsWith('.css')) mime = 'text/css';
+            else if (path.endsWith('.js')) mime = 'application/javascript';
+            else if (path.endsWith('.json')) mime = 'application/json';
+
+            const blob = new Blob([file.content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            
+            // Normalize path (remove leading . or /)
+            const cleanPath = path.replace(/^\.?\//, '');
+            fileMap[cleanPath] = url;
+            
+            // Build Import Map entries
+            // We map "./style.css" -> "blob:..." and "style.css" -> "blob:..."
+            imports['./' + cleanPath] = url;
+            imports[cleanPath] = url;
+        });
+
+        // 2. Prepare the Index HTML with the Interceptor
+        if (!files[rootFile]) {
+            self.postMessage({ error: 'Root file not found' });
+            return;
+        }
+
+        const rootContent = files[rootFile].content;
+
+        self.postMessage({ 
+            success: true, 
+            fileMap, 
+            imports,
+            rootContent 
+        });
+    };
+</script>
+
+<script>
+/**
+ * APP LOGIC
+ */
+const PROJECTS_KEY = 'myCodeEditor_projectList';
+const CURRENT_PROJECT_KEY = 'myCodeEditor_currentProject';
+const FILES_PREFIX = 'myCodeEditor_files_';
+
+const defaultFiles = {
+    'index.html': {
+        language: 'html',
+        content: `<!DOCTYPE html>
+<html>
+<head>
+    <title>Sophisticated Editor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Worker Interception Demo</h1>
+    <div id="output">Loading...</div>
+    <button id="loadBtn">Fetch Data Dynamically</button>
+    
+    <!-- ES Module Support via Interception -->
+    <script type="module">
+        import { hello } from './utils.js';
+        document.getElementById('output').textContent = hello();
+        
+        // Dynamic fetch interception
+        document.getElementById('loadBtn').onclick = async () => {
+            const res = await fetch('data.json');
+            const data = await res.json();
+            alert(data.message);
+        };
+    <\/script>
+</body>
+</html>`
+    },
+    'style.css': {
+        language: 'css',
+        content: `body { font-family: sans-serif; padding: 20px; background: #222; color: #fff; }
+h1 { color: #61dafb; border-bottom: 2px solid #61dafb; display: inline-block; }
+button { padding: 8px 16px; cursor: pointer; background: #61dafb; border: none; font-weight: bold; margin-top: 10px; }
+button:hover { background: #4fa8c7; }`
+    },
+    'utils.js': {
+        language: 'javascript',
+        content: `export function hello() {
+    return "Imports are working via Blob Mapping!";
+}`
+    },
+    'data.json': {
+        language: 'json',
+        content: `{
+    "message": "This JSON was fetched via the intercepted Request API!"
+}`
+    }
+};
+
+const editorApp = {
+    projects: [],
+    currentProject: '',
+    files: {},
+    activeFile: null,
+    editorInstance: null,
+    expandedFolders: new Set(),
+    contextMenuTarget: null,
+    worker: null,
+
+    init: function() {
+        this.initWorker();
+        this.loadProjects();
+        this.initMonaco();
+        this.initContextMenu();
+    },
+
+    // Initialize the Web Worker from the script tag
+    initWorker: function() {
+        const blob = new Blob([document.getElementById('worker-code').textContent], { type: "text/javascript" });
+        this.worker = new Worker(URL.createObjectURL(blob));
+        
+        this.worker.onmessage = (e) => {
+            const loader = document.getElementById('loader');
+            const status = document.getElementById('previewStatus');
+            loader.style.display = 'none';
+
+            if (e.data.error) {
+                alert(e.data.error);
+                status.textContent = "Error";
+                return;
+            }
+
+            if (e.data.success) {
+                status.textContent = "Running";
+                this.renderPreview(e.data.rootContent, e.data.fileMap, e.data.imports);
+            }
+        };
+    },
+
+    loadProjects: function() {
+        const storedProjects = localStorage.getItem(PROJECTS_KEY);
+        this.projects = storedProjects ? JSON.parse(storedProjects) : ['Default Project'];
+        if (!localStorage.getItem(PROJECTS_KEY)) localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+
+        const storedCurrent = localStorage.getItem(CURRENT_PROJECT_KEY);
+        this.currentProject = (storedCurrent && this.projects.includes(storedCurrent)) ? storedCurrent : this.projects[0];
+        
+        this.updateProjectSelect();
+        this.loadFiles();
+    },
+
+    updateProjectSelect: function() {
+        const select = document.getElementById('projectSelect');
+        select.innerHTML = '';
+        this.projects.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p; opt.textContent = p; opt.selected = (p === this.currentProject);
+            select.appendChild(opt);
+        });
+    },
+
+    createNewProject: function() {
+        const name = prompt('Project name:');
+        if (!name || this.projects.includes(name)) return;
+        this.saveFiles();
+        this.projects.push(name);
+        localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+        localStorage.setItem(FILES_PREFIX + name, JSON.stringify(defaultFiles));
+        this.switchProject(name);
+    },
+
+    deleteCurrentProject: function() {
+        if (this.projects.length <= 1) return alert('Cannot delete last project');
+        if (!confirm('Delete ' + this.currentProject + '?')) return;
+        localStorage.removeItem(FILES_PREFIX + this.currentProject);
+        this.projects.splice(this.projects.indexOf(this.currentProject), 1);
+        localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+        this.switchProject(this.projects[0]);
+    },
+
+    switchProject: function(name) {
+        if (this.editorInstance) this.saveFiles();
+        this.currentProject = name;
+        localStorage.setItem(CURRENT_PROJECT_KEY, name);
+        this.activeFile = null;
+        this.loadFiles();
+        this.updateProjectSelect();
+        if (this.editorInstance) this.switchFile(this.activeFile);
+        this.renderSidebar();
+    },
+
+    loadFiles: function() {
+        const key = FILES_PREFIX + this.currentProject;
+        const stored = localStorage.getItem(key);
+        this.files = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(defaultFiles));
+        if (!this.activeFile || !this.files[this.activeFile]) this.activeFile = 'index.html';
+        // Ensure index.html exists
+        if (!this.files['index.html']) {
+            this.activeFile = Object.keys(this.files)[0];
+        }
+    },
+
+    saveFiles: function() {
+        if (this.activeFile && this.editorInstance && this.files[this.activeFile]) {
+            this.files[this.activeFile].content = this.editorInstance.getValue();
+        }
+        localStorage.setItem(FILES_PREFIX + this.currentProject, JSON.stringify(this.files));
+    },
+
+    initMonaco: function() {
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
+        require(['vs/editor/editor.main'], () => {
+            this.editorInstance = monaco.editor.create(document.getElementById('monaco-root'), {
+                value: this.files[this.activeFile].content,
+                language: this.files[this.activeFile].language,
+                theme: 'vs-dark',
+                automaticLayout: true,
+                minimap: { enabled: false },
+                fontSize: 14
+            });
+            this.editorInstance.onDidChangeModelContent(() => {
+                this.files[this.activeFile].content = this.editorInstance.getValue();
+                this.saveFiles();
+            });
+            this.renderSidebar();
+        });
+    },
+
+    addFile: function() {
+        const name = document.getElementById('newFilename').value.trim();
+        if (!name || this.files[name]) return;
+        
+        let lang = 'plaintext';
+        if (name.endsWith('.html')) lang = 'html';
+        else if (name.endsWith('.css')) lang = 'css';
+        else if (name.endsWith('.js')) lang = 'javascript';
+        else if (name.endsWith('.json')) lang = 'json';
+
+        this.files[name] = { language: lang, content: '' };
+        document.getElementById('newFilename').value = '';
+        this.switchFile(name);
+        this.renderSidebar();
+        this.saveFiles();
+    },
+
+    switchFile: function(name) {
+        this.activeFile = name;
+        const file = this.files[name];
+        if (this.editorInstance && file) {
+            const model = this.editorInstance.getModel();
+            monaco.editor.setModelLanguage(model, file.language);
+            this.editorInstance.setValue(file.content);
+        }
+        this.renderSidebar();
+    },
+
+    deleteFile: function(name) {
+        if (!confirm('Delete ' + name + '?')) return;
+        delete this.files[name];
+        if (this.activeFile === name) this.activeFile = Object.keys(this.files)[0] || '';
+        if (this.activeFile) this.switchFile(this.activeFile);
+        this.renderSidebar();
+        this.saveFiles();
+    },
+
+    renderSidebar: function() {
+        const list = document.getElementById('fileList');
+        list.innerHTML = '';
+        const tree = {};
+        
+        Object.keys(this.files).sort().forEach(path => {
+            const parts = path.split('/');
+            let current = tree;
+            parts.forEach((part, i) => {
+                if (!current[part]) current[part] = (i === parts.length - 1) ? { __type: 'file', fullPath: path } : { __type: 'folder', children: {} };
+                current = current[part].children || current[part];
+            });
+        });
+
+        const buildTree = (node, container, pathStr = '') => {
+            Object.entries(node).sort((a,b) => (a[1].__type === 'folder' ? -1 : 1)).forEach(([name, data]) => {
+                if (data.__type === 'folder') {
+                    const fPath = pathStr ? `${pathStr}/${name}` : name;
+                    const isOpen = this.expandedFolders.has(fPath);
+                    const li = document.createElement('li');
+                    li.innerHTML = `<div class="folder-item ${isOpen?'open':''}"><span class="folder-icon">▶</span> ${name}</div>`;
+                    li.firstChild.onclick = () => {
+                        isOpen ? this.expandedFolders.delete(fPath) : this.expandedFolders.add(fPath);
+                        this.renderSidebar();
+                    };
+                    const ul = document.createElement('ul');
+                    ul.className = `nested-group ${isOpen?'expanded':''}`;
+                    li.appendChild(ul);
+                    container.appendChild(li);
+                    buildTree(data.children, ul, fPath);
+                } else {
+                    const li = document.createElement('li');
+                    li.className = `file-item ${data.fullPath === this.activeFile ? 'active' : ''}`;
+                    li.innerHTML = `<span>${name}</span><span class="del-btn">×</span>`;
+                    li.onclick = () => this.switchFile(data.fullPath);
+                    li.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); this.deleteFile(data.fullPath); };
+                    li.oncontextmenu = (e) => { e.preventDefault(); this.showContextMenu(e, data.fullPath); };
+                    container.appendChild(li);
+                }
+            });
+        };
+        const root = document.createElement('ul'); root.className = 'tree-root';
+        buildTree(tree, root);
+        list.appendChild(root);
+    },
+
+    initContextMenu: function() {
+        const menu = document.getElementById('context-menu');
+        window.onclick = () => menu.style.display = 'none';
+        document.getElementById('ctx-rename').onclick = () => {
+            const old = this.contextMenuTarget;
+            const newName = prompt('Rename to:', old);
+            if (!newName || this.files[newName]) return;
+            this.files[newName] = this.files[old];
+            delete this.files[old];
+            if (this.activeFile === old) this.activeFile = newName;
+            this.renderSidebar(); this.saveFiles();
+        };
+        document.getElementById('ctx-delete').onclick = () => this.deleteFile(this.contextMenuTarget);
+    },
+
+    showContextMenu: function(e, file) {
+        const menu = document.getElementById('context-menu');
+        this.contextMenuTarget = file;
+        menu.style.display = 'block';
+        menu.style.left = e.pageX + 'px';
+        menu.style.top = e.pageY + 'px';
+    },
+
+    formatCode: function() { this.editorInstance?.getAction('editor.action.formatDocument').run(); },
+
+    // RUN: Sends files to Worker
+    runCode: function() {
+        this.saveFiles();
+        document.getElementById('loader').style.display = 'flex';
+        document.getElementById('previewStatus').textContent = "Processing...";
+        
+        // Offload blob creation to worker
+        this.worker.postMessage({
+            files: this.files,
+            rootFile: 'index.html'
+        });
+    },
+    
+    // Open current preview in a clean new tab (true fullscreen)
+    openFullscreenPreview: function() {
+        const iframe = document.getElementById('previewFrame');
+
+        // Auto-run first if the preview is not loaded yet
+        if (!iframe.src || iframe.src === 'about:blank') {
+            this.runCode();
+
+            // Wait for worker + renderPreview to finish
+            setTimeout(() => {
+                this._actuallyOpenFullscreen();
+            }, 900);
+        } else {
+            this._actuallyOpenFullscreen();
+        }
+    },
+
+    // Helper to avoid code duplication
+    _actuallyOpenFullscreen: function() {
+        const iframe = document.getElementById('previewFrame');
+        if (iframe.src && iframe.src !== 'about:blank') {
+            window.open(iframe.src, '_blank');
+        } else {
+            alert("Preview not ready yet. Try clicking Run first.");
+        }
+    },
+
+    // RENDER: Injects the sophisticated interceptor
+    renderPreview: function(htmlContent, fileMap, imports) {
+        const iframe = document.getElementById('previewFrame');
+        
+        // The Magic Interceptor Script
+        // This runs inside the iframe before any other code
+        const interceptorScript = `
+            <script>
+                (function() {
+                    const fileMap = ${JSON.stringify(fileMap)};
+                    
+                    // 1. Intercept Fetch API
+                    const originalFetch = window.fetch;
+                    window.fetch = async function(input, init) {
+                        let url = input;
+                        if (input instanceof Request) url = input.url;
+                        
+                        // Clean URL to handle relative paths
+                        const cleanUrl = url.replace(/^[./]+/, '');
+                        
+                        if (fileMap[cleanUrl]) {
+                            console.log('[Interceptor] Serving fetch for:', cleanUrl);
+                            return originalFetch(fileMap[cleanUrl]);
+                        }
+                        return originalFetch(input, init);
+                    };
+
+                    // 2. Intercept DOM Elements (img, script src, link href)
+                    // We watch for new nodes added to DOM and rewrite their attributes immediately
+                    const observer = new MutationObserver(mutations => {
+                        mutations.forEach(mutation => {
+                            mutation.addedNodes.forEach(node => {
+                                if (node.nodeType === 1) { // Element
+                                    // Handle Images/Scripts
+                                    if ((node.tagName === 'IMG' || node.tagName === 'SCRIPT') && node.getAttribute('src')) {
+                                        const src = node.getAttribute('src').replace(/^[./]+/, '');
+                                        if (fileMap[src]) node.src = fileMap[src];
+                                    }
+                                    // Handle CSS
+                                    if (node.tagName === 'LINK' && node.getAttribute('href')) {
+                                        const href = node.getAttribute('href').replace(/^[./]+/, '');
+                                        if (fileMap[href]) node.href = fileMap[href];
+                                    }
+                                }
+                            });
+                        });
+                    });
+                    
+                    observer.observe(document.documentElement, { childList: true, subtree: true });
+                })();
+            <\/script>
+            <!-- Import Map for ES Modules -->
+            <script type="importmap">
+                { "imports": ${JSON.stringify(imports)} }
+            <\/script>
+        `;
+
+        // Pre-process initial HTML tags to avoid 404s on initial load
+        // (The observer handles dynamic additions, this handles the static HTML)
+        let finalHtml = htmlContent;
+        
+        // Simple regex replace for static tags (Interceptor handles dynamic/js)
+        Object.keys(fileMap).forEach(filename => {
+            const blobUrl = fileMap[filename];
+            const regexSrc = new RegExp(`src=["'](./)?${filename}["']`, 'g');
+            const regexHref = new RegExp(`href=["'](./)?${filename}["']`, 'g');
+            finalHtml = finalHtml.replace(regexSrc, `src="${blobUrl}"`).replace(regexHref, `href="${blobUrl}"`);
+        });
+
+        // Combine
+        const blob = new Blob([interceptorScript + finalHtml], { type: 'text/html' });
+        iframe.src = URL.createObjectURL(blob);
+    }
+};
+
+editorApp.init();
+</script>
+</body>
+</html>

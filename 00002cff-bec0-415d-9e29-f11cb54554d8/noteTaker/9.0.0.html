@@ -1681,7 +1681,7 @@
             dragState.noteStartY = note.y;
             document.body.classList.add("is-dragging");
 
-            note.el.style.pointerEvents = "none";
+            // note.el.style.pointerEvents = "none";
           }
 
           if (e.target.closest(".note__resize-handle")) {
@@ -1702,6 +1702,8 @@
         if (dragState.active && dragState.noteId) {
           const note = notes[dragState.noteId];
           if (!note) return;
+
+          if (dragState.action === "move") note.el.style.pointerEvents = "none";
       
           const deltaX = e.clientX - dragState.startX;
           const deltaY = e.clientY - dragState.startY;

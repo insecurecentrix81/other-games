@@ -1635,6 +1635,8 @@
           const noteEl = e.target.closest(".note");
           if (!noteEl) return;
 
+          if (e.target.closest(".note__title--editing")) return; 
+
           const noteId = noteEl.dataset.noteId;
           const note = notes[noteId];
           if (!note) return;

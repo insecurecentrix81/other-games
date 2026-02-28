@@ -1212,7 +1212,9 @@
         async function exportAllNotes() {
           const noteDataPromises = Object.values(notes).map(note => note.toJSON());
           const notesData = await Promise.all(noteDataPromises);
-          const sectionsData = Object.values(sections).map(s => s.toJSON());
+          const sectionsData = Object.values(sections)
+            .sort((a, b) => a.order - b.order)
+            .map(s => s.toJSON());
 
           return JSON.stringify({
             version: "9.0.0",
@@ -1230,6 +1232,8 @@
 
             // Import sections first
             if (data.sections && data.sections.length > 0) {
+              data.sections.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+              
               for (const sectionData of data.sections) {
                 const section = new Section(sectionData);
                 sections[section.id] = section;

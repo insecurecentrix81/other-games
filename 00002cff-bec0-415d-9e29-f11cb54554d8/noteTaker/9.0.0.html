@@ -574,12 +574,13 @@
         };
 
         // ============ Section Class ============
-        class Section {
+                class Section {
           constructor(config = {}) {
             this.id = config.id ?? this.generateId();
             this.name = config.name ?? "New Section";
             this.isEncrypted = config.isEncrypted ?? false;
             this.encryptedMarker = config.encryptedMarker ?? null;
+            this.encryptedNotesData = config.encryptedNotesData ?? null; // Store encrypted notes
             this.isLocked = this.isEncrypted;
             this.cachedPassword = null;
             this.order = config.order ?? Date.now();
@@ -606,8 +607,6 @@
             this.el.appendChild(this.nameEl);
 
             this.updateDisplay();
-
-            // Insert before the add button
             sectionBarEl.insertBefore(this.el, addSectionBtnEl);
           }
 
@@ -619,7 +618,6 @@
           }
 
           async encrypt(password) {
-            // Store an encrypted marker to verify password later
             this.encryptedMarker = await Crypto.encrypt("SECTION_VERIFIED", password);
             this.isEncrypted = true;
             this.isLocked = false;
@@ -634,6 +632,22 @@
                 this.isLocked = false;
                 this.cachedPassword = password;
                 this.updateDisplay();
+                
+                // Restore notes securely stored inside this section
+                if (this.encryptedNotesData) {
+                  try {
+                    const decryptedNotesStr = await Crypto.decrypt(this.encryptedNotesData, password);
+                    const parsedNotes = JSON.parse(decryptedNotesStr);
+                    for (const noteData of parsedNotes) {
+                      const note = new Note({ sectionId: this.id });
+                      note.fromJSON(noteData);
+                      notes[note.id] = note;
+                    }
+                  } catch (e) {
+                    console.error("Failed to decrypt notes in section", e);
+                  }
+                  this.encryptedNotesData = null; // Removed from stored blob once extracted to memory
+                }
                 return true;
               }
             } catch (e) {
@@ -642,8 +656,25 @@
             return false;
           }
 
-          lock() {
-            if (this.isEncrypted) {
+          async lock() {
+            if (this.isEncrypted && !this.isLocked) {
+              // Serialize and encrypt all notes before destroying them from memory
+              const notesPromises = [];
+              const noteIds = [];
+              for (const id in notes) {
+                if (notes[id].sectionId === this.id) {
+                  notesPromises.push(notes[id].toJSON());
+                  noteIds.push(id);
+                }
+              }
+              const notesInSection = await Promise.all(notesPromises);
+              this.encryptedNotesData = await Crypto.encrypt(JSON.stringify(notesInSection), this.cachedPassword);
+              
+              // Destroy notes from memory so they can't be inspected via DevTools
+              for (const id of noteIds) {
+                if (notes[id]) notes[id].destroy();
+              }
+              
               this.isLocked = true;
               this.cachedPassword = null;
               this.updateDisplay();
@@ -655,7 +686,12 @@
               const marker = await Crypto.decrypt(this.encryptedMarker, currentPassword);
               if (marker === "SECTION_VERIFIED") {
                 this.encryptedMarker = await Crypto.encrypt("SECTION_VERIFIED", newPassword);
-                if (!this.isLocked) {
+                
+                // If section is locked, re-encrypt the stored blob
+                if (this.isLocked && this.encryptedNotesData) {
+                  const decryptedNotesStr = await Crypto.decrypt(this.encryptedNotesData, currentPassword);
+                  this.encryptedNotesData = await Crypto.encrypt(decryptedNotesStr, newPassword);
+                } else if (!this.isLocked) {
                   this.cachedPassword = newPassword;
                 }
                 return true;
@@ -671,9 +707,12 @@
               try {
                 const marker = await Crypto.decrypt(this.encryptedMarker, password);
                 if (marker === "SECTION_VERIFIED") {
+                  if (this.isLocked) await this.unlock(password); // Unlock to restore notes first
+                  
                   this.isEncrypted = false;
                   this.isLocked = false;
                   this.encryptedMarker = null;
+                  this.encryptedNotesData = null;
                   this.cachedPassword = null;
                   this.updateDisplay();
                   resolve(true);
@@ -705,9 +744,8 @@
 
             input.addEventListener("blur", finishRename);
             input.addEventListener("keydown", (e) => {
-              if (e.key === "Enter") {
-                input.blur();
-              } else if (e.key === "Escape") {
+              if (e.key === "Enter") input.blur();
+              else if (e.key === "Escape") {
                 input.value = this.name;
                 input.blur();
               }
@@ -720,6 +758,7 @@
               name: this.name,
               isEncrypted: this.isEncrypted,
               encryptedMarker: this.encryptedMarker,
+              encryptedNotesData: this.encryptedNotesData, // Added for storage
               order: this.order
             };
           }
@@ -1049,6 +1088,7 @@
             }
 
             return {
+              id: this.id,
               sectionId: this.sectionId,
               x: this.x,
               y: this.y,
@@ -1065,6 +1105,10 @@
           }
 
           fromJSON(data) {
+            if (data.id) {
+               this.id = data.id;
+               this.el.dataset.noteId = this.id;
+            }
             this.sectionId = data.sectionId ?? this.sectionId;
             this.x = data.x ?? this.x;
             this.y = data.y ?? this.y;
@@ -1210,11 +1254,38 @@
 
         // ============ Note Manager ============
         async function exportAllNotes() {
-          const noteDataPromises = Object.values(notes).map(note => note.toJSON());
-          const notesData = await Promise.all(noteDataPromises);
-          const sectionsData = Object.values(sections)
-            .sort((a, b) => a.order - b.order)
-            .map(s => s.toJSON());
+          const sectionsData = [];
+          
+          for (const sectionId in sections) {
+            const section = sections[sectionId];
+            const secData = section.toJSON();
+
+            if (section.isEncrypted) {
+              if (!section.isLocked && section.cachedPassword) {
+                // Section is unlocked; bundle its notes and encrypt them for secure storage.
+                const sectionNotesPromises = [];
+                for (const id in notes) {
+                  if (notes[id].sectionId === sectionId) sectionNotesPromises.push(notes[id].toJSON());
+                }
+                const sectionNotes = await Promise.all(sectionNotesPromises);
+                secData.encryptedNotesData = await Crypto.encrypt(JSON.stringify(sectionNotes), section.cachedPassword);
+              } else {
+                // Section is locked; pass the already encrypted blob directly.
+                secData.encryptedNotesData = section.encryptedNotesData;
+              }
+            }
+            sectionsData.push(secData);
+          }
+
+          const unencryptedNotesPromises = [];
+          for (const id in notes) {
+            // ONLY push notes that belong to unencrypted sections into the global view
+            const section = sections[notes[id].sectionId];
+            if (!section || !section.isEncrypted) {
+              unencryptedNotesPromises.push(notes[id].toJSON());
+            }
+          }
+          const notesData = await Promise.all(unencryptedNotesPromises);
 
           return JSON.stringify({
             version: "9.0.0",
@@ -1374,15 +1445,22 @@
             const section = sections[id];
             const item = document.createElement("div");
             item.className = "context-menu__item";
-            item.textContent = section.name + (section.isEncrypted ? " 🔒" : "");
-            item.dataset.sectionId = id;
-            item.addEventListener("click", () => {
-              if (contextTargetNoteId && notes[contextTargetNoteId]) {
-                notes[contextTargetNoteId].moveToSection(id);
-                scheduleSave();
-              }
-              hideContextMenu();
-            });
+            
+            if (section.isEncrypted && section.isLocked) {
+              item.textContent = section.name + " 🔒 (Unlock to move)";
+              item.style.opacity = "0.5";
+              item.style.cursor = "not-allowed";
+            } else {
+              item.textContent = section.name + (section.isEncrypted ? " 🔓" : "");
+              item.dataset.sectionId = id;
+              item.addEventListener("click", () => {
+                if (contextTargetNoteId && notes[contextTargetNoteId]) {
+                  notes[contextTargetNoteId].moveToSection(id);
+                  scheduleSave();
+                }
+                hideContextMenu();
+              });
+            }
             moveToSectionMenuEl.appendChild(item);
           }
 
@@ -1506,7 +1584,7 @@
                 const password = prompt("Enter password to encrypt this section:");
                 if (password) {
                   await section.encrypt(password);
-                  section.lock();
+                  await section.lock(); // <-- Await Added
                   if (currentSectionId === section.id) {
                     showSectionLockOverlay(section.id);
                   }
@@ -1517,7 +1595,7 @@
 
             case "lock-section":
               if (section && section.isEncrypted && !section.isLocked) {
-                section.lock();
+                await section.lock(); // <-- Await Added
                 if (currentSectionId === section.id) {
                   showSectionLockOverlay(section.id);
                 }
@@ -1771,12 +1849,16 @@
                 const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
                 const tabEl = dropTarget ? dropTarget.closest('.section-tab:not(.section-tab--add)') : null;
                 
-                // If dropped on a different section tab, move the note
                 if (tabEl) {
                   const targetSectionId = tabEl.dataset.sectionId;
                   if (targetSectionId && targetSectionId !== note.sectionId) {
-                    note.moveToSection(targetSectionId);
-                    scheduleSave();
+                    const targetSection = sections[targetSectionId];
+                    if (targetSection && targetSection.isEncrypted && targetSection.isLocked) {
+                      alert("Cannot move note to a locked section. Please unlock it first.");
+                    } else {
+                      note.moveToSection(targetSectionId);
+                      scheduleSave();
+                    }
                   }
                 }
               }

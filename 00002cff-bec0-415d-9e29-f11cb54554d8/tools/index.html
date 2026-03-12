@@ -34,7 +34,7 @@
                         
                         // IMPORTANT: The link must include the folder path
                         const fileNameClean = file.name.replace('.html', '');
-                        li.innerHTML = `<a href="${folderPath}/${file.name}">${fileNameClean}</a>`;
+                        li.innerHTML = `<a href="${file.name}">${fileNameClean}</a>`;
                         
                         listElement.appendChild(li);
                     }

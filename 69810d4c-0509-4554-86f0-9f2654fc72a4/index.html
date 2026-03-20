@@ -175,7 +175,8 @@
 const PROJECTS_KEY = 'myCodeEditor_projectList';
 const CURRENT_PROJECT_KEY = 'myCodeEditor_currentProject';
 const FILES_PREFIX = 'myCodeEditor_files_';
-
+const START_NEW_PROJECT_ON_EACH_OPEN = true;
+    
 const defaultFiles = {
     'index.html': {
         language: 'html',
@@ -267,10 +268,35 @@ const editorApp = {
     },
 
     loadProjects: function() {
+        if (START_NEW_PROJECT_ON_EACH_OPEN) {
+            // Always start with a brand-new project
+            const newProject = 'Scratch-' + Date.now();
+    
+            // Optional: clear old per-file keys so LocalStorage doesn't keep growing
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith(FILES_PREFIX)) localStorage.removeItem(k);
+            });
+    
+            this.projects = [newProject];
+            this.currentProject = newProject;
+    
+            localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+            localStorage.setItem(CURRENT_PROJECT_KEY, newProject);
+            localStorage.setItem(
+                FILES_PREFIX + newProject,
+                JSON.stringify(JSON.parse(JSON.stringify(defaultFiles)))
+            );
+    
+            this.updateProjectSelect();
+            this.loadFiles();
+            return;
+        }
+    
+        // Existing behavior (kept for future toggle)
         const storedProjects = localStorage.getItem(PROJECTS_KEY);
         this.projects = storedProjects ? JSON.parse(storedProjects) : ['Default Project'];
         if (!localStorage.getItem(PROJECTS_KEY)) localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-
+    
         const storedCurrent = localStorage.getItem(CURRENT_PROJECT_KEY);
         this.currentProject = (storedCurrent && this.projects.includes(storedCurrent)) ? storedCurrent : this.projects[0];
         
@@ -314,6 +340,12 @@ const editorApp = {
         this.activeFile = null;
         this.loadFiles();
         this.updateProjectSelect();
+        
+        // Clean up old Monaco models so they don't collide with the new project
+        if (window.monaco) {
+            monaco.editor.getModels().forEach(model => model.dispose());
+        }
+        
         if (this.editorInstance) this.switchFile(this.activeFile);
         this.renderSidebar();
     },
@@ -337,19 +369,45 @@ const editorApp = {
     },
 
     initMonaco: function() {
+        // 1. Fix the Worker NetworkError / importScripts Cross-Origin issue
+        window.MonacoEnvironment = {
+            getWorkerUrl: function(workerId, label) {
+                const code = `
+                    self.MonacoEnvironment = {
+                        baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/'
+                    };
+                    importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/base/worker/workerMain.js');
+                `;
+                const blob = new Blob([code], { type: 'application/javascript' });
+                return URL.createObjectURL(blob);
+            }
+        };
+
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
         require(['vs/editor/editor.main'], () => {
             this.editorInstance = monaco.editor.create(document.getElementById('monaco-root'), {
-                value: this.files[this.activeFile].content,
-                language: this.files[this.activeFile].language,
                 theme: 'vs-dark',
                 automaticLayout: true,
                 minimap: { enabled: false },
                 fontSize: 14
             });
+
+            // 2. Properly initialize the first model
+            const uri = monaco.Uri.parse('file:///' + this.activeFile);
+            let initialModel = monaco.editor.getModel(uri);
+            if (!initialModel) {
+                initialModel = monaco.editor.createModel(this.files[this.activeFile].content, this.files[this.activeFile].language, uri);
+            }
+            this.editorInstance.setModel(initialModel);
+
+            // 3. Debounce save to prevent the UI from freezing on fast typing
+            let saveTimeout;
             this.editorInstance.onDidChangeModelContent(() => {
                 this.files[this.activeFile].content = this.editorInstance.getValue();
-                this.saveFiles();
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    this.saveFiles();
+                }, 750); // Will wait for a 750ms pause in typing before saving
             });
             this.renderSidebar();
         });
@@ -376,9 +434,14 @@ const editorApp = {
         this.activeFile = name;
         const file = this.files[name];
         if (this.editorInstance && file) {
-            const model = this.editorInstance.getModel();
-            monaco.editor.setModelLanguage(model, file.language);
-            this.editorInstance.setValue(file.content);
+            const uri = monaco.Uri.parse('file:///' + name);
+            let model = monaco.editor.getModel(uri);
+            
+            if (!model) {
+                // Creates a background model preserving undo history & scroll positions
+                model = monaco.editor.createModel(file.content, file.language, uri);
+            }
+            this.editorInstance.setModel(model);
         }
         this.renderSidebar();
     },
@@ -386,6 +449,14 @@ const editorApp = {
     deleteFile: function(name) {
         if (!confirm('Delete ' + name + '?')) return;
         delete this.files[name];
+        
+        // Dispose model to free memory
+        if (window.monaco) {
+            const uri = monaco.Uri.parse('file:///' + name);
+            const model = monaco.editor.getModel(uri);
+            if (model) model.dispose();
+        }
+
         if (this.activeFile === name) this.activeFile = Object.keys(this.files)[0] || '';
         if (this.activeFile) this.switchFile(this.activeFile);
         this.renderSidebar();
@@ -445,10 +516,32 @@ const editorApp = {
             const old = this.contextMenuTarget;
             const newName = prompt('Rename to:', old);
             if (!newName || this.files[newName]) return;
+            
             this.files[newName] = this.files[old];
+            
+            // Auto-update language based on the new extension
+            let lang = 'plaintext';
+            if (newName.endsWith('.html')) lang = 'html';
+            else if (newName.endsWith('.css')) lang = 'css';
+            else if (newName.endsWith('.js')) lang = 'javascript';
+            else if (newName.endsWith('.json')) lang = 'json';
+            this.files[newName].language = lang;
+
             delete this.files[old];
-            if (this.activeFile === old) this.activeFile = newName;
-            this.renderSidebar(); this.saveFiles();
+            
+            // Dispose the old model
+            if (window.monaco) {
+                const oldUri = monaco.Uri.parse('file:///' + old);
+                const oldModel = monaco.editor.getModel(oldUri);
+                if (oldModel) oldModel.dispose();
+            }
+
+            if (this.activeFile === old) {
+                this.activeFile = newName;
+                this.switchFile(newName);
+            }
+            this.renderSidebar(); 
+            this.saveFiles();
         };
         document.getElementById('ctx-delete').onclick = () => this.deleteFile(this.contextMenuTarget);
     },

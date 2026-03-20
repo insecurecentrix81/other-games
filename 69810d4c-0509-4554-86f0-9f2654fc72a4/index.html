@@ -83,7 +83,7 @@
     </style>
 
     <!-- avoid using latest.js for compatibility reasons -->
-    <!--<script src="https://securecentrix81.github.io/api/centrix/localStorage-proxy/1.1.0.js" integrity="sha384-brOY3SIKHAj5b15WluO2EUuMmeOnuefqOHOFskOKhekJhZtE4pVqrP5JG0vs2Q8m" crossorigin="anonymous"></script>-->
+    <script src="https://securecentrix81.github.io/api/centrix/localStorage-proxy/1.1.0.js" integrity="sha384-brOY3SIKHAj5b15WluO2EUuMmeOnuefqOHOFskOKhekJhZtE4pVqrP5JG0vs2Q8m" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -287,23 +287,19 @@ const editorApp = {
         this.projects = [];
       }
     
-      if (this.projects.length === 0) {
-        const defaultName = 'My Project';
-        this.projects.push(defaultName);
-        localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-        localStorage.setItem(
-          FILES_PREFIX + defaultName,
-          JSON.stringify(JSON.parse(JSON.stringify(defaultFiles)))
-        );
-      }
+      // Always create a new project on every page load
+      const newProjectName = `My Project ${Date.now()}`;
     
-      const storedCurrent = localStorage.getItem(CURRENT_PROJECT_KEY);
-      this.currentProject =
-        storedCurrent && this.projects.includes(storedCurrent)
-          ? storedCurrent
-          : this.projects[0];
+      this.projects.push(newProjectName);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+      localStorage.setItem(
+        FILES_PREFIX + newProjectName,
+        JSON.stringify(JSON.parse(JSON.stringify(defaultFiles)))
+      );
     
+      this.currentProject = newProjectName;
       localStorage.setItem(CURRENT_PROJECT_KEY, this.currentProject);
+    
       this.updateProjectSelect();
       this.loadFiles();
     },

@@ -70,6 +70,16 @@
         #context-menu { position: fixed; z-index: 10000; width: 150px; background: var(--menu-bg); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.5); display: none; padding: 5px 0; border-radius: 4px; }
         .context-menu-item { padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text); display: flex; align-items: center; }
         .context-menu-item:hover { background: var(--menu-hover); color: #fff; }
+
+        #projectSelect {
+          background: #444;
+          color: #fff;
+        }
+        
+        #projectSelect option {
+          background: #252526;
+          color: #fff;
+        }
     </style>
 
     <!-- avoid using latest.js for compatibility reasons -->
@@ -92,7 +102,6 @@
                 title="Open preview in new tab (fullscreen)">
             ⛶ Fullscreen
         </button>
-</div>
     </div>
 </header>
 
@@ -270,48 +279,67 @@ const editorApp = {
     },
 
     loadProjects: function() {
-        // 1. Load the list of project names
+      try {
         const storedProjects = localStorage.getItem(PROJECTS_KEY);
         this.projects = storedProjects ? JSON.parse(storedProjects) : [];
+        if (!Array.isArray(this.projects)) this.projects = [];
+      } catch {
+        this.projects = [];
+      }
     
-        // 2. If the list is empty (first time ever), create a default project
-        if (this.projects.length === 0) {
-            const defaultName = 'My Project';
-            this.projects.push(defaultName);
-            localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-            localStorage.setItem(FILES_PREFIX + defaultName, JSON.stringify(JSON.parse(JSON.stringify(defaultFiles))));
-        }
+      if (this.projects.length === 0) {
+        const defaultName = 'My Project';
+        this.projects.push(defaultName);
+        localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+        localStorage.setItem(
+          FILES_PREFIX + defaultName,
+          JSON.stringify(JSON.parse(JSON.stringify(defaultFiles)))
+        );
+      }
     
-        // 3. Determine which project to open (last used or the first in list)
-        const storedCurrent = localStorage.getItem(CURRENT_PROJECT_KEY);
-        this.currentProject = (storedCurrent && this.projects.includes(storedCurrent)) 
-            ? storedCurrent 
-            : this.projects[0];
+      const storedCurrent = localStorage.getItem(CURRENT_PROJECT_KEY);
+      this.currentProject =
+        storedCurrent && this.projects.includes(storedCurrent)
+          ? storedCurrent
+          : this.projects[0];
     
-        // 4. Finalize
-        localStorage.setItem(CURRENT_PROJECT_KEY, this.currentProject);
-        this.updateProjectSelect();
-        this.loadFiles();
+      localStorage.setItem(CURRENT_PROJECT_KEY, this.currentProject);
+      this.updateProjectSelect();
+      this.loadFiles();
     },
 
     updateProjectSelect: function() {
-        const select = document.getElementById('projectSelect');
-        select.innerHTML = '';
-        this.projects.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p; opt.textContent = p; opt.selected = (p === this.currentProject);
-            select.appendChild(opt);
-        });
+      const select = document.getElementById('projectSelect');
+      select.innerHTML = '';
+    
+      this.projects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        select.appendChild(opt);
+      });
+    
+      select.value = this.currentProject;
     },
 
     createNewProject: function() {
-        const name = prompt('Project name:');
-        if (!name || this.projects.includes(name)) return;
-        this.saveFiles();
-        this.projects.push(name);
-        localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-        localStorage.setItem(FILES_PREFIX + name, JSON.stringify(defaultFiles));
-        this.switchProject(name);
+      const name = prompt('Project name:')?.trim();
+      if (!name) return;
+      if (this.projects.includes(name)) {
+        alert('Project already exists');
+        return;
+      }
+    
+      this.saveFiles();
+      this.projects.push(name);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+    
+      localStorage.setItem(
+        FILES_PREFIX + name,
+        JSON.stringify(JSON.parse(JSON.stringify(defaultFiles)))
+      );
+    
+      this.switchProject(name);
     },
 
     deleteCurrentProject: function() {

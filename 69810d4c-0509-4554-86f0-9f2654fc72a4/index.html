@@ -140,8 +140,7 @@
         const { files, rootFile } = e.data;
         const fileMap = {};
         const imports = {};
-
-        // 1. Convert all files to Blob URLs
+    
         Object.keys(files).forEach(path => {
             const file = files[path];
             let mime = 'text/plain';
@@ -149,33 +148,29 @@
             else if (path.endsWith('.css')) mime = 'text/css';
             else if (path.endsWith('.js')) mime = 'application/javascript';
             else if (path.endsWith('.json')) mime = 'application/json';
-
+    
             const blob = new Blob([file.content], { type: mime });
             const url = URL.createObjectURL(blob);
             
-            // Normalize path (remove leading . or /)
-            const cleanPath = path.replace(/^\.?\//, '');
+            const cleanPath = path.replace(/^\.?\//, ''); // e.g., "clicker.js"
             fileMap[cleanPath] = url;
             
-            // Build Import Map entries
-            // We map "./style.css" -> "blob:..." and "style.css" -> "blob:..."
-            imports['./' + cleanPath] = url;
-            imports[cleanPath] = url;
+            // FIX: Map multiple variations to ensure the browser finds it
+            imports[cleanPath] = url;           // "clicker.js"
+            imports['./' + cleanPath] = url;    // "./clicker.js"
+            imports['/' + cleanPath] = url;     // "/clicker.js"
         });
-
-        // 2. Prepare the Index HTML with the Interceptor
+    
         if (!files[rootFile]) {
             self.postMessage({ error: 'Root file not found' });
             return;
         }
-
-        const rootContent = files[rootFile].content;
-
+    
         self.postMessage({ 
             success: true, 
             fileMap, 
             imports,
-            rootContent 
+            rootContent: files[rootFile].content 
         });
     };
 </script>

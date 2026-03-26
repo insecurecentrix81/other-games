@@ -580,7 +580,8 @@ If you already have enough information, write your final answer directly for the
           messages: msgs,
           stream: true,
           max_tokens: 1024,
-          temperature: temp,
+          temperature: 1,
+          repetition_penalty: 1.2,
           top_p: 0.7,
           chat_template_kwargs: { enable_thinking: false },
         });

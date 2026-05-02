@@ -29,7 +29,7 @@
         .workspace { display: flex; flex: 1; overflow: hidden; }
         
         /* SIDEBAR */
-        .sidebar { width: 250px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar { width: 250px; flex-shrink: 0; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .file-controls { padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 5px; }
         .file-controls input { background: #3c3c3c; border: 1px solid #555; color: white; padding: 4px; width: 100%; border-radius: 3px; }
         .file-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
@@ -52,7 +52,7 @@
         .file-item { padding-left: 24px; }
 
         /* EDITOR AREA */
-        .editor-container { flex: 1; position: relative; }
+        .editor-container { flex: 1; min-width: 0; position: relative; }
         #monaco-root { width: 100%; height: 100%; }
         
         /* LOADING OVERLAY */
@@ -81,17 +81,6 @@
             position: absolute;
             left: -3px; right: -3px; top: 0; bottom: 0;
         }
-
-        /* DRAG OVERLAY - captures mouse events so the iframe doesn't swallow them */
-        #drag-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 9999;
-            cursor: col-resize;
-            display: none;
-            background: transparent;
-        }
-        #drag-overlay.active { display: block; }
 
         /* CONTEXT MENU */
         #context-menu { position: fixed; z-index: 10000; width: 150px; background: var(--menu-bg); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.5); display: none; padding: 5px 0; border-radius: 4px; }
@@ -155,8 +144,6 @@
         <iframe id="previewFrame" sandbox="allow-scripts allow-modals allow-same-origin allow-forms"></iframe>
     </div>
 </div>
-
-<div id="drag-overlay"></div>
 
 <div id="context-menu">
     <div class="context-menu-item" id="ctx-rename">Rename</div>
@@ -290,58 +277,70 @@ const editorApp = {
         const handle = document.getElementById('resizeHandle');
         const preview = document.getElementById('previewContainer');
         const workspace = document.querySelector('.workspace');
-        const overlay = document.getElementById('drag-overlay');
-        if (!handle || !preview || !workspace || !overlay) return;
+        const sidebar = workspace?.querySelector('.sidebar');
+        if (!handle || !preview || !workspace) return;
 
         const STORAGE_KEY = 'myCodeEditor_previewWidth';
+        const MIN_PREVIEW = 200;
+        const MIN_EDITOR = 120;
         const stored = parseFloat(localStorage.getItem(STORAGE_KEY));
-        if (!isNaN(stored) && stored > 200) {
+        if (!isNaN(stored) && stored > MIN_PREVIEW) {
             preview.style.flex = `0 0 ${stored}px`;
         }
 
         let dragging = false;
+        let activePointerId = null;
 
         const onMove = (e) => {
-            if (!dragging) return;
+            if (!dragging || e.pointerId !== activePointerId) return;
             const rect = workspace.getBoundingClientRect();
-            // Preview width = distance from mouse to workspace right edge.
+            const sidebarW = sidebar ? sidebar.getBoundingClientRect().width : 0;
+            const handleW = handle.getBoundingClientRect().width;
+            const maxPreview = Math.max(
+                MIN_PREVIEW,
+                rect.width - sidebarW - handleW - MIN_EDITOR
+            );
+            // Preview width = distance from pointer to workspace right edge.
             const newWidth = Math.max(
-                200,
-                Math.min(rect.right - e.clientX, rect.width - 300)
+                MIN_PREVIEW,
+                Math.min(rect.right - e.clientX, maxPreview)
             );
             preview.style.flex = `0 0 ${newWidth}px`;
             try { localStorage.setItem(STORAGE_KEY, String(newWidth)); } catch {}
         };
 
-        const stopDrag = () => {
+        const stopDrag = (e) => {
             if (!dragging) return;
+            if (e && e.pointerId !== activePointerId) return;
             dragging = false;
+            if (activePointerId !== null && handle.hasPointerCapture?.(activePointerId)) {
+                try { handle.releasePointerCapture(activePointerId); } catch {}
+            }
+            activePointerId = null;
             handle.classList.remove('dragging');
-            overlay.classList.remove('active');
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             if (this.editorInstance) this.editorInstance.layout();
         };
 
-        handle.addEventListener('mousedown', (e) => {
+        // Pointer Events + setPointerCapture guarantees the handle keeps
+        // receiving move/up events even when the cursor goes over the iframe
+        // or briefly leaves the browser window mid-drag.
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
             dragging = true;
+            activePointerId = e.pointerId;
+            try { handle.setPointerCapture(e.pointerId); } catch {}
             handle.classList.add('dragging');
-            // Overlay covers the iframe so mouse events keep flowing to the parent doc.
-            overlay.classList.add('active');
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
             e.preventDefault();
         });
 
-        document.addEventListener('mousemove', onMove);
-        overlay.addEventListener('mousemove', onMove);
-
-        document.addEventListener('mouseup', stopDrag);
-        overlay.addEventListener('mouseup', stopDrag);
-        // Safety nets: if the mouse leaves the window or the tab loses focus,
-        // make sure we don't get stuck in the dragging state.
-        window.addEventListener('blur', stopDrag);
-        document.addEventListener('mouseleave', stopDrag);
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', stopDrag);
+        handle.addEventListener('pointercancel', stopDrag);
+        handle.addEventListener('lostpointercapture', stopDrag);
     },
 
     // Initialize the Web Worker from the script tag

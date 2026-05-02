@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Directory</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; }
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 8px; }
+        a { text-decoration: none; color: #0366d6; }
+        a:hover { text-decoration: underline; }
+        .icon { margin-right: 8px; }
+        .back-link { font-weight: bold; color: #d73a49; margin-bottom: 15px; display: block; }
+    </style>
+</head>
+<body> 
+    <h1 id="title">Project Files</h1>
+    <a href="../" class="back-link" id="back-button" style="display:none;">← Up one level</a>
+    <ul id="file-list">Loading files and folders...</ul>
+
+    <script>
+        async function getFiles() {
+            const listElement = document.getElementById('file-list');
+            const backButton = document.getElementById('back-button');
+            
+            try {
+                // Parse GitHub Pages URL components
+                const hostParts = location.hostname.split('.');
+                const username = hostParts[0];
+                const pathSegments = location.pathname.split('/').filter(s => s.length > 0);
+                
+                // pathSegments[0] is usually the repo name in GitHub Pages (username.github.io/repo-name/)
+                const repo = pathSegments[0];
+                // The rest is the internal folder path
+                const folderPath = pathSegments.slice(1).join('/');
+
+                // Show back button if we are deep in a subfolder
+                if (folderPath.length > 0) {
+                    backButton.style.display = 'block';
+                }
+
+                const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${folderPath}`;
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (!Array.isArray(data)) {
+                    listElement.innerHTML = '<li>Error: Folder not found or empty.</li>';
+                    return;
+                }
+
+                listElement.innerHTML = ''; // Clear loading text
+
+                // Sort: Folders first, then files
+                data.sort((a, b) => {
+                    if (a.type === b.type) return a.name.localeCompare(b.name);
+                    return a.type === 'dir' ? -1 : 1;
+                });
+
+                data.forEach(item => {
+                    const li = document.createElement('li');
+                    const isFolder = item.type === 'dir';
+                    
+                    // Choose icon and format link
+                    const icon = isFolder ? '📁' : '📄';
+                    const linkTarget = isFolder ? `${item.name}/` : item.name;
+                    
+                    // Display name (remove .html from files if you prefer)
+                    const displayName = isFolder ? item.name : item.name.replace('.html', '');
+
+                    li.innerHTML = `
+                        <span class="icon">${icon}</span>
+                        <a href="${linkTarget}">${displayName}${isFolder ? '/' : ''}</a>
+                    `;
+                    
+                    listElement.appendChild(li);
+                });
+
+            } catch (error) {
+                console.error("Error fetching files:", error);
+                listElement.innerHTML = '<li>Error loading directory. Check console for details.</li>';
+            }
+        }
+
+        getFiles();
+    </script>
+</body>
+</html>

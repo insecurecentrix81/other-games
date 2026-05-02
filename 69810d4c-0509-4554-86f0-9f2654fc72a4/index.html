@@ -29,7 +29,7 @@
         .workspace { display: flex; flex: 1; overflow: hidden; }
         
         /* SIDEBAR */
-        .sidebar { width: 250px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar { width: 250px; flex-shrink: 0; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .file-controls { padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 5px; }
         .file-controls input { background: #3c3c3c; border: 1px solid #555; color: white; padding: 4px; width: 100%; border-radius: 3px; }
         .file-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
@@ -52,7 +52,7 @@
         .file-item { padding-left: 24px; }
 
         /* EDITOR AREA */
-        .editor-container { flex: 1; position: relative; }
+        .editor-container { flex: 1; min-width: 0; position: relative; }
         #monaco-root { width: 100%; height: 100%; }
         
         /* LOADING OVERLAY */
@@ -61,16 +61,45 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* PREVIEW AREA */
-        .preview-container { width: 40%; background: white; border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+        .preview-container { flex: 0 0 40%; background: white; display: flex; flex-direction: column; min-width: 200px; }
         .preview-header { padding: 5px 10px; background: #eee; color: #333; font-size: 12px; border-bottom: 1px solid #ccc; font-weight: bold; display: flex; justify-content: space-between; }
         .preview-status { font-size: 10px; color: #666; }
         iframe { flex: 1; border: none; width: 100%; height: 100%; background: #fff; }
+
+        /* RESIZE HANDLE */
+        .resize-handle {
+            width: 5px;
+            background: var(--border);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.15s;
+            position: relative;
+        }
+        .resize-handle:hover, .resize-handle.dragging { background: var(--accent); }
+        .resize-handle::after {
+            content: "";
+            position: absolute;
+            left: -3px; right: -3px; top: 0; bottom: 0;
+        }
 
         /* CONTEXT MENU */
         #context-menu { position: fixed; z-index: 10000; width: 150px; background: var(--menu-bg); border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.5); display: none; padding: 5px 0; border-radius: 4px; }
         .context-menu-item { padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text); display: flex; align-items: center; }
         .context-menu-item:hover { background: var(--menu-hover); color: #fff; }
+
+        #projectSelect {
+          background: #444;
+          color: #fff;
+        }
+        
+        #projectSelect option {
+          background: #252526;
+          color: #fff;
+        }
     </style>
+
+    <!-- avoid using latest.js for compatibility reasons -->
+    <script src="/api/centrix/localStorage-proxy/1.1.0.js" integrity="sha384-brOY3SIKHAj5b15WluO2EUuMmeOnuefqOHOFskOKhekJhZtE4pVqrP5JG0vs2Q8m" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -82,6 +111,8 @@
             <button class="secondary" onclick="editorApp.createNewProject()" title="New">+</button>
             <button class="secondary" onclick="editorApp.deleteCurrentProject()" style="color: #f44336;" title="Delete">🗑</button>
         </div>
+        <button class="secondary" onclick="editorApp.exportZipProject()">Save Zip</button>
+        <button class="secondary" onclick="editorApp.openZipProjectPicker()">Load Zip</button>
         <button class="secondary" onclick="editorApp.formatCode()">Format</button>
         <button onclick="editorApp.runCode()">▶ Run</button>
         <button onclick="editorApp.openFullscreenPreview()" 
@@ -89,7 +120,6 @@
                 title="Open preview in new tab (fullscreen)">
             ⛶ Fullscreen
         </button>
-</div>
     </div>
 </header>
 
@@ -105,7 +135,8 @@
         <div id="loader"><div class="spinner"></div></div>
         <div id="monaco-root"></div>
     </div>
-    <div class="preview-container">
+    <div class="resize-handle" id="resizeHandle" title="Drag to resize"></div>
+    <div class="preview-container" id="previewContainer">
         <div class="preview-header">
             <span>Output</span>
             <span id="previewStatus" class="preview-status">Ready</span>
@@ -119,7 +150,10 @@
     <div class="context-menu-item" id="ctx-delete">Delete</div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/loader.min.js"></script>
+<input id="projectZipInput" type="file" accept=".zip,application/zip" style="display:none" onchange="editorApp.importZipProject(this.files[0]); this.value = '';">
+
+<script src="/api/cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="/api/cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/loader.min.js"></script>
 
 <!-- WORKER SCRIPT DEFINITION -->
 <!-- This worker processes files into Blobs to avoid main thread lag and prepares the import map -->
@@ -128,8 +162,7 @@
         const { files, rootFile } = e.data;
         const fileMap = {};
         const imports = {};
-
-        // 1. Convert all files to Blob URLs
+    
         Object.keys(files).forEach(path => {
             const file = files[path];
             let mime = 'text/plain';
@@ -137,33 +170,29 @@
             else if (path.endsWith('.css')) mime = 'text/css';
             else if (path.endsWith('.js')) mime = 'application/javascript';
             else if (path.endsWith('.json')) mime = 'application/json';
-
+    
             const blob = new Blob([file.content], { type: mime });
             const url = URL.createObjectURL(blob);
             
-            // Normalize path (remove leading . or /)
-            const cleanPath = path.replace(/^\.?\//, '');
+            const cleanPath = path.replace(/^\.?\//, ''); // e.g., "clicker.js"
             fileMap[cleanPath] = url;
             
-            // Build Import Map entries
-            // We map "./style.css" -> "blob:..." and "style.css" -> "blob:..."
-            imports['./' + cleanPath] = url;
-            imports[cleanPath] = url;
+            // FIX: Map multiple variations to ensure the browser finds it
+            imports[cleanPath] = url;           // "clicker.js"
+            imports['./' + cleanPath] = url;    // "./clicker.js"
+            imports['/' + cleanPath] = url;     // "/clicker.js"
         });
-
-        // 2. Prepare the Index HTML with the Interceptor
+    
         if (!files[rootFile]) {
             self.postMessage({ error: 'Root file not found' });
             return;
         }
-
-        const rootContent = files[rootFile].content;
-
+    
         self.postMessage({ 
             success: true, 
             fileMap, 
             imports,
-            rootContent 
+            rootContent: files[rootFile].content 
         });
     };
 </script>
@@ -175,7 +204,7 @@
 const PROJECTS_KEY = 'myCodeEditor_projectList';
 const CURRENT_PROJECT_KEY = 'myCodeEditor_currentProject';
 const FILES_PREFIX = 'myCodeEditor_files_';
-
+    
 const defaultFiles = {
     'index.html': {
         language: 'html',
@@ -241,6 +270,77 @@ const editorApp = {
         this.loadProjects();
         this.initMonaco();
         this.initContextMenu();
+        this.initResizer();
+    },
+
+    initResizer: function() {
+        const handle = document.getElementById('resizeHandle');
+        const preview = document.getElementById('previewContainer');
+        const workspace = document.querySelector('.workspace');
+        const sidebar = workspace?.querySelector('.sidebar');
+        if (!handle || !preview || !workspace) return;
+
+        const STORAGE_KEY = 'myCodeEditor_previewWidth';
+        const MIN_PREVIEW = 200;
+        const MIN_EDITOR = 120;
+        const stored = parseFloat(localStorage.getItem(STORAGE_KEY));
+        if (!isNaN(stored) && stored > MIN_PREVIEW) {
+            preview.style.flex = `0 0 ${stored}px`;
+        }
+
+        let dragging = false;
+        let activePointerId = null;
+
+        const onMove = (e) => {
+            if (!dragging || e.pointerId !== activePointerId) return;
+            const rect = workspace.getBoundingClientRect();
+            const sidebarW = sidebar ? sidebar.getBoundingClientRect().width : 0;
+            const handleW = handle.getBoundingClientRect().width;
+            const maxPreview = Math.max(
+                MIN_PREVIEW,
+                rect.width - sidebarW - handleW - MIN_EDITOR
+            );
+            // Preview width = distance from pointer to workspace right edge.
+            const newWidth = Math.max(
+                MIN_PREVIEW,
+                Math.min(rect.right - e.clientX, maxPreview)
+            );
+            preview.style.flex = `0 0 ${newWidth}px`;
+            try { localStorage.setItem(STORAGE_KEY, String(newWidth)); } catch {}
+        };
+
+        const stopDrag = (e) => {
+            if (!dragging) return;
+            if (e && e.pointerId !== activePointerId) return;
+            dragging = false;
+            if (activePointerId !== null && handle.hasPointerCapture?.(activePointerId)) {
+                try { handle.releasePointerCapture(activePointerId); } catch {}
+            }
+            activePointerId = null;
+            handle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            if (this.editorInstance) this.editorInstance.layout();
+        };
+
+        // Pointer Events + setPointerCapture guarantees the handle keeps
+        // receiving move/up events even when the cursor goes over the iframe
+        // or briefly leaves the browser window mid-drag.
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            dragging = true;
+            activePointerId = e.pointerId;
+            try { handle.setPointerCapture(e.pointerId); } catch {}
+            handle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', stopDrag);
+        handle.addEventListener('pointercancel', stopDrag);
+        handle.addEventListener('lostpointercapture', stopDrag);
     },
 
     // Initialize the Web Worker from the script tag
@@ -267,35 +367,63 @@ const editorApp = {
     },
 
     loadProjects: function() {
+      try {
         const storedProjects = localStorage.getItem(PROJECTS_KEY);
-        this.projects = storedProjects ? JSON.parse(storedProjects) : ['Default Project'];
-        if (!localStorage.getItem(PROJECTS_KEY)) localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-
-        const storedCurrent = localStorage.getItem(CURRENT_PROJECT_KEY);
-        this.currentProject = (storedCurrent && this.projects.includes(storedCurrent)) ? storedCurrent : this.projects[0];
-        
-        this.updateProjectSelect();
-        this.loadFiles();
+        this.projects = storedProjects ? JSON.parse(storedProjects) : [];
+        if (!Array.isArray(this.projects)) this.projects = [];
+      } catch {
+        this.projects = [];
+      }
+    
+      // Always create a new project on every page load
+      const newProjectName = `My Project ${Date.now()}`;
+    
+      this.projects.push(newProjectName);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+      localStorage.setItem(
+        FILES_PREFIX + newProjectName,
+        JSON.stringify(JSON.parse(JSON.stringify(defaultFiles)))
+      );
+    
+      this.currentProject = newProjectName;
+      localStorage.setItem(CURRENT_PROJECT_KEY, this.currentProject);
+    
+      this.updateProjectSelect();
+      this.loadFiles();
     },
 
     updateProjectSelect: function() {
-        const select = document.getElementById('projectSelect');
-        select.innerHTML = '';
-        this.projects.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p; opt.textContent = p; opt.selected = (p === this.currentProject);
-            select.appendChild(opt);
-        });
+      const select = document.getElementById('projectSelect');
+      select.innerHTML = '';
+    
+      this.projects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        select.appendChild(opt);
+      });
+    
+      select.value = this.currentProject;
     },
 
     createNewProject: function() {
-        const name = prompt('Project name:');
-        if (!name || this.projects.includes(name)) return;
-        this.saveFiles();
-        this.projects.push(name);
-        localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
-        localStorage.setItem(FILES_PREFIX + name, JSON.stringify(defaultFiles));
-        this.switchProject(name);
+      const name = prompt('Project name:')?.trim();
+      if (!name) return;
+      if (this.projects.includes(name)) {
+        alert('Project already exists');
+        return;
+      }
+    
+      this.saveFiles();
+      this.projects.push(name);
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
+    
+      localStorage.setItem(
+        FILES_PREFIX + name,
+        JSON.stringify(JSON.parse(JSON.stringify(defaultFiles)))
+      );
+    
+      this.switchProject(name);
     },
 
     deleteCurrentProject: function() {
@@ -308,24 +436,40 @@ const editorApp = {
     },
 
     switchProject: function(name) {
-        if (this.editorInstance) this.saveFiles();
+        // 1. Save current work before leaving
+        this.saveFiles();
+        
+        // 2. Update current project state
         this.currentProject = name;
         localStorage.setItem(CURRENT_PROJECT_KEY, name);
-        this.activeFile = null;
+        
+        // 3. Clear existing Monaco models to prevent "Model already exists" errors
+        if (window.monaco) {
+            monaco.editor.getModels().forEach(model => model.dispose());
+        }
+    
+        // 4. Reload files from LocalStorage for the NEW project
+        this.activeFile = null; // Reset active file so loadFiles can pick a valid one
         this.loadFiles();
+        
+        // 5. Update UI
         this.updateProjectSelect();
-        if (this.editorInstance) this.switchFile(this.activeFile);
         this.renderSidebar();
+        
+        // 6. Load the content into the editor
+        if (this.activeFile) {
+            this.switchFile(this.activeFile);
+        }
     },
 
     loadFiles: function() {
         const key = FILES_PREFIX + this.currentProject;
         const stored = localStorage.getItem(key);
         this.files = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(defaultFiles));
-        if (!this.activeFile || !this.files[this.activeFile]) this.activeFile = 'index.html';
-        // Ensure index.html exists
-        if (!this.files['index.html']) {
-            this.activeFile = Object.keys(this.files)[0];
+        
+        // Ensure we pick a valid file from the new project
+        if (!this.activeFile || !this.files[this.activeFile]) {
+            this.activeFile = this.files['index.html'] ? 'index.html' : Object.keys(this.files)[0];
         }
     },
 
@@ -336,21 +480,182 @@ const editorApp = {
         localStorage.setItem(FILES_PREFIX + this.currentProject, JSON.stringify(this.files));
     },
 
+    detectLanguage: function(name) {
+        if (name.endsWith('.html')) return 'html';
+        if (name.endsWith('.css')) return 'css';
+        if (name.endsWith('.js')) return 'javascript';
+        if (name.endsWith('.json')) return 'json';
+        return 'plaintext';
+    },
+
+    getZipProjectMetadataPath: function() {
+        return '.securecentrix-project.json';
+    },
+
+    sanitizeDownloadName: function(name) {
+        return (name || 'project').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-');
+    },
+
+    normalizeZipPath: function(path) {
+        const parts = String(path || '')
+            .replace(/\\/g, '/')
+            .replace(/^\/+/, '')
+            .split('/')
+            .filter(part => part && part !== '.' && part !== '..');
+        return parts.join('/');
+    },
+
+    downloadBlob: function(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+
+    exportZipProject: async function() {
+        if (!window.JSZip) {
+            alert('Zip support failed to load. Check your network connection and try again.');
+            return;
+        }
+
+        this.saveFiles();
+
+        const zip = new JSZip();
+        Object.keys(this.files).sort().forEach(path => {
+            zip.file(path, this.files[path].content || '');
+        });
+        zip.file(this.getZipProjectMetadataPath(), JSON.stringify({
+            app: 'securecentrix-project-editor',
+            version: 1,
+            projectName: this.currentProject,
+            activeFile: this.activeFile
+        }, null, 2));
+
+        try {
+            const blob = await zip.generateAsync({ type: 'blob' });
+            this.downloadBlob(blob, `${this.sanitizeDownloadName(this.currentProject)}.zip`);
+        } catch (err) {
+            console.error(err);
+            alert('Could not save project zip.');
+        }
+    },
+
+    openZipProjectPicker: function() {
+        document.getElementById('projectZipInput').click();
+    },
+
+    readZipProject: async function(file) {
+        const zip = await JSZip.loadAsync(file);
+        const metadataPath = this.getZipProjectMetadataPath();
+        let metadata = {};
+
+        const metadataFile = zip.file(metadataPath);
+        if (metadataFile) {
+            try {
+                metadata = JSON.parse(await metadataFile.async('string'));
+            } catch {
+                metadata = {};
+            }
+        }
+
+        const files = {};
+        const reads = [];
+        zip.forEach((rawPath, entry) => {
+            if (entry.dir || rawPath === metadataPath || rawPath.startsWith('__MACOSX/')) return;
+            const normalized = this.normalizeZipPath(rawPath);
+            if (!normalized || normalized === '.DS_Store' || normalized.endsWith('/.DS_Store')) return;
+            reads.push(entry.async('string').then(content => {
+                files[normalized] = {
+                    language: this.detectLanguage(normalized),
+                    content
+                };
+            }));
+        });
+
+        await Promise.all(reads);
+        return { files, metadata };
+    },
+
+    importZipProject: async function(file) {
+        if (!file) return;
+        if (!window.JSZip) {
+            alert('Zip support failed to load. Check your network connection and try again.');
+            return;
+        }
+        if (!confirm(`Replace "${this.currentProject}" with files from "${file.name}"?`)) return;
+
+        try {
+            const { files, metadata } = await this.readZipProject(file);
+            if (!Object.keys(files).length) {
+                alert('No files were found in that zip.');
+                return;
+            }
+
+            this.files = files;
+            this.activeFile = files[metadata.activeFile]
+                ? metadata.activeFile
+                : (files['index.html'] ? 'index.html' : Object.keys(files).sort()[0]);
+            this.expandedFolders = new Set();
+
+            if (window.monaco) {
+                monaco.editor.getModels().forEach(model => model.dispose());
+            }
+
+            this.renderSidebar();
+            if (this.activeFile) this.switchFile(this.activeFile);
+            this.saveFiles();
+            this.runCode();
+        } catch (err) {
+            console.error(err);
+            alert('Could not load project zip.');
+        }
+    },
+
     initMonaco: function() {
+        // 1. Fix the Worker CORS issue
+        window.MonacoEnvironment = {
+            getWorkerUrl: function(workerId, label) {
+                const code = `
+                    self.MonacoEnvironment = { baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/' };
+                    importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/base/worker/workerMain.js');
+                `;
+                const blob = new Blob([code], { type: 'application/javascript' });
+                return URL.createObjectURL(blob);
+            }
+        };
+    
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
+    
         require(['vs/editor/editor.main'], () => {
             this.editorInstance = monaco.editor.create(document.getElementById('monaco-root'), {
-                value: this.files[this.activeFile].content,
-                language: this.files[this.activeFile].language,
                 theme: 'vs-dark',
                 automaticLayout: true,
                 minimap: { enabled: false },
                 fontSize: 14
             });
+    
+            // 2. Properly initialize the first model using your existing helper
+            if (this.activeFile && this.files[this.activeFile]) {
+                this.switchFile(this.activeFile);
+            }
+    
+            // 3. Debounce save logic
+            let saveTimeout;
             this.editorInstance.onDidChangeModelContent(() => {
-                this.files[this.activeFile].content = this.editorInstance.getValue();
-                this.saveFiles();
+                // Check if activeFile exists to prevent crashes
+                if (this.activeFile && this.files[this.activeFile]) {
+                    this.files[this.activeFile].content = this.editorInstance.getValue();
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        this.saveFiles();
+                    }, 750);
+                }
             });
+    
             this.renderSidebar();
         });
     },
@@ -376,9 +681,14 @@ const editorApp = {
         this.activeFile = name;
         const file = this.files[name];
         if (this.editorInstance && file) {
-            const model = this.editorInstance.getModel();
-            monaco.editor.setModelLanguage(model, file.language);
-            this.editorInstance.setValue(file.content);
+            const uri = monaco.Uri.parse('file:///' + name);
+            let model = monaco.editor.getModel(uri);
+            
+            if (!model) {
+                // Creates a background model preserving undo history & scroll positions
+                model = monaco.editor.createModel(file.content, file.language, uri);
+            }
+            this.editorInstance.setModel(model);
         }
         this.renderSidebar();
     },
@@ -386,6 +696,14 @@ const editorApp = {
     deleteFile: function(name) {
         if (!confirm('Delete ' + name + '?')) return;
         delete this.files[name];
+        
+        // Dispose model to free memory
+        if (window.monaco) {
+            const uri = monaco.Uri.parse('file:///' + name);
+            const model = monaco.editor.getModel(uri);
+            if (model) model.dispose();
+        }
+
         if (this.activeFile === name) this.activeFile = Object.keys(this.files)[0] || '';
         if (this.activeFile) this.switchFile(this.activeFile);
         this.renderSidebar();
@@ -445,10 +763,32 @@ const editorApp = {
             const old = this.contextMenuTarget;
             const newName = prompt('Rename to:', old);
             if (!newName || this.files[newName]) return;
+            
             this.files[newName] = this.files[old];
+            
+            // Auto-update language based on the new extension
+            let lang = 'plaintext';
+            if (newName.endsWith('.html')) lang = 'html';
+            else if (newName.endsWith('.css')) lang = 'css';
+            else if (newName.endsWith('.js')) lang = 'javascript';
+            else if (newName.endsWith('.json')) lang = 'json';
+            this.files[newName].language = lang;
+
             delete this.files[old];
-            if (this.activeFile === old) this.activeFile = newName;
-            this.renderSidebar(); this.saveFiles();
+            
+            // Dispose the old model
+            if (window.monaco) {
+                const oldUri = monaco.Uri.parse('file:///' + old);
+                const oldModel = monaco.editor.getModel(oldUri);
+                if (oldModel) oldModel.dispose();
+            }
+
+            if (this.activeFile === old) {
+                this.activeFile = newName;
+                this.switchFile(newName);
+            }
+            this.renderSidebar(); 
+            this.saveFiles();
         };
         document.getElementById('ctx-delete').onclick = () => this.deleteFile(this.contextMenuTarget);
     },

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Saharsh 3.0 Mini</title>
+    <title>Saharsh 3.0 Pico</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -25,7 +25,7 @@
         width: 100vw;
         height: 100vh;
         /* The Image */
-        background-image: url('https://securecentrix81.github.io/other-games/28ffa7a0-31e3-43da-b535-39ea89597a60/saharsh-3.0-mini-background-v1.png');
+        background-image: url('/saharsh-3.0-mini-background-v1.png');
         /* This makes it repeat infinitely */
         background-repeat: repeat; 
         /* This "zooms" it in by forcing the tile size to be large */
@@ -182,7 +182,7 @@
     <!-- Loading Screen -->
     <div id="loading-screen">
       <div class="loading-icon"></div>
-      <div class="loading-title">Saharsh 3.0 Mini</div>
+      <div class="loading-title">Saharsh 3.0 Pico</div>
       <div class="loading-status" id="loading-status">Initializing...</div>
       <div class="loading-progress">
         <div class="loading-progress-bar" id="loading-progress-bar"></div>
@@ -192,7 +192,7 @@
     <!-- Main Container -->
     <div class="container" id="main-container" style="display: none;">
       <div class="header">
-        <h1>Saharsh 3.0 Mini</h1>
+        <h1>Saharsh 3.0 Pico</h1>
         <button class="btn-clear" id="clear-btn">Clear</button>
       </div>
       <div id="chat-box">
@@ -375,7 +375,7 @@
       import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
       // const SELECTED_MODEL = "Qwen3-1.7B-q4f16_1-MLC";
-      const SELECTED_MODEL = "Llama-3.2-3B-Instruct-q4f16_1-MLC"
+      const SELECTED_MODEL = "SmolLM2-360M-Instruct-q4f16_1-MLC"
       /* ─── DOM refs ─── */
       const loadingScreen    = document.getElementById('loading-screen');
       const loadingStatus    = document.getElementById('loading-status');
@@ -394,9 +394,9 @@
       marked.setOptions({ breaks: true, gfm: true });
 
       /* ─── Prompts ─── */
-      const SYSTEM_PROMPT = `[SYSTEM] You are an AI assistant named Saharsh 3.0 Mini hosted on Secure Centrix81, a gaming website which can be accessed at https://securecentrix81.github.io. You are not hosted on a server; you are being hosted locally on the user's computer. Your proccessing power is limited by the user's computer.`;
-
-      const TOOLS_DESCRIPTION = `[SYSTEM] You have access to the following tools.
+      const SYSTEM_PROMPT = `[SYSTEM] You are an AI assistant named Saharsh 3.0 Pico hosted on Secure Centrix81, a gaming website which can be accessed at https://securecentrix81.github.io. You are not hosted on a server; you are being hosted locally on the user's computer. Your proccessing power is limited by the user's computer.`;
+const TOOLS_DESCRIPTION=""
+      const TOOLS_DESCRIPTION_ = `[SYSTEM] You have access to the following tools.
 If you need to call a tool, output ONLY a single JSON object or code block in these formats:
 
 {"tool": "name", "args": {"param": "value"}}
@@ -574,7 +574,7 @@ If you already have enough information, write your final answer directly for the
 - money giveaway(${window.usDebtFormatted}, see "giveaway")`
           }
           case "generate_key":
-            return encryptAES("/auth_immediate_ok#saharsh-3.0-mini+"+Date.now(), "ba76f35d-16d1-42d5-9740-c4bba18f56c60f8ade21-0db0-43d9-be0b-f70a75a90e8f0872ba44-168c-492e-8210-64798ab4786f02be5f8d-e1c8-49bb-b692-a7c3e25683ca09bd097a-e24d-468c-adff-e202754f0e0bf8dbcf49-3239-47cd-a748-636f7f863187ef2d6ab3-5de8-4baf-ae2c-8c2d39540352cddb025e-006f-4a83-92a6-521545081c4dff4ef70e-4768-47f6-9917-2a1560f389efd236d0eb-e088-4a85-9098-937af54db57b")
+            return encryptAES("/auth_immediate_ok#saharsh-3.0-nano+"+Date.now(), "ba76f35d-16d1-42d5-9740-c4bba18f56c60f8ade21-0db0-43d9-be0b-f70a75a90e8f0872ba44-168c-492e-8210-64798ab4786f02be5f8d-e1c8-49bb-b692-a7c3e25683ca09bd097a-e24d-468c-adff-e202754f0e0bf8dbcf49-3239-47cd-a748-636f7f863187ef2d6ab3-5de8-4baf-ae2c-8c2d39540352cddb025e-006f-4a83-92a6-521545081c4dff4ef70e-4768-47f6-9917-2a1560f389efd236d0eb-e088-4a85-9098-937af54db57b")
           default:
             return "Error: unknown tool '" + name + "'";
                     }
@@ -587,7 +587,8 @@ If you already have enough information, write your final answer directly for the
           messages: msgs,
           stream: true,
           max_tokens: 1024,
-          temperature: temp,
+          temperature: 1,
+          repetition_penalty: 1.2,
           top_p: 0.7,
           chat_template_kwargs: { enable_thinking: false },
         });

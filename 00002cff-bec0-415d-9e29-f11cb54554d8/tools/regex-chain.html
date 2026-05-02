@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regex Text Chainer</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --panel-bg: #282a36;
+            --text-color: #f8f8f2;
+            --border-color: #44475a;
+            --accent-color: #bd93f9;
+            --success-color: #50fa7b;
+            --danger-color: #ff5555;
+            --input-bg: #191a21;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--panel-bg);
+            padding: 10px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .storage-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 15px;
+            border-radius: 4px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button, select {
+            background-color: var(--border-color);
+            color: var(--text-color);
+            border: 1px solid transparent;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        select { appearance: none; padding-right: 25px; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 8px center; background-size: 12px; }
+
+        button:hover { background-color: #6272a4; }
+        button.primary { background-color: var(--accent-color); color: #000; font-weight: bold; }
+        button.primary:hover { background-color: #caa9fa; }
+        button.danger { background-color: var(--danger-color); color: #fff; padding: 4px 10px;}
+        button.danger:hover { background-color: #ff6e6e; }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .debugger-area {
+            width: 400px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, width 0.3s ease;
+        }
+
+        .debugger-area.hidden {
+            width: 0;
+            border: none;
+            overflow: hidden;
+        }
+
+        .debugger-header {
+            padding: 15px;
+            font-weight: bold;
+            border-bottom: 1px solid var(--border-color);
+            background: #21222c;
+        }
+
+        .debugger-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .debug-step {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        
+        .debug-step-header {
+            background: var(--border-color);
+            padding: 5px 10px;
+            font-size: 0.85em;
+            color: var(--accent-color);
+        }
+
+        .debug-step pre {
+            padding: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 0.9em;
+            margin: 0;
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        textarea:focus, input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--accent-color);}
+
+        #chain-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            position: relative;
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            color: var(--success-color);
+        }
+
+        .step-type-select {
+            background-color: var(--input-bg);
+            font-size: 0.85em;
+            padding: 4px 25px 4px 8px;
+            border-color: var(--border-color);
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .step-controls { display: flex; gap: 5px; }
+
+        .step-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .flex-grow { flex: 1; }
+        .w-flags { width: 60px; text-align: center; }
+
+        .add-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .error-text { color: var(--danger-color); font-size: 0.9em; margin-top: 5px; }
+
+        .step[data-type="regex-list"] .replace-container,
+        .step[data-type="plain-replace"] .flags-container {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-top">
+            <h2>Regex Text Chainer</h2>
+            <div class="controls">
+                <label><input type="checkbox" id="realtime-toggle" checked> Real-time Updates</label>
+                <label><input type="checkbox" id="debugger-toggle" checked> Show Debugger</label>
+                <button id="run-btn" class="primary" style="display: none;">Run Chain</button>
+            </div>
+        </div>
+
+        <div class="storage-bar">
+            <span style="font-size: 0.8em; color: var(--accent-color); font-weight: bold;">PRESETS:</span>
+            <input type="text" id="pattern-name" placeholder="Pattern Name..." style="width: 200px; padding: 6px;">
+            <button onclick="saveCurrentPattern()" class="primary">Save Pattern</button>
+            <div style="width: 1px; height: 20px; background: var(--border-color);"></div>
+            <select id="saved-patterns-list" style="min-width: 150px;">
+                <option value="">-- Load Saved --</option>
+            </select>
+            <button onclick="loadSelectedPattern()">Load</button>
+            <button onclick="deleteSelectedPattern()" class="danger">Delete</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <main class="editor-area">
+            <div class="input-group">
+                <label>Input Text</label>
+                <textarea id="main-input" rows="5" placeholder="Paste your starting text here..."></textarea>
+            </div>
+
+            <div id="chain-container"></div>
+
+            <div class="add-buttons">
+                <button onclick="addStep('regex-replace')">+ Add Step</button>
+            </div>
+
+            <div class="input-group">
+                <label>Final Output</label>
+                <textarea id="main-output" rows="6" readonly placeholder="Output will appear here..."></textarea>
+            </div>
+        </main>
+
+        <aside class="debugger-area" id="debugger-panel">
+            <div class="debugger-header">Step Debugger</div>
+            <div class="debugger-content" id="debugger-content"></div>
+        </aside>
+    </div>
+
+    <script>
+        const els = {
+            input: document.getElementById('main-input'),
+            output: document.getElementById('main-output'),
+            chainContainer: document.getElementById('chain-container'),
+            debuggerPanel: document.getElementById('debugger-panel'),
+            debuggerContent: document.getElementById('debugger-content'),
+            realtimeToggle: document.getElementById('realtime-toggle'),
+            debuggerToggle: document.getElementById('debugger-toggle'),
+            runBtn: document.getElementById('run-btn'),
+            patternNameInput: document.getElementById('pattern-name'),
+            savedList: document.getElementById('saved-patterns-list')
+        };
+
+        let stepCounter = 0;
+        let debounceTimer;
+        const STORAGE_KEY = 'regex_chainer_patterns';
+        const AUTOSAVE_KEY = 'regex_chainer_autosave';
+
+        function unescapeString(str) {
+            return str.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+        }
+
+        function addStep(type = 'regex-replace', values = null) {
+            stepCounter++;
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'step';
+            stepDiv.dataset.type = type;
+            stepDiv.id = `step-${stepCounter}`;
+
+            stepDiv.innerHTML = `
+                <div class="step-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size: 0.9em; opacity: 0.7;">#${stepCounter}</span>
+                        <select class="step-type-select" onchange="updateStepType(this)">
+                            <option value="regex-replace" ${type === 'regex-replace' ? 'selected' : ''}>Regex Replace</option>
+                            <option value="regex-list" ${type === 'regex-list' ? 'selected' : ''}>Regex Match (List)</option>
+                            <option value="plain-replace" ${type === 'plain-replace' ? 'selected' : ''}>Plain Text Replace</option>
+                        </select>
+                    </div>
+                    <div class="step-controls">
+                        <button onclick="moveStep(this, -1)">▲</button>
+                        <button onclick="moveStep(this, 1)">▼</button>
+                        <button class="danger" onclick="deleteStep(this)">✕</button>
+                    </div>
+                </div>
+                <div class="step-body">
+                    <div class="input-row">
+                        <input type="text" class="find flex-grow" placeholder="Find / Regex pattern..." value="${values ? escapeHTMLAttr(values.find) : ''}">
+                        <div class="flags-container">
+                            <input type="text" class="flags w-flags" placeholder="Flags" value="${values ? escapeHTMLAttr(values.flags) : 'g'}" title="Regex Flags">
+                        </div>
+                    </div>
+                    <div class="replace-container">
+                        <textarea class="replace" rows="2" placeholder="Replacement text">${values ? escapeHTMLAttr(values.replace) : ''}</textarea>
+                    </div>
+                </div>
+                <div class="error-text"></div>
+            `;
+
+            els.chainContainer.appendChild(stepDiv);
+            if (!values) triggerUpdate();
+        }
+
+        function escapeHTMLAttr(str) {
+            return str ? str.replace(/"/g, '&quot;') : '';
+        }
+
+        function updateStepType(selectEl) {
+            const step = selectEl.closest('.step');
+            step.dataset.type = selectEl.value;
+            triggerUpdate();
+        }
+
+        function deleteStep(btn) {
+            btn.closest('.step').remove();
+            triggerUpdate();
+        }
+
+        function moveStep(btn, direction) {
+            const step = btn.closest('.step');
+            const parent = step.parentNode;
+            if (direction === -1 && step.previousElementSibling) {
+                parent.insertBefore(step, step.previousElementSibling);
+            } else if (direction === 1 && step.nextElementSibling) {
+                parent.insertBefore(step.nextElementSibling, step);
+            }
+            triggerUpdate();
+        }
+
+        function runChain() {
+            let currentText = els.input.value;
+            const steps = document.querySelectorAll('.step');
+            els.debuggerContent.innerHTML = '';
+
+            steps.forEach((step, index) => {
+                const type = step.dataset.type;
+                const errorEl = step.querySelector('.error-text');
+                errorEl.textContent = '';
+
+                let findVal = step.querySelector('.find').value;
+                let replaceVal = step.querySelector('.replace').value;
+                let flagsVal = step.querySelector('.flags').value;
+
+                try {
+                    if (type === 'regex-replace' && findVal) {
+                        const regex = new RegExp(findVal, flagsVal);
+                        currentText = currentText.replace(regex, unescapeString(replaceVal));
+                    } 
+                    else if (type === 'regex-list' && findVal) {
+                        const regex = new RegExp(findVal, flagsVal);
+                        const matches = currentText.match(regex);
+                        currentText = matches ? matches.join('\n') : '';
+                    } 
+                    else if (type === 'plain-replace' && findVal) {
+                        currentText = currentText.split(findVal).join(unescapeString(replaceVal));
+                    }
+                } catch (e) {
+                    errorEl.textContent = `Error: ${e.message}`;
+                }
+                addDebuggerStep(index + 1, type, currentText);
+            });
+
+            els.output.value = currentText;
+            saveAutoState(); // Save state every time chain runs
+        }
+
+        /* --- Persistence Logic --- */
+
+        function saveAutoState() {
+            const state = {
+                inputText: els.input.value,
+                patternName: els.patternNameInput.value,
+                realtime: els.realtimeToggle.checked,
+                showDebugger: els.debuggerToggle.checked,
+                steps: []
+            };
+
+            document.querySelectorAll('.step').forEach(stepEl => {
+                state.steps.push({
+                    type: stepEl.dataset.type,
+                    find: stepEl.querySelector('.find').value,
+                    replace: stepEl.querySelector('.replace').value,
+                    flags: stepEl.querySelector('.flags').value
+                });
+            });
+
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(state));
+        }
+
+        function loadAutoState() {
+            const raw = localStorage.getItem(AUTOSAVE_KEY);
+            if (!raw) {
+                addStep('regex-replace');
+                return;
+            }
+
+            const state = JSON.parse(raw);
+            els.input.value = state.inputText || '';
+            els.patternNameInput.value = state.patternName || '';
+            els.realtimeToggle.checked = state.realtime !== undefined ? state.realtime : true;
+            els.debuggerToggle.checked = state.showDebugger !== undefined ? state.showDebugger : true;
+            
+            // Apply UI toggle states
+            els.debuggerPanel.classList.toggle('hidden', !els.debuggerToggle.checked);
+            els.runBtn.style.display = els.realtimeToggle.checked ? 'none' : 'block';
+
+            if (state.steps && state.steps.length > 0) {
+                state.steps.forEach(s => addStep(s.type, s));
+            } else {
+                addStep('regex-replace');
+            }
+            
+            runChain();
+        }
+
+        /* --- Preset Storage Logic --- */
+
+        function saveCurrentPattern() {
+            const name = els.patternNameInput.value.trim();
+            if (!name) return alert("Please enter a name for the pattern.");
+
+            const steps = [];
+            document.querySelectorAll('.step').forEach(stepEl => {
+                steps.push({
+                    type: stepEl.dataset.type,
+                    find: stepEl.querySelector('.find').value,
+                    replace: stepEl.querySelector('.replace').value,
+                    flags: stepEl.querySelector('.flags').value
+                });
+            });
+
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            saved[name] = steps;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+            
+            updateSavedList();
+            alert(`Pattern "${name}" saved!`);
+        }
+
+        function updateSavedList() {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            const currentValue = els.savedList.value;
+            
+            els.savedList.innerHTML = '<option value="">-- Load Saved --</option>';
+            Object.keys(saved).sort().forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                els.savedList.appendChild(opt);
+            });
+            els.savedList.value = currentValue;
+        }
+
+        function loadSelectedPattern() {
+            const name = els.savedList.value;
+            if (!name) return;
+
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            const steps = saved[name];
+            if (!steps) return;
+
+            if (confirm(`Load pattern "${name}"? This will replace current steps.`)) {
+                els.chainContainer.innerHTML = '';
+                stepCounter = 0;
+                steps.forEach(s => addStep(s.type, s));
+                els.patternNameInput.value = name;
+                runChain();
+            }
+        }
+
+        function deleteSelectedPattern() {
+            const name = els.savedList.value;
+            if (!name || !confirm(`Delete pattern "${name}"?`)) return;
+
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            delete saved[name];
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+            updateSavedList();
+        }
+
+        /* --- Helper & Init --- */
+
+        function addDebuggerStep(stepNum, type, text) {
+            const div = document.createElement('div');
+            div.className = 'debug-step';
+            let displayText = text.length > 5000 ? text.substring(0, 5000) + '\n... [TRUNCATED]' : text;
+            div.innerHTML = `
+                <div class="debug-step-header">Step ${stepNum}: ${type}</div>
+                <pre>${escapeHTML(displayText) || '<i>(empty)</i>'}</pre>
+            `;
+            els.debuggerContent.appendChild(div);
+        }
+
+        function triggerUpdate() {
+            saveAutoState(); // Capture structural changes immediately
+            if (els.realtimeToggle.checked) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(runChain, 250);
+            }
+        }
+
+        function escapeHTML(str) {
+            return str ? str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag])) : '';
+        }
+
+        els.chainContainer.addEventListener('input', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') triggerUpdate();
+        });
+
+        els.input.addEventListener('input', triggerUpdate);
+        els.patternNameInput.addEventListener('input', saveAutoState);
+
+        els.realtimeToggle.addEventListener('change', () => {
+            els.runBtn.style.display = els.realtimeToggle.checked ? 'none' : 'block';
+            if(els.realtimeToggle.checked) runChain();
+            saveAutoState();
+        });
+
+        els.debuggerToggle.addEventListener('change', (e) => {
+            els.debuggerPanel.classList.toggle('hidden', !e.target.checked);
+            saveAutoState();
+        });
+
+        els.runBtn.addEventListener('click', runChain);
+
+        // Initialization
+        updateSavedList();
+        loadAutoState();
+    </script>
+</body>
+</html>

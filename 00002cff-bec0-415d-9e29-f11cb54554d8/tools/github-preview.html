@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Preview</title>
+<style>
+:root {
+    --bg: #1e1e1e;
+    --panel: #252526;
+    --panel2: #2d2d2d;
+    --panel3: #383838;
+    --text: #d4d4d4;
+    --muted: #909090;
+    --accent: #007acc;
+    --accent-hov: #1591e2;
+    --border: #3c3c3c;
+    --error: #f48771;
+    --warn: #d7ba7d;
+    --ok: #4ec9b0;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    margin: 0;
+    font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+header {
+    padding: 10px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row + .row { margin-top: 8px; }
+
+label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+input[type=text], input[type=password] {
+    flex: 1;
+    min-width: 200px;
+    background: #1e1e1e;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 7px 10px;
+    border-radius: 3px;
+    font-family: 'Fira Code', ui-monospace, monospace;
+    font-size: 13px;
+}
+input[type=text]:focus, input[type=password]:focus { outline: none; border-color: var(--accent); }
+
+button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+button:hover { background: var(--accent-hov); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+button.secondary:hover { background: var(--panel3); }
+
+.status {
+    font-size: 12px;
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: 3px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    min-width: 80px;
+    text-align: center;
+}
+.status.ok { color: var(--ok); border-color: rgba(78, 201, 176, 0.4); }
+.status.warn { color: var(--warn); border-color: rgba(215, 186, 125, 0.4); }
+.status.error { color: var(--error); border-color: rgba(244, 135, 113, 0.4); }
+.status.busy { color: var(--accent); border-color: rgba(0, 122, 204, 0.5); }
+
+details { margin-top: 8px; }
+details > summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 0;
+    user-select: none;
+    list-style: none;
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: '▸ '; display: inline-block; transition: transform 0.15s; }
+details[open] > summary::before { content: '▾ '; }
+details[open] > summary { color: var(--text); }
+
+.detail-body {
+    padding: 8px 12px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+.detail-body code {
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: 'Fira Code', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--text);
+}
+.detail-body ul { margin: 6px 0; padding-left: 22px; }
+.detail-body strong { color: var(--text); font-weight: 500; }
+
+.checkbox-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.checkbox-row input[type=checkbox] { margin: 0; cursor: pointer; }
+.checkbox-row label { cursor: pointer; }
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+    background: #0e0e0e;
+}
+iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: white;
+}
+
+.placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    color: var(--muted);
+    padding: 40px 20px;
+    text-align: center;
+}
+.placeholder h2 { color: var(--text); font-weight: 500; margin: 0; font-size: 22px; }
+.placeholder p { margin: 0; max-width: 640px; }
+.placeholder code {
+    background: var(--panel2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'Fira Code', ui-monospace, monospace;
+}
+.placeholder ul {
+    text-align: left;
+    max-width: 700px;
+    line-height: 1.8;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.placeholder ul li { padding-left: 20px; position: relative; }
+.placeholder ul li::before { content: '›'; position: absolute; left: 4px; color: var(--accent); }
+.placeholder .examples {
+    margin-top: 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 16px;
+    text-align: left;
+}
+.placeholder .examples a {
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Fira Code', ui-monospace, monospace;
+}
+.placeholder .examples a:hover { text-decoration: underline; }
+.placeholder .examples > div { margin-top: 4px; }
+
+.warn-banner {
+    background: rgba(215, 186, 125, 0.1);
+    border: 1px solid rgba(215, 186, 125, 0.4);
+    color: var(--warn);
+    padding: 8px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.pat-stored {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+}
+</style>
+</head>
+<body>
+<header>
+    <div class="row">
+        <input type="text" id="urlInput" placeholder="https://github.com/owner/repo/blob/main/path/to/index.html" autocomplete="off" spellcheck="false" />
+        <button id="loadBtn">Load</button>
+        <span class="status" id="status">Initializing</span>
+    </div>
+    <div class="row">
+        <label for="patInput">PAT:</label>
+        <input type="password" id="patInput" placeholder="ghp_… or github_pat_… (only required for private repos)" autocomplete="off" spellcheck="false" style="flex: 0 1 360px;" />
+        <div class="checkbox-row">
+            <input type="checkbox" id="rememberPat" />
+            <label for="rememberPat">Remember (localStorage)</label>
+        </div>
+        <span class="pat-stored" id="patStored"></span>
+        <button class="secondary" id="clearPatBtn">Clear PAT</button>
+        <button class="secondary" id="clearCacheBtn">Clear cache</button>
+        <button class="secondary" id="unregisterBtn" title="Unregister the service worker (e.g. if it gets stuck)">Reset SW</button>
+    </div>
+    <details id="detailsPane">
+        <summary>Help &amp; resolved URL</summary>
+        <div class="detail-body" id="detailBody">
+            <strong>Supported input URL forms:</strong>
+            <ul>
+                <li><code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/blob/&lt;ref&gt;/&lt;path&gt;</code></li>
+                <li><code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/tree/&lt;ref&gt;/&lt;path&gt;</code> &mdash; treated as directory</li>
+                <li><code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/raw/&lt;ref&gt;/&lt;path&gt;</code></li>
+                <li><code>https://raw.githubusercontent.com/&lt;owner&gt;/&lt;repo&gt;/&lt;ref&gt;/&lt;path&gt;</code> (or with <code>refs/heads/</code> prefix)</li>
+            </ul>
+            <strong>Multi-path probing:</strong> for a request like <code>/path/to/file</code>, the service worker tries in order: <code>/path/to/file</code>, <code>/path/to/file.html</code>, <code>/path/to/file/index.html</code>, <code>/path/to/file/index.htm</code>. A trailing slash (<code>/path/to/dir/</code>) forces directory mode (only tries <code>index.html</code>/<code>index.htm</code> inside it).
+            <br><br>
+            <strong>Authentication:</strong> public requests use <code>raw.githubusercontent.com</code>. When a PAT is set, requests use the GitHub Contents API (<code>api.github.com</code>) with <code>Accept: application/vnd.github.raw</code>, which is the documented path for authenticated raw access.
+            <br><br>
+            <strong>Limitations:</strong>
+            <ul>
+                <li>Page must be served over <code>http://localhost</code> or <code>https://</code> &mdash; service workers don't run on <code>file://</code>.</li>
+                <li>Pages that load assets via absolute root paths (<code>&lt;img src="/logo.png"&gt;</code>) won't resolve, because the service worker scope is limited to this directory.</li>
+                <li>Branch/ref names containing slashes must be URL-encoded in the input or the bare-form raw URL.</li>
+                <li>Default-branch detection from a bare repo URL is not performed; include a branch in the URL.</li>
+            </ul>
+            <strong>PAT security:</strong> tokens are stored in <code>sessionStorage</code> (cleared when this tab closes) by default. Checking "Remember" moves them to <code>localStorage</code> &mdash; convenient but readable by any script on this origin. Use a fine-grained token scoped to the minimum repos.
+            <div id="resolvedDisplay" style="margin-top: 10px;"></div>
+        </div>
+    </details>
+</header>
+
+<main id="main">
+    <div class="placeholder" id="placeholder">
+        <h2>GitHub HTML Preview</h2>
+        <p>Paste a GitHub URL above and press <strong>Load</strong> to render it inline. Relative assets (CSS, JS, images, sub-pages) are fetched on demand by a service worker.</p>
+        <div class="examples">
+            <strong>Try a public example:</strong>
+            <div><a data-example="https://github.com/h5bp/html5-boilerplate/blob/main/dist/index.html">github.com/h5bp/html5-boilerplate/blob/main/dist/index.html</a></div>
+            <div><a data-example="https://github.com/mdn/dom-examples/blob/main/web-storage/index.html">github.com/mdn/dom-examples/blob/main/web-storage/index.html</a></div>
+        </div>
+    </div>
+</main>
+
+<script>
+'use strict';
+
+const SW_URL = './github-preview-sw.js';
+const PREVIEW_PREFIX = 'gh-preview';
+
+const $ = (id) => document.getElementById(id);
+const urlInput = $('urlInput');
+const patInput = $('patInput');
+const rememberPat = $('rememberPat');
+const loadBtn = $('loadBtn');
+const statusEl = $('status');
+const mainEl = $('main');
+const placeholderEl = $('placeholder');
+const resolvedDisplay = $('resolvedDisplay');
+const patStored = $('patStored');
+
+let currentIframe = null;
+let swReady = false;
+
+function setStatus(msg, kind) {
+    statusEl.textContent = msg || '';
+    statusEl.className = 'status ' + (kind || '');
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+}
+
+function loadStoredPat() {
+    const fromLocal = localStorage.getItem('gh-preview-pat');
+    const fromSession = sessionStorage.getItem('gh-preview-pat');
+    if (fromLocal) {
+        patInput.value = fromLocal;
+        rememberPat.checked = true;
+        patStored.textContent = '(loaded from localStorage)';
+    } else if (fromSession) {
+        patInput.value = fromSession;
+        rememberPat.checked = false;
+        patStored.textContent = '(loaded from sessionStorage)';
+    }
+}
+
+function storePat() {
+    const pat = patInput.value.trim();
+    if (rememberPat.checked) {
+        if (pat) {
+            localStorage.setItem('gh-preview-pat', pat);
+            patStored.textContent = '(saved to localStorage)';
+        } else {
+            localStorage.removeItem('gh-preview-pat');
+            patStored.textContent = '';
+        }
+        sessionStorage.removeItem('gh-preview-pat');
+    } else {
+        if (pat) {
+            sessionStorage.setItem('gh-preview-pat', pat);
+            patStored.textContent = '(session only)';
+        } else {
+            sessionStorage.removeItem('gh-preview-pat');
+            patStored.textContent = '';
+        }
+        localStorage.removeItem('gh-preview-pat');
+    }
+}
+
+function sendToSw(message, timeoutMs) {
+    return new Promise((resolve) => {
+        const sw = navigator.serviceWorker.controller;
+        if (!sw) { resolve(null); return; }
+        const ch = new MessageChannel();
+        let done = false;
+        ch.port1.onmessage = (ev) => {
+            if (done) return;
+            done = true;
+            resolve(ev.data || {});
+        };
+        try { sw.postMessage(message, [ch.port2]); }
+        catch (e) { resolve(null); return; }
+        setTimeout(() => { if (!done) { done = true; resolve(null); } }, timeoutMs || 2000);
+    });
+}
+
+async function syncPatToSw() {
+    return sendToSw({ type: 'set-pat', pat: patInput.value.trim() });
+}
+
+$('clearPatBtn').addEventListener('click', async () => {
+    patInput.value = '';
+    localStorage.removeItem('gh-preview-pat');
+    sessionStorage.removeItem('gh-preview-pat');
+    patStored.textContent = '';
+    await syncPatToSw();
+    // Also clear the auth cache so we don't serve formerly-private content
+    await sendToSw({ type: 'clear-cache' });
+    setStatus('PAT and cache cleared', 'ok');
+});
+
+$('clearCacheBtn').addEventListener('click', async () => {
+    const r = await sendToSw({ type: 'clear-cache' });
+    if (r) setStatus('Cache cleared', 'ok');
+    else setStatus('SW not active', 'warn');
+});
+
+$('unregisterBtn').addEventListener('click', async () => {
+    setStatus('Resetting SW…', 'busy');
+    try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.unregister();
+        if ('caches' in window) {
+            const names = await caches.keys();
+            await Promise.all(names.filter((n) => n.startsWith('gh-preview-')).map((n) => caches.delete(n)));
+        }
+    } catch (e) { /* ignore */ }
+    sessionStorage.removeItem('gh-preview-sw-reloaded');
+    location.reload();
+});
+
+patInput.addEventListener('change', async () => { storePat(); await syncPatToSw(); });
+patInput.addEventListener('blur', async () => { storePat(); await syncPatToSw(); });
+rememberPat.addEventListener('change', storePat);
+
+document.querySelectorAll('[data-example]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+        e.preventDefault();
+        urlInput.value = a.getAttribute('data-example');
+        load();
+    });
+});
+
+// --- URL parsing ---
+function parseGitHubUrl(input) {
+    let url;
+    try { url = new URL(input); } catch { return { error: 'Could not parse as URL.' }; }
+
+    const trailingSlash = url.pathname.endsWith('/') && url.pathname !== '/';
+    const segments = url.pathname.split('/').filter(Boolean);
+
+    if (url.hostname === 'github.com' || url.hostname === 'www.github.com') {
+        if (segments.length < 2) return { error: 'github.com URL must include /<owner>/<repo>.' };
+        const [owner, repo, kind, ...rest] = segments;
+        if (!kind) {
+            return { error: 'Default-branch detection is not supported. Include a branch, e.g. /tree/main.' };
+        }
+        if (kind === 'blob' || kind === 'raw') {
+            if (rest.length < 1) return { error: 'Missing branch/ref in URL.' };
+            const ref = rest[0];
+            const path = rest.slice(1).join('/');
+            return { owner, repo, ref, path, trailingSlash };
+        }
+        if (kind === 'tree') {
+            if (rest.length < 1) return { error: 'Missing branch/ref in URL.' };
+            const ref = rest[0];
+            const path = rest.slice(1).join('/');
+            return { owner, repo, ref, path, trailingSlash: true };
+        }
+        return { error: `Unsupported github.com URL form: /${kind}/...` };
+    }
+
+    if (url.hostname === 'raw.githubusercontent.com') {
+        if (segments.length < 3) return { error: 'raw.githubusercontent.com URL is too short.' };
+        const [owner, repo, ...rest] = segments;
+        let ref, pathParts;
+        if (rest[0] === 'refs' && (rest[1] === 'heads' || rest[1] === 'tags') && rest.length >= 3) {
+            ref = rest[2];
+            pathParts = rest.slice(3);
+        } else {
+            ref = rest[0];
+            pathParts = rest.slice(1);
+        }
+        const path = pathParts.join('/');
+        return { owner, repo, ref, path, trailingSlash };
+    }
+
+    return { error: `Unsupported host: ${url.hostname}. Use github.com or raw.githubusercontent.com.` };
+}
+
+function buildPreviewUrl(parsed) {
+    const enc = encodeURIComponent;
+    const pathSegs = parsed.path ? parsed.path.split('/').filter(Boolean) : [];
+    let u = `./${PREVIEW_PREFIX}/${enc(parsed.owner)}/${enc(parsed.repo)}/${enc(parsed.ref)}/`;
+    u += pathSegs.map(enc).join('/');
+    if (pathSegs.length > 0 && parsed.trailingSlash && !u.endsWith('/')) u += '/';
+    return u;
+}
+
+function buildEquivalentRawUrl(parsed) {
+    const enc = encodeURIComponent;
+    const pathSegs = parsed.path ? parsed.path.split('/').filter(Boolean) : [];
+    let u = `https://raw.githubusercontent.com/${enc(parsed.owner)}/${enc(parsed.repo)}/refs/heads/${enc(parsed.ref)}/`;
+    u += pathSegs.map(enc).join('/');
+    if (pathSegs.length > 0 && parsed.trailingSlash && !u.endsWith('/')) u += '/';
+    return u;
+}
+
+async function load() {
+    if (!swReady) {
+        setStatus('SW not ready yet', 'warn');
+        return;
+    }
+
+    const raw = urlInput.value.trim();
+    if (!raw) { setStatus('Enter a URL', 'warn'); return; }
+
+    const parsed = parseGitHubUrl(raw);
+    if (parsed.error) {
+        setStatus('Invalid URL', 'error');
+        resolvedDisplay.innerHTML = `<strong style="color: var(--error);">Error:</strong> ${escapeHtml(parsed.error)}`;
+        $('detailsPane').open = true;
+        return;
+    }
+
+    setStatus('Loading…', 'busy');
+    storePat();
+    await syncPatToSw();
+
+    const previewUrl = buildPreviewUrl(parsed);
+    const equivRaw = buildEquivalentRawUrl(parsed);
+    resolvedDisplay.innerHTML =
+        `<strong>Preview URL (this origin):</strong> <code>${escapeHtml(previewUrl)}</code><br>` +
+        `<strong>Equivalent raw URL:</strong> <code>${escapeHtml(equivRaw)}</code><br>` +
+        `<strong>Parsed:</strong> owner=<code>${escapeHtml(parsed.owner)}</code> ` +
+        `repo=<code>${escapeHtml(parsed.repo)}</code> ` +
+        `ref=<code>${escapeHtml(parsed.ref)}</code> ` +
+        `path=<code>${escapeHtml(parsed.path || '(root)')}</code> ` +
+        `dir=<code>${parsed.trailingSlash}</code>`;
+
+    if (currentIframe) currentIframe.remove();
+    if (placeholderEl.parentNode) placeholderEl.parentNode.removeChild(placeholderEl);
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'previewFrame';
+    iframe.src = previewUrl;
+    iframe.addEventListener('load', () => setStatus('Loaded', 'ok'));
+    iframe.addEventListener('error', () => setStatus('Load error', 'error'));
+    mainEl.appendChild(iframe);
+    currentIframe = iframe;
+}
+
+loadBtn.addEventListener('click', load);
+urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') load(); });
+
+async function init() {
+    if (!('serviceWorker' in navigator)) {
+        setStatus('SW unsupported', 'error');
+        showFatal('Your browser does not support service workers. This tool cannot function.');
+        return;
+    }
+    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '::1';
+    if (location.protocol !== 'https:' && !isLocalhost) {
+        setStatus('Insecure context', 'error');
+        showFatal(
+            `Service workers require a secure context. This page is at <code>${escapeHtml(location.href)}</code>. ` +
+            `Serve it over <code>http://localhost</code> or <code>https://</code> to use this tool.`,
+        );
+        return;
+    }
+
+    loadStoredPat();
+
+    try {
+        await navigator.serviceWorker.register(SW_URL);
+        await navigator.serviceWorker.ready;
+
+        if (!navigator.serviceWorker.controller) {
+            const already = sessionStorage.getItem('gh-preview-sw-reloaded');
+            if (!already) {
+                sessionStorage.setItem('gh-preview-sw-reloaded', '1');
+                setStatus('Activating SW…', 'busy');
+                location.reload();
+                return;
+            }
+        }
+        sessionStorage.removeItem('gh-preview-sw-reloaded');
+
+        swReady = true;
+        await syncPatToSw();
+        setStatus('Ready', 'ok');
+    } catch (e) {
+        setStatus('SW failed', 'error');
+        showFatal('Service worker registration failed: <code>' + escapeHtml(e.message || String(e)) + '</code>');
+    }
+}
+
+function showFatal(html) {
+    placeholderEl.innerHTML =
+        '<h2 style="color: var(--error);">Cannot start</h2>' +
+        '<p>' + html + '</p>';
+}
+
+navigator.serviceWorker && navigator.serviceWorker.addEventListener('controllerchange', () => {
+    swReady = !!navigator.serviceWorker.controller;
+    if (swReady) syncPatToSw();
+});
+
+init();
+</script>
+</body>
+</html>
